@@ -1,25 +1,39 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
-  FileText,
-  Wallet,
-  Users,
-  CalendarDays,
+  Home,
+  BookOpen,
+  Contact,
+  HeartHandshake,
+  Building2,
+  MessageSquareQuote,
   Image as ImageIcon,
+  Menu,
+  Share2,
+  Newspaper,
+  Images,
+  Wallet,
+  Landmark,
+  Target,
+  Banknote,
   BarChart3,
-  ShieldCheck,
-  Settings,
+  Users,
+  ClipboardList,
+  CalendarDays,
+  CalendarCheck,
+  FolderOpen,
   UserCog,
+  ShieldCheck,
+  KeyRound,
+  Settings,
 } from 'lucide-react';
 
 export interface AdminNavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Permission code required to see this item as active; undefined = always available. */
+  /** Permission code required to see this item; undefined = always available. */
   permission?: string;
-  /** Business modules not yet built (Phase 5/6+) render disabled with a "Soon" badge. */
-  comingSoon?: boolean;
 }
 
 export interface AdminNavGroup {
@@ -28,12 +42,11 @@ export interface AdminNavGroup {
 }
 
 /**
- * Grouped by job function (Content / Finance / Engagement / System), matching
- * design/01-Information-Architecture.md §6 — each seeded role in
- * apps/api/prisma/seed.ts naturally lands in one group. Business-module items
- * are listed (so the shell reads as complete) but marked `comingSoon` until
- * their routes/pages ship in the feature-development phase — see
- * DEVELOPMENT_PROGRESS.md.
+ * Grouped by job function (Content / Finance / Engagement / Documents / System),
+ * matching design/01-Information-Architecture.md §6. Every item below now has a
+ * real page behind it (Phase 5) — visibility is gated purely by `permission`
+ * (checked against the caller's session in sidebar-nav.tsx), no more
+ * `comingSoon` placeholders.
  */
 export const adminNavGroups: AdminNavGroup[] = [
   {
@@ -44,45 +57,86 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: 'Content',
     items: [
       {
-        label: 'Pages',
-        href: '/admin/content',
-        icon: FileText,
+        label: 'Home Content',
+        href: '/admin/content/home',
+        icon: Home,
         permission: 'content:view',
-        comingSoon: true,
       },
       {
-        label: 'Events & News',
-        href: '/admin/events',
-        icon: CalendarDays,
-        permission: 'events:view',
-        comingSoon: true,
+        label: 'About Ashram',
+        href: '/admin/content/about',
+        icon: BookOpen,
+        permission: 'content:view',
       },
       {
-        label: 'Gallery',
-        href: '/admin/gallery',
+        label: 'Contact Page',
+        href: '/admin/content/contact',
+        icon: Contact,
+        permission: 'content:view',
+      },
+      {
+        label: 'Activities & Services',
+        href: '/admin/content/activities',
+        icon: HeartHandshake,
+        permission: 'activities:view',
+      },
+      {
+        label: 'Managing Committee',
+        href: '/admin/content/committee',
+        icon: Building2,
+        permission: 'committee:view',
+      },
+      {
+        label: 'Testimonials',
+        href: '/admin/content/testimonials',
+        icon: MessageSquareQuote,
+        permission: 'testimonials:view',
+      },
+      {
+        label: 'Hero Banners',
+        href: '/admin/content/hero-banners',
         icon: ImageIcon,
-        permission: 'gallery:view',
-        comingSoon: true,
+        permission: 'banners:view',
       },
+      {
+        label: 'Navigation Menus',
+        href: '/admin/content/navigation',
+        icon: Menu,
+        permission: 'navigation:view',
+      },
+      {
+        label: 'Social Links',
+        href: '/admin/content/social-links',
+        icon: Share2,
+        permission: 'social_links:view',
+      },
+      { label: 'News', href: '/admin/news', icon: Newspaper, permission: 'news:view' },
+      { label: 'Gallery', href: '/admin/gallery', icon: Images, permission: 'gallery:view' },
     ],
   },
   {
     label: 'Finance',
     items: [
+      { label: 'Donations', href: '/admin/donations', icon: Wallet, permission: 'donations:view' },
       {
-        label: 'Donations',
-        href: '/admin/donations',
-        icon: Wallet,
+        label: 'Donation Categories',
+        href: '/admin/donations/categories',
+        icon: Landmark,
         permission: 'donations:view',
-        comingSoon: true,
       },
       {
-        label: 'Reports',
-        href: '/admin/reports',
-        icon: BarChart3,
-        permission: 'reports:generate',
-        comingSoon: true,
+        label: 'Donation Campaigns',
+        href: '/admin/donations/campaigns',
+        icon: Target,
+        permission: 'appeals:view',
       },
+      {
+        label: 'Bank Transfers',
+        href: '/admin/donations/bank-transfers',
+        icon: Banknote,
+        permission: 'bank_transfers:view',
+      },
+      { label: 'Reports', href: '/admin/reports', icon: BarChart3, permission: 'donations:view' },
     ],
   },
   {
@@ -93,26 +147,48 @@ export const adminNavGroups: AdminNavGroup[] = [
         href: '/admin/volunteers',
         icon: Users,
         permission: 'volunteers:view',
-        comingSoon: true,
+      },
+      {
+        label: 'Volunteer Assignments',
+        href: '/admin/volunteers/assignments',
+        icon: ClipboardList,
+        permission: 'volunteer_assignments:view',
+      },
+      { label: 'Events', href: '/admin/events', icon: CalendarDays, permission: 'events:view' },
+      {
+        label: 'Event Registrations',
+        href: '/admin/events/registrations',
+        icon: CalendarCheck,
+        permission: 'event_registrations:view',
+      },
+    ],
+  },
+  {
+    label: 'Documents',
+    items: [
+      {
+        label: 'Documents',
+        href: '/admin/documents',
+        icon: FolderOpen,
+        permission: 'documents:view',
       },
     ],
   },
   {
     label: 'System',
     items: [
-      {
-        label: 'Users',
-        href: '/admin/users',
-        icon: UserCog,
-        permission: 'users:view',
-        comingSoon: true,
-      },
+      { label: 'Users', href: '/admin/users', icon: UserCog, permission: 'users:view' },
       {
         label: 'Roles & Permissions',
         href: '/admin/roles',
         icon: ShieldCheck,
         permission: 'roles:view',
-        comingSoon: true,
+      },
+      {
+        label: 'Permissions',
+        href: '/admin/permissions',
+        icon: KeyRound,
+        permission: 'permissions:view',
       },
       { label: 'Settings', href: '/admin/settings', icon: Settings },
     ],

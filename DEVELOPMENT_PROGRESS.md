@@ -2,11 +2,11 @@
 
 ## Sai Yadadri Seva Ashram Platform
 
-|                   |                                                 |
-| ----------------- | ----------------------------------------------- |
-| **Current Phase** | Phase 4 — Core Application Framework (Complete) |
-| **Date**          | 2026-08-03                                      |
-| **Status**        | Awaiting client approval to proceed to Phase 5  |
+|                   |                                                                   |
+| ----------------- | ----------------------------------------------------------------- |
+| **Current Phase** | Phase 5 — Business Modules & Content Management System (Complete) |
+| **Date**          | 2026-08-03                                                        |
+| **Status**        | Awaiting client approval to proceed to the next phase             |
 
 ---
 
@@ -17,15 +17,14 @@
 | **Phase 1**  | Business Analysis & Documentation (BRD, SRS, Functional/Non-Functional Requirements, User Stories, Use Cases, System Modules, Database Requirements, Admin Modules, Roles & Permissions, Technology Stack, Security Requirements, API Requirements, Project Timeline, Risk Analysis, Assumptions & Dependencies) | ✅ Complete — [`documentation/MASTER_PROJECT_PLAN.md`](documentation/MASTER_PROJECT_PLAN.md) |
 | **Phase 2**  | Enterprise System Design & UI/UX (Information Architecture, Sitemap, User/Admin Flows, Wireframes, Design System, Component Library, Responsive Design, Animation, Accessibility, SEO Structure, Database ERD, API Architecture, Folder Structure, Deployment Architecture)                                      | ✅ Complete — [`design/SYSTEM_DESIGN.md`](design/SYSTEM_DESIGN.md)                           |
 | **Phase 3**  | Project Initialization & Codebase Foundation                                                                                                                                                                                                                                                                     | ✅ Complete                                                                                  |
-| **Phase 4**  | Core Application Framework — Authentication, RBAC, Database, Backend APIs, Frontend layouts/shell, Admin Dashboard shell                                                                                                                                                                                         | ✅ Complete — this document                                                                  |
-| **Phase 5**  | Core Development — Public Site (Home, About, Activities, Gallery, Events, Contact)                                                                                                                                                                                                                               | ⏳ Not started                                                                               |
-| **Phase 6**  | Core Development — Donation Platform (Razorpay integration, checkout, receipts)                                                                                                                                                                                                                                  | ⏳ Not started                                                                               |
-| **Phase 7**  | Core Development — Remaining Admin Modules (Content, Donations, Volunteers, Events, Gallery, Reports)                                                                                                                                                                                                            | ⏳ Not started                                                                               |
-| **Phase 8**  | Content Population & Bilingual Translation                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
-| **Phase 9**  | QA, Security Testing & Accessibility Audit                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
-| **Phase 10** | UAT with Client                                                                                                                                                                                                                                                                                                  | ⏳ Not started                                                                               |
-| **Phase 11** | Deployment & Go-Live                                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
-| **Phase 12** | Post-Launch Stabilization & Handover                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
+| **Phase 4**  | Core Application Framework — Authentication, RBAC, Database, Backend APIs, Frontend layouts/shell, Admin Dashboard shell                                                                                                                                                                                         | ✅ Complete                                                                                  |
+| **Phase 5**  | Business Modules & Content Management System — re-scoped by explicit client instruction from the originally-planned "Public Site" to: all backend business-module APIs (CMS, Donations, Volunteers, Events, News, Gallery, Documents) **and** the complete admin CMS frontend for every module                   | ✅ Complete — this document, §9–§13                                                          |
+| **Phase 6**  | Core Development — Public Site (Home, About, Activities, Gallery, Events, Contact) + Donation Platform (Razorpay integration, checkout, receipts)                                                                                                                                                                | ⏳ Not started                                                                               |
+| **Phase 7**  | Content Population & Bilingual Translation                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
+| **Phase 8**  | QA, Security Testing & Accessibility Audit                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
+| **Phase 9**  | UAT with Client                                                                                                                                                                                                                                                                                                  | ⏳ Not started                                                                               |
+| **Phase 10** | Deployment & Go-Live                                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
+| **Phase 11** | Post-Launch Stabilization & Handover                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
 
 ---
 
@@ -153,3 +152,121 @@ All checks were run **from the repository root** (`npm run lint` / `npm run type
 ## 7. Approval Gate
 
 Per the phased, approval-gated process this project follows: **this phase is complete and the codebase builds cleanly with zero TypeScript errors, zero ESLint errors, and zero build errors on both apps** (verified via `npm run lint`, `npm run typecheck`, and `npm run build` from the repository root, all passing after the fixes documented in §4). Stopping here for client approval before any business-module features are implemented.
+
+---
+
+## 8. Git Milestones
+
+Annotated tags marking each completed, approved phase (local-only — no remote is configured for this repository). Phases 1–3 were delivered together in a single squashed "Initial commit," so their tags share one commit hash; Phase 4 landed as its own commit.
+
+| Tag                          | Commit                                          | Description                                                                 |
+| ---------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
+| `v0.1-project-documentation` | `ecb1cbb` (Initial commit)                      | Phase 1 - Business Analysis, BRD, SRS, Requirements Documentation           |
+| `v0.2-system-design`         | `ecb1cbb` (Initial commit)                      | Phase 2 - UI/UX, Architecture, Database Design, API Design                  |
+| `v0.3-project-foundation`    | `ecb1cbb` (Initial commit)                      | Phase 3 - Project Foundation, Monorepo Setup, Docker, CI/CD, Infrastructure |
+| `v0.4-authentication-core`   | `87625d9` (Phase 4: core application framework) | Phase 4 - Authentication, RBAC, Core Framework, Admin Shell                 |
+
+Verify locally with `git tag -l -n1` (list) or `git show <tag>` (full annotation + commit details).
+
+---
+
+## 9. Phase 5 — What Was Built: Backend Business Modules
+
+Per explicit client instruction, Phase 5 was re-scoped from the originally-planned "Public Site" to: **all backend business-module APIs, then the complete admin CMS frontend for every module** — the public-facing site is deferred to the next phase, to be built against these now-complete APIs.
+
+### 9.1 Database
+
+- `apps/api/prisma/schema.prisma` extended with every Phase 5 model: `Testimonial`, `HeroBanner`, `SocialMediaLink`, `NavigationMenuItem` (self-referencing, one level), `SiteSettings` (singleton), `Activity` (covers both "Activities" and "Services" — no separate Services concept exists in the source documents), `Donor`, `DonationCategory`, `Appeal`, `Donation` (+ `DonationFrequency`), `BankTransferRecord`, `Receipt`, `CommitteeMember`, `Volunteer`, `VolunteerApplication`, `VolunteerAssignment`, `EventCategory`, `Event`, `EventRegistration`, `GalleryAlbum`, `GalleryItem`, `DocumentRepo` (+ `pan_card` category), `PageContent`.
+- Migration generated via `prisma migrate diff` against the pre-Phase-5 schema snapshot (`20260803132314_phase5_business_modules/`) — no live Postgres in this environment, same constraint as every prior phase; **never applied to a real database** (see §12).
+- `apps/api/prisma/seed.ts` rewritten: ~50 permission codes, full role→permission mapping for all 10 roles, 27 real committee members, 7 real activities, and a verified-fields-only `SiteSettings` row — no fabricated data anywhere (unverified fields left blank per the project's established pattern).
+
+### 9.2 Backend architecture decisions
+
+- **Generic CRUD factory** (`src/lib/simple-crud-router.ts`) powers the 7 "plain CRUD" modules (Hero Banners, Testimonials, Social Links, Navigation, Activities, Committee, Event Categories) — one tested implementation instead of 7 near-duplicate route files, consistent pagination/audit-log/error-handling behavior everywhere.
+- **Hand-written routers** for every module with real business logic: Donations (manual entry, status transitions, CSV export, SQL-aggregated analytics), Bank Transfers (public claim → admin verify/reject → auto-creates Donation + Receipt), Volunteers (registration → application review → auto-creates Volunteer profile on acceptance), Events (capacity + automatic waitlist promotion on cancellation), Gallery (Cloudinary upload/delete, linked videos, reorder), Documents (Cloudinary upload combined with metadata in one request).
+- **New generic `POST /media/upload` endpoint** (`src/routes/v1/media.routes.ts`) added to support the CMS modules whose schemas store a plain image URL (Hero Banners/Testimonials/Committee/Activities) with no upload endpoint of their own — reuses the existing Cloudinary integration, gated by authentication only since it performs no business mutation.
+- Every list endpoint returns the same `{ data, pagination }` envelope; every single-resource endpoint returns `{ data }` — verified consistent across all ~20 route files, which is what let one generic frontend `createResourceHooks()` factory (§10) work everywhere.
+- Swagger/OpenAPI (`src/config/swagger.ts`) extended with every new endpoint group, including a generated-paths helper for the 7 factory-backed modules to avoid hand-duplicating identical path objects.
+
+---
+
+## 10. Phase 5 — What Was Built: Admin CMS Frontend
+
+Every module below is a real page wired to the live backend API — no mocked data, no placeholder services.
+
+### 10.1 Reusable framework (built once, used everywhere)
+
+| Component/hook                                                                                                       | Purpose                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `components/ui/{dialog,alert-dialog,select,textarea,checkbox,tabs,table,popover}.tsx`                                | Pulled via the `shadcn` CLI (already configured for this repo's `base-nova`/`@base-ui` style) rather than hand-rolled, guaranteeing exact convention match with the Phase 4 components                                                |
+| `hooks/use-resource.ts` — `createResourceHooks()`                                                                    | Generic list/detail/create/update/delete/reorder TanStack Query hook factory — every module's data-fetching is one function call                                                                                                      |
+| `components/admin/data-table.tsx`                                                                                    | Generic table: column defs, loading skeletons, empty state, row selection, row actions                                                                                                                                                |
+| `components/admin/{pagination-bar,search-input,confirm-dialog,form-dialog,status-badge,page-header,empty-state}.tsx` | Shared list/CRUD chrome                                                                                                                                                                                                               |
+| `components/admin/rich-text-editor.tsx`                                                                              | Minimal Bold/Italic/Headings/Lists/Link/Image toolbar per `design/07-Component-Library.md` §5.4 (deliberately not a full editor framework — matches the non-technical admin persona); output sanitized with DOMPurify on every change |
+| `components/admin/{image-upload-field,file-upload-field}.tsx`                                                        | Drag-and-drop image upload (via the new `/media/upload` endpoint) and plain file picker with preview                                                                                                                                  |
+| `hooks/use-permission.ts`                                                                                            | `useHasPermission(code)` — gates every Add/Edit/Delete button (UX nicety; the backend enforces every permission regardless)                                                                                                           |
+
+New dependencies added: `dompurify` (rich-text sanitization, defense-in-depth per `documentation/12-Security-Requirements.md`'s XSS requirement) and `recharts` (Reports/Dashboard charts).
+
+### 10.2 Pages built, by module
+
+| Module (as requested)                                            | Route(s)                                                                    | Notes                                                                                                                                                                           |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard                                                        | `/admin`                                                                    | Real KPI tiles now backed by live APIs (Admin Users, Donations this month, Registered Volunteers, Published Events), real donation-trend chart, still permission-gated per tile |
+| Home Content                                                     | `/admin/content/home`                                                       | Welcome message (rich text) + repeatable impact-stat rows, **autosave**                                                                                                         |
+| About / History / Vision / Mission / Founder / Treasurer Message | `/admin/content/about`                                                      | One editor, tabbed (backend stores these as sections of a single `PageContent` record — see §9.1), **autosave**                                                                 |
+| Managing Committee                                               | `/admin/content/committee`                                                  | Full CRUD, photo upload                                                                                                                                                         |
+| Treasurer Message                                                | _(folded into About tabs above — no separate backend record exists for it)_ |                                                                                                                                                                                 |
+| Activities & Services                                            | `/admin/content/activities`                                                 | Full CRUD — one entity covers both per the Phase 5 backend decision (§9.1)                                                                                                      |
+| Hero Banners                                                     | `/admin/content/hero-banners`                                               | Full CRUD, image upload, CTA fields                                                                                                                                             |
+| Testimonials                                                     | `/admin/content/testimonials`                                               | Full CRUD, photo upload                                                                                                                                                         |
+| Navigation Menus                                                 | `/admin/content/navigation`                                                 | Full CRUD, one level of parent/child nesting                                                                                                                                    |
+| Social Links                                                     | `/admin/content/social-links`                                               | Full CRUD, one row per platform                                                                                                                                                 |
+| Gallery / Albums / Photos / Videos                               | `/admin/gallery`, `/admin/gallery/[albumId]`                                | Album grid → album detail with photo upload, linked-video add, reorder (up/down), delete (cleans up Cloudinary assets)                                                          |
+| News                                                             | `/admin/news`                                                               | Full CRUD, rich text body, SEO fields                                                                                                                                           |
+| Events                                                           | `/admin/events`                                                             | Full CRUD, rich text description, inline category management dialog, SEO fields                                                                                                 |
+| Event Registrations                                              | `/admin/events/registrations`                                               | List, check-in, cancel (with automatic waitlist promotion server-side)                                                                                                          |
+| Donation Categories                                              | `/admin/donations/categories`                                               | Full CRUD (soft "deactivate", matching the backend's own semantics)                                                                                                             |
+| Donation Campaigns                                               | `/admin/donations/campaigns`                                                | Full CRUD, live progress bar against target amount                                                                                                                              |
+| Donations                                                        | `/admin/donations`                                                          | List/filter/search, manual entry, CSV export                                                                                                                                    |
+| Bank Transfers                                                   | `/admin/donations/bank-transfers`                                           | Verification queue — verify (creates Donation + Receipt) / reject with note                                                                                                     |
+| Volunteer Management                                             | `/admin/volunteers`                                                         | Applications review (accept/reject/under-review) + registered-volunteer directory, tabbed                                                                                       |
+| Volunteer Assignments                                            | `/admin/volunteers/assignments`                                             | Full CRUD, filterable by volunteer                                                                                                                                              |
+| Documents                                                        | `/admin/documents`                                                          | Upload (combined file + metadata), edit metadata, Download Centre visibility toggle                                                                                             |
+| Reports                                                          | `/admin/reports`                                                            | Donation analytics only — **honestly scoped**: no volunteer/event reporting backend exists yet, stated explicitly on the page rather than fabricating additional report types   |
+| Website Settings                                                 | `/admin/settings?tab=website`                                               | Branding, contact info, footer, maintenance mode                                                                                                                                |
+| SEO Settings                                                     | `/admin/settings?tab=seo`                                                   | Default meta title/description/OG image                                                                                                                                         |
+| Users                                                            | `/admin/users`                                                              | Full CRUD (deferred from Phase 4, now explicitly requested)                                                                                                                     |
+| Roles                                                            | `/admin/roles`                                                              | Full CRUD with grouped permission-checkbox matrix                                                                                                                               |
+| Permissions                                                      | `/admin/permissions`                                                        | Read-only catalogue, grouped by module                                                                                                                                          |
+
+**Sidebar** (`lib/admin-nav.ts`, `components/admin/sidebar-nav.tsx`) rewritten: every `comingSoon` placeholder removed, every item now points at a real page, and visibility is now actually gated by the caller's permissions (previously the `permission` field was defined but never checked) — including hiding entire groups that end up empty for a narrowly-scoped role.
+
+---
+
+## 11. Phase 5 Build Verification Results
+
+| Check                                |                                                              Frontend (`apps/web`)                                                               |                                     Backend (`apps/api`)                                     |
+| ------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
+| `npm run lint` (from repo root)      |                                                          ✅ Pass, 0 errors, 0 warnings                                                           |                                ✅ Pass, 0 errors, 0 warnings                                 |
+| `npm run typecheck` (from repo root) |                                                                ✅ Pass, 0 errors                                                                 |                                      ✅ Pass, 0 errors                                       |
+| `npm run build` (from repo root)     |                                         ✅ Pass — 35 routes (26 new admin pages), full production build                                          |                                ✅ Pass (`tsc` + `tsc-alias`)                                 |
+| Runtime smoke test                   | ✅ Both dev servers boot cleanly; `/login` renders with no console errors; Swagger UI at `/api/v1/docs` lists every new endpoint group correctly | ✅ `/api/v1/health`, `/media/upload`, and every Phase 5 route confirmed wired via Swagger UI |
+
+All checks were run **from the repository root**, exactly as instructed, and iterated until fully clean.
+
+---
+
+## 12. Phase 5 Known Limitation (Environment)
+
+Same root cause as every prior phase: **no live PostgreSQL instance is available in this build environment.** The migration (§9.1) has been generated correctly (via Prisma's own schema-diff engine) but never applied, so:
+
+- A full authenticated browser walkthrough of the new admin pages (login → navigate → create/edit/delete a record) has **not** been exercised end-to-end — verification for this phase relied on `lint`/`typecheck`/`build` (which includes Next.js's own prerendering and type-checking passes) plus an unauthenticated runtime smoke test (dev servers boot, public pages render without console errors, Swagger UI serves all routes correctly).
+- **Action required before UAT**: run `docker compose up -d postgres`, apply the Phase 5 migration and seed data, then walk through each admin module once against a real database — particularly the bespoke workflows (bank-transfer verification, volunteer-application acceptance, event waitlist promotion, gallery Cloudinary upload/delete) which have real side effects worth confirming end-to-end.
+- Cloudinary credentials are also not configured in this environment (confirmed via a startup warning), so image/file upload endpoints are wired correctly but untested against the real Cloudinary API.
+
+---
+
+## 13. Phase 5 Approval Gate
+
+Per the phased, approval-gated process this project follows: **this phase is complete and the codebase builds cleanly with zero TypeScript errors, zero ESLint errors, and zero build errors on both apps** (verified via `npm run lint`, `npm run typecheck`, and `npm run build` from the repository root). Stopping here for client approval before proceeding to the next phase (public-facing site + donation checkout).

@@ -93,15 +93,910 @@ const sessionSchema: OpenAPIV3.SchemaObject = {
   },
 };
 
+const paginationParams: OpenAPIV3.ParameterObject[] = [
+  { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+  { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 20 } },
+];
+
+const idPathParam: OpenAPIV3.ParameterObject = {
+  name: 'id',
+  in: 'path',
+  required: true,
+  schema: { type: 'string', format: 'uuid' },
+};
+
+/**
+ * Every "simple content" module (Hero Banners, Testimonials, Social Links,
+ * Navigation, Activities, Committee, Event Categories) is built on the
+ * generic `buildSimpleCrudRouter` factory (src/lib/simple-crud-router.ts),
+ * so its documented shape — list/get/create/update/delete(+reorder) — is
+ * identical across modules. Generating the path objects here mirrors that
+ * one-factory-many-routers design instead of hand-duplicating six near
+ * identical path blocks.
+ */
+function simpleCrudPaths(
+  basePath: string,
+  tag: string,
+  entityName: string,
+  options: { supportsReorder?: boolean } = {},
+): OpenAPIV3.PathsObject {
+  const paths: OpenAPIV3.PathsObject = {
+    [basePath]: {
+      get: {
+        tags: [tag],
+        summary: `List ${entityName} (paginated)`,
+        parameters: paginationParams,
+        responses: { '200': { description: 'OK' }, '401': errorResponse, '403': errorResponse },
+      },
+      post: {
+        tags: [tag],
+        summary: `Create a ${entityName}`,
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object' } } },
+        },
+        responses: {
+          '201': { description: 'Created' },
+          '400': errorResponse,
+          '403': errorResponse,
+        },
+      },
+    },
+    [`${basePath}/{id}`]: {
+      get: {
+        tags: [tag],
+        summary: `Get a single ${entityName}`,
+        parameters: [idPathParam],
+        responses: { '200': { description: 'OK' }, '404': errorResponse },
+      },
+      patch: {
+        tags: [tag],
+        summary: `Update a ${entityName}`,
+        parameters: [idPathParam],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object' } } },
+        },
+        responses: { '200': { description: 'Updated' }, '404': errorResponse },
+      },
+      delete: {
+        tags: [tag],
+        summary: `Soft-delete a ${entityName}`,
+        parameters: [idPathParam],
+        responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+      },
+    },
+  };
+
+  if (options.supportsReorder) {
+    paths[`${basePath}/bulk/reorder`] = {
+      patch: {
+        tags: [tag],
+        summary: `Reorder ${entityName} by displayOrder`,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['items'],
+                properties: {
+                  items: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        displayOrder: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'Reordered' }, '400': errorResponse },
+      },
+    };
+  }
+
+  return paths;
+}
+
+const phase5Paths: OpenAPIV3.PathsObject = {
+  ...simpleCrudPaths('/hero-banners', 'Hero Banners', 'hero banner', { supportsReorder: true }),
+  ...simpleCrudPaths('/testimonials', 'Testimonials', 'testimonial', { supportsReorder: true }),
+  ...simpleCrudPaths('/social-links', 'Social Links', 'social media link', {
+    supportsReorder: true,
+  }),
+  ...simpleCrudPaths('/navigation', 'Navigation', 'navigation menu item', {
+    supportsReorder: true,
+  }),
+  ...simpleCrudPaths('/activities', 'Activities', 'activity', { supportsReorder: true }),
+  ...simpleCrudPaths('/committee', 'Committee', 'committee member', { supportsReorder: true }),
+  ...simpleCrudPaths('/event-categories', 'Event Categories', 'event category'),
+
+  '/site-settings/public': {
+    get: {
+      tags: ['Site Settings'],
+      summary: 'Get site-wide settings (public — contact info, SEO defaults, social links)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/site-settings': {
+    get: {
+      tags: ['Site Settings'],
+      summary: 'Get site-wide settings (requires settings:view)',
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    patch: {
+      tags: ['Site Settings'],
+      summary: 'Update site-wide settings (requires settings:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '200': { description: 'Updated' }, '403': errorResponse },
+    },
+  },
+
+  '/page-content/public/{pageKey}': {
+    get: {
+      tags: ['Page Content'],
+      summary: 'Get published page content by key (public)',
+      security: [],
+      parameters: [
+        {
+          name: 'pageKey',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', enum: ['home', 'about', 'contact'] },
+        },
+      ],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/page-content': {
+    get: {
+      tags: ['Page Content'],
+      summary: 'List all page content blocks (requires content:view)',
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/page-content/{pageKey}': {
+    get: {
+      tags: ['Page Content'],
+      summary: 'Get a page content block by key (requires content:view)',
+      parameters: [
+        {
+          name: 'pageKey',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', enum: ['home', 'about', 'contact'] },
+        },
+      ],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Page Content'],
+      summary: 'Update a page content block (requires content:edit)',
+      parameters: [
+        {
+          name: 'pageKey',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', enum: ['home', 'about', 'contact'] },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['blocksEn'],
+              properties: {
+                blocksEn: { type: 'object' },
+                blocksTe: { type: 'object' },
+              },
+            },
+          },
+        },
+      },
+      responses: { '200': { description: 'Updated' }, '403': errorResponse },
+    },
+  },
+
+  '/donation-categories/public': {
+    get: {
+      tags: ['Donation Categories'],
+      summary: 'List active donation categories (public — donation checkout flow)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/donation-categories': {
+    get: {
+      tags: ['Donation Categories'],
+      summary: 'List donation categories (requires donations:view)',
+      parameters: paginationParams,
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['Donation Categories'],
+      summary: 'Create a donation category (requires donations:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/donation-categories/{id}': {
+    get: {
+      tags: ['Donation Categories'],
+      summary: 'Get a donation category (requires donations:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Donation Categories'],
+      summary: 'Update a donation category (requires donations:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['Donation Categories'],
+      summary: 'Deactivate a donation category (requires donations:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Deactivated' }, '404': errorResponse },
+    },
+  },
+
+  '/appeals/public': {
+    get: {
+      tags: ['Appeals'],
+      summary: 'List active fundraising appeals (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/appeals': {
+    get: {
+      tags: ['Appeals'],
+      summary: 'List appeals (requires appeals:view)',
+      parameters: [
+        ...paginationParams,
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['active', 'completed', 'archived'] },
+        },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['Appeals'],
+      summary: 'Create an appeal (requires appeals:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/appeals/{id}': {
+    get: {
+      tags: ['Appeals'],
+      summary: 'Get an appeal, including raised-amount cache (requires appeals:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Appeals'],
+      summary: 'Update an appeal (requires appeals:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['Appeals'],
+      summary: 'Archive an appeal (requires appeals:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Archived' }, '404': errorResponse },
+    },
+  },
+
+  '/donations': {
+    get: {
+      tags: ['Donations'],
+      summary: 'List donations with filters (requires donations:view)',
+      parameters: [
+        ...paginationParams,
+        { name: 'status', in: 'query', schema: { type: 'string' } },
+        { name: 'frequency', in: 'query', schema: { type: 'string' } },
+        { name: 'categoryId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+        { name: 'dateFrom', in: 'query', schema: { type: 'string', format: 'date' } },
+        { name: 'dateTo', in: 'query', schema: { type: 'string', format: 'date' } },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/donations/analytics': {
+    get: {
+      tags: ['Donations'],
+      summary: 'Donation analytics — totals by category/status/month (requires donations:view)',
+      parameters: [
+        { name: 'dateFrom', in: 'query', schema: { type: 'string', format: 'date' } },
+        { name: 'dateTo', in: 'query', schema: { type: 'string', format: 'date' } },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/donations/export': {
+    get: {
+      tags: ['Donations'],
+      summary: 'Export filtered donations as CSV (requires donations:export)',
+      responses: {
+        '200': { description: 'CSV file', content: { 'text/csv': { schema: { type: 'string' } } } },
+        '403': errorResponse,
+      },
+    },
+  },
+  '/donations/{id}': {
+    get: {
+      tags: ['Donations'],
+      summary: 'Get a single donation (requires donations:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/donations/manual': {
+    post: {
+      tags: ['Donations'],
+      summary:
+        'Record a manual (cash/in-person) donation — creates donor + receipt (requires donations:create_manual)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/donations/{id}/status': {
+    patch: {
+      tags: ['Donations'],
+      summary: 'Change a donation status, e.g. flag refund (requires donations:flag_refund)',
+      parameters: [idPathParam],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '200': { description: 'Updated' }, '403': errorResponse },
+    },
+  },
+
+  '/bank-transfers/public': {
+    post: {
+      tags: ['Bank Transfers'],
+      summary: "Submit a bank-transfer claim ('I've made a transfer' form, public, rate-limited)",
+      security: [],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: {
+        '201': { description: 'Submitted, pending verification' },
+        '429': errorResponse,
+      },
+    },
+  },
+  '/bank-transfers': {
+    get: {
+      tags: ['Bank Transfers'],
+      summary: 'List bank-transfer claims (requires bank_transfers:view)',
+      parameters: [
+        ...paginationParams,
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['unverified', 'verified', 'rejected'] },
+        },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/bank-transfers/{id}': {
+    get: {
+      tags: ['Bank Transfers'],
+      summary: 'Get a bank-transfer claim (requires bank_transfers:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/bank-transfers/{id}/verify': {
+    post: {
+      tags: ['Bank Transfers'],
+      summary:
+        'Verify a claim — creates the linked Donation + Receipt (requires bank_transfers:manage)',
+      parameters: [idPathParam],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '200': { description: 'Verified' }, '404': errorResponse },
+    },
+  },
+  '/bank-transfers/{id}/reject': {
+    post: {
+      tags: ['Bank Transfers'],
+      summary: 'Reject a claim with an internal note (requires bank_transfers:manage)',
+      parameters: [idPathParam],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '200': { description: 'Rejected' }, '404': errorResponse },
+    },
+  },
+
+  '/volunteers/register': {
+    post: {
+      tags: ['Volunteers'],
+      summary: 'Submit a volunteer application (public, rate-limited)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Submitted' }, '429': errorResponse },
+    },
+  },
+  '/volunteers/applications/list': {
+    get: {
+      tags: ['Volunteers'],
+      summary: 'List volunteer applications (requires volunteers:view)',
+      parameters: [
+        ...paginationParams,
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['pending', 'approved', 'rejected'] },
+        },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/volunteers/applications/{id}': {
+    get: {
+      tags: ['Volunteers'],
+      summary: 'Get a volunteer application (requires volunteers:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/volunteers/applications/{id}/status': {
+    patch: {
+      tags: ['Volunteers'],
+      summary:
+        'Approve/reject a volunteer application — approval creates the Volunteer profile and emails the applicant (requires volunteers:manage_status)',
+      parameters: [idPathParam],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+  },
+  '/volunteers': {
+    get: {
+      tags: ['Volunteers'],
+      summary: 'List approved volunteer profiles (requires volunteers:view)',
+      parameters: [
+        ...paginationParams,
+        { name: 'search', in: 'query', schema: { type: 'string' } },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/volunteers/{id}': {
+    get: {
+      tags: ['Volunteers'],
+      summary: 'Get a volunteer profile (requires volunteers:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+
+  '/volunteer-assignments': {
+    get: {
+      tags: ['Volunteer Assignments'],
+      summary: 'List volunteer task assignments (requires volunteer_assignments:view)',
+      parameters: paginationParams,
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['Volunteer Assignments'],
+      summary: 'Assign a task to a volunteer (requires volunteer_assignments:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/volunteer-assignments/{id}': {
+    get: {
+      tags: ['Volunteer Assignments'],
+      summary: 'Get a volunteer assignment (requires volunteer_assignments:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Volunteer Assignments'],
+      summary: 'Update an assignment status/details (requires volunteer_assignments:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+  },
+
+  '/events/public': {
+    get: {
+      tags: ['Events'],
+      summary: 'List published events (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/events/public/{slug}': {
+    get: {
+      tags: ['Events'],
+      summary: 'Get a published event by slug (public)',
+      security: [],
+      parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/events': {
+    get: {
+      tags: ['Events'],
+      summary: 'List events, any status (requires events:view)',
+      parameters: paginationParams,
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['Events'],
+      summary: 'Create an event (requires events:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/events/{id}': {
+    get: {
+      tags: ['Events'],
+      summary: 'Get an event (requires events:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Events'],
+      summary: 'Update an event (requires events:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['Events'],
+      summary: 'Soft-delete an event (requires events:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+    },
+  },
+
+  '/event-registrations/public': {
+    post: {
+      tags: ['Event Registrations'],
+      summary:
+        'Register for an event — waitlists automatically once capacity is reached (public, rate-limited)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Registered' }, '429': errorResponse },
+    },
+  },
+  '/event-registrations': {
+    get: {
+      tags: ['Event Registrations'],
+      summary: 'List event registrations (requires event_registrations:view)',
+      parameters: paginationParams,
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+  },
+  '/event-registrations/{id}/check-in': {
+    post: {
+      tags: ['Event Registrations'],
+      summary: 'Check in a registrant at the event (requires event_registrations:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Checked in' }, '404': errorResponse },
+    },
+  },
+  '/event-registrations/{id}/cancel': {
+    post: {
+      tags: ['Event Registrations'],
+      summary:
+        'Cancel a registration — promotes the next waitlisted registrant (requires event_registrations:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Cancelled' }, '404': errorResponse },
+    },
+  },
+
+  '/news/public': {
+    get: {
+      tags: ['News'],
+      summary: 'List published news posts (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/news/public/{slug}': {
+    get: {
+      tags: ['News'],
+      summary: 'Get a published news post by slug (public)',
+      security: [],
+      parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/news': {
+    get: {
+      tags: ['News'],
+      summary: 'List news posts, any status (requires news:view)',
+      parameters: paginationParams,
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['News'],
+      summary: 'Create a news post (requires news:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/news/{id}': {
+    get: {
+      tags: ['News'],
+      summary: 'Get a news post (requires news:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['News'],
+      summary: 'Update a news post (requires news:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['News'],
+      summary: 'Soft-delete a news post (requires news:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+    },
+  },
+
+  '/gallery/public': {
+    get: {
+      tags: ['Gallery'],
+      summary: 'List gallery albums with their items (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/gallery/albums': {
+    get: {
+      tags: ['Gallery'],
+      summary: 'List gallery albums (requires gallery:view)',
+      parameters: [
+        ...paginationParams,
+        { name: 'category', in: 'query', schema: { type: 'string' } },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['Gallery'],
+      summary: 'Create a gallery album (requires gallery:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '403': errorResponse },
+    },
+  },
+  '/gallery/albums/{id}': {
+    get: {
+      tags: ['Gallery'],
+      summary: 'Get an album with its items (requires gallery:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Gallery'],
+      summary: 'Update an album (requires gallery:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['Gallery'],
+      summary: 'Delete an album — cleans up all Cloudinary assets in it (requires gallery:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+    },
+  },
+  '/gallery/albums/{albumId}/upload': {
+    post: {
+      tags: ['Gallery'],
+      summary:
+        'Upload an image into an album via Cloudinary, multipart/form-data field "file" (requires gallery:manage)',
+      parameters: [
+        { name: 'albumId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              properties: {
+                file: { type: 'string', format: 'binary' },
+                altTextEn: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      responses: { '201': { description: 'Uploaded' }, '404': errorResponse },
+    },
+  },
+  '/gallery/albums/{albumId}/videos': {
+    post: {
+      tags: ['Gallery'],
+      summary:
+        'Add a linked video (YouTube/Vimeo/external URL) to an album (requires gallery:manage)',
+      parameters: [
+        { name: 'albumId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+      ],
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '201': { description: 'Created' }, '404': errorResponse },
+    },
+  },
+  '/gallery/items/reorder': {
+    patch: {
+      tags: ['Gallery'],
+      summary: 'Reorder items within an album by displayOrder (requires gallery:manage)',
+      requestBody: {
+        required: true,
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      responses: { '200': { description: 'Reordered' } },
+    },
+  },
+  '/gallery/items/{id}': {
+    patch: {
+      tags: ['Gallery'],
+      summary: 'Update a gallery item (alt text, order) (requires gallery:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['Gallery'],
+      summary: 'Delete a gallery item — cleans up its Cloudinary asset (requires gallery:manage)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+    },
+  },
+
+  '/documents/public': {
+    get: {
+      tags: ['Documents'],
+      summary: 'Download Centre — list publicly visible documents (public)',
+      security: [],
+      parameters: [{ name: 'category', in: 'query', schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/documents': {
+    get: {
+      tags: ['Documents'],
+      summary: 'List documents (requires documents:view)',
+      parameters: [
+        ...paginationParams,
+        { name: 'category', in: 'query', schema: { type: 'string' } },
+      ],
+      responses: { '200': { description: 'OK' }, '403': errorResponse },
+    },
+    post: {
+      tags: ['Documents'],
+      summary:
+        'Upload a compliance document via Cloudinary, multipart/form-data field "file" (requires documents:upload)',
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              properties: {
+                file: { type: 'string', format: 'binary' },
+                category: { type: 'string' },
+                titleEn: { type: 'string' },
+                titleTe: { type: 'string' },
+                publishedDate: { type: 'string', format: 'date' },
+                publicVisible: { type: 'boolean' },
+              },
+            },
+          },
+        },
+      },
+      responses: { '201': { description: 'Uploaded' }, '403': errorResponse },
+    },
+  },
+  '/media/upload': {
+    post: {
+      tags: ['Media'],
+      summary:
+        'Upload an image to Cloudinary and get back its hosted URL (any authenticated admin)',
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
+          },
+        },
+      },
+      responses: { '201': { description: 'Uploaded' }, '401': errorResponse },
+    },
+  },
+  '/documents/{id}': {
+    get: {
+      tags: ['Documents'],
+      summary: 'Get a document (requires documents:view)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+    patch: {
+      tags: ['Documents'],
+      summary: 'Update document metadata / toggle public visibility (requires documents:publish)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Updated' }, '404': errorResponse },
+    },
+    delete: {
+      tags: ['Documents'],
+      summary: 'Delete a document — cleans up its Cloudinary asset (requires documents:publish)',
+      parameters: [idPathParam],
+      responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+    },
+  },
+};
+
 export const openApiDocument: OpenAPIV3.Document = {
   openapi: '3.0.3',
   info: {
     title: 'Sai Yadadri Seva Ashram Platform API',
-    version: '0.1.0',
+    version: '0.2.0',
     description:
-      'Core application framework API (Phase 4): authentication, RBAC (users/roles/permissions), and profile. ' +
-      'Business-domain endpoints (donations, content, volunteers, events, gallery, etc.) are added in the feature-development phase — ' +
-      'see documentation/13-API-Requirements.md for the full planned catalogue.',
+      'Core application framework (Phase 4: auth, RBAC, profile) plus all Phase 5 business modules — ' +
+      'Content Management System, Donations, Volunteers, Events, News, Gallery, and Documents. ' +
+      'Endpoints under `/public` on a given resource require no authentication and back the public website; ' +
+      'all other endpoints require a session cookie and the listed permission code — ' +
+      'see documentation/13-API-Requirements.md and documentation/10-Roles-and-Permissions.md.',
   },
   servers: [{ url: `${env.API_URL}/api/v1`, description: 'Current environment' }],
   tags: [
@@ -111,6 +1006,45 @@ export const openApiDocument: OpenAPIV3.Document = {
     { name: 'Roles', description: 'Configurable RBAC roles' },
     { name: 'Permissions', description: 'Read-only permission catalogue' },
     { name: 'Profile', description: "The authenticated caller's own profile" },
+    {
+      name: 'Site Settings',
+      description: 'Singleton site-wide settings (contact info, SEO defaults)',
+    },
+    { name: 'Page Content', description: 'Home / About / Contact page content blocks' },
+    { name: 'Hero Banners', description: 'Homepage hero carousel banners' },
+    { name: 'Testimonials', description: 'Donor/volunteer testimonials' },
+    { name: 'Social Links', description: 'Footer/header social media links' },
+    { name: 'Navigation', description: 'Header/footer navigation menu items' },
+    { name: 'Activities', description: 'Ashram programs/activities & services' },
+    { name: 'Committee', description: 'Managing committee members' },
+    {
+      name: 'Donation Categories',
+      description: 'Fixed donation categories (e.g. Annadanam, Education)',
+    },
+    { name: 'Appeals', description: 'Fundraising campaigns/appeals with progress tracking' },
+    { name: 'Donations', description: 'Donation records, manual entry, status, analytics, export' },
+    {
+      name: 'Bank Transfers',
+      description: 'Public bank-transfer claim submission + admin verification',
+    },
+    { name: 'Volunteers', description: 'Volunteer registration, applications, approval' },
+    { name: 'Volunteer Assignments', description: 'Task assignments for approved volunteers' },
+    { name: 'Event Categories', description: 'Categories used to classify events' },
+    { name: 'Events', description: 'Events, publishing, capacity' },
+    {
+      name: 'Event Registrations',
+      description: 'Public event registration, check-in, cancellation',
+    },
+    { name: 'News', description: 'News/blog posts (EventNewsPost type=news)' },
+    { name: 'Gallery', description: 'Photo/video albums (Cloudinary-backed)' },
+    {
+      name: 'Documents',
+      description: '12A/80G/PAN/registration/annual/audit documents + download centre',
+    },
+    {
+      name: 'Media',
+      description: 'Generic image-hosting utility for CMS fields that store a plain URL',
+    },
   ],
   components: {
     securitySchemes: { cookieAuth, bearerAuth },
@@ -119,6 +1053,7 @@ export const openApiDocument: OpenAPIV3.Document = {
   },
   security: [{ cookieAuth: [] }],
   paths: {
+    ...phase5Paths,
     '/health': {
       get: {
         tags: ['Health'],

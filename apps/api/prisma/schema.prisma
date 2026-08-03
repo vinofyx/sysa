@@ -85,6 +85,10 @@ model AdminUser {
   sessions                Session[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  verifiedBankTransfers   BankTransferRecord[]     @relation("BankTransferVerifier")
+  assignedVolunteerTasks  VolunteerAssignment[]    @relation("AssignmentAssignedBy")
+  createdEvents           Event[]                  @relation("EventCreatedBy")
+  updatedSiteSettings     SiteSettings[]           @relation("SiteSettingsEditor")
 
   @@index([roleId])
   @@index([email])
@@ -199,8 +203,10 @@ model DonationCategory {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  donations Donation[]
-  appeals   Appeal[]
+  donations           Donation[]
+  appeals             Appeal[]
+  bankTransferRecords BankTransferRecord[]
+  activities          Activity[]
 
   @@map("donation_category")
 }
@@ -227,30 +233,76 @@ enum DonationSource {
   manual
 }
 
-model Donation {
-  id                String         @id @default(uuid())
-  donorId           String         @map("donor_id")
-  categoryId        String         @map("category_id")
-  appealId          String?        @map("appeal_id")
-  amount            Decimal        @db.Decimal(12, 2)
-  currency          String         @default("INR")
-  paymentMethod     PaymentMethod  @map("payment_method")
-  paymentGatewayRef String?        @map("payment_gateway_ref")
-  status            DonationStatus @default(pending)
-  source            DonationSource @default(online)
-  internalNote      String?        @map("internal_note")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  completedAt       DateTime?      @map("completed_at")
+/// Distinguishes a single gift from a recurring pledge — the "One-Time
+/// Donations" vs. "Monthly Donations" split requested for Phase 5. Actual
+/// recurring-charge automation (re-billing a monthly donor) is a Razorpay
+/// Subscriptions integration deferred to the Donation Platform phase
+/// (documentation/03-Functional-Requirements.md FR-DON-08); this field lets
+/// the admin classify/report on a donation's intended frequency starting now.
+enum DonationFrequency {
+  one_time
+  monthly
+}
 
-  donor    Donor            @relation(fields: [donorId], references: [id], onDelete: Restrict)
-  category DonationCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  appeal   Appeal?          @relation(fields: [appealId], references: [id], onDelete: SetNull)
-  receipt  Receipt?
+model Donation {
+  id                String            @id @default(uuid())
+  donorId           String            @map("donor_id")
+  categoryId        String            @map("category_id")
+  appealId          String?           @map("appeal_id")
+  amount            Decimal           @db.Decimal(12, 2)
+  currency          String            @default("INR")
+  paymentMethod     PaymentMethod     @map("payment_method")
+  paymentGatewayRef String?           @map("payment_gateway_ref")
+  status            DonationStatus    @default(pending)
+  source            DonationSource    @default(online)
+  frequency         DonationFrequency @default(one_time)
+  internalNote      String?           @map("internal_note")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  completedAt       DateTime?         @map("completed_at")
+
+  donor             Donor               @relation(fields: [donorId], references: [id], onDelete: Restrict)
+  category          DonationCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  appeal            Appeal?             @relation(fields: [appealId], references: [id], onDelete: SetNull)
+  receipt           Receipt?
+  bankTransferClaim BankTransferRecord?
 
   @@index([status, createdAt])
   @@index([categoryId])
   @@index([donorId])
+  @@index([frequency])
   @@map("donation")
+}
+
+enum BankTransferStatus {
+  pending_verification
+  verified
+  rejected
+}
+
+/// A donor's self-reported "I've made a bank transfer/UPI payment" claim
+/// (design/03-User-Flows.md F-03) — separate from `Donation` because it starts
+/// as an unverified claim; a Finance Admin cross-checks it against the bank
+/// statement and only then creates/links the authoritative `Donation` record.
+model BankTransferRecord {
+  id                String             @id @default(uuid())
+  donorName         String             @map("donor_name")
+  donorEmail        String?            @map("donor_email")
+  donorPhone        String?            @map("donor_phone")
+  categoryId        String             @map("category_id")
+  amount            Decimal            @db.Decimal(12, 2)
+  bankReferenceUtr  String?            @map("bank_reference_utr")
+  submittedAt       DateTime           @default(now()) @map("submitted_at")
+  status            BankTransferStatus @default(pending_verification)
+  verifiedByAdminId String?            @map("verified_by_admin_id")
+  linkedDonationId  String?            @unique @map("linked_donation_id")
+  internalNote      String?            @map("internal_note")
+
+  category        DonationCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  verifiedByAdmin AdminUser?       @relation("BankTransferVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
+  linkedDonation  Donation?        @relation(fields: [linkedDonationId], references: [id], onDelete: SetNull)
+
+  @@index([status, submittedAt])
+  @@map("bank_transfer_record")
 }
 
 model Receipt {
@@ -297,18 +349,20 @@ model Appeal {
 // ------------------------------------------------------------------------------
 
 model CommitteeMember {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
   designation  String
-  displayOrder Int      @map("display_order")
-  photoUrl     String?  @map("photo_url")
-  bioEn        String?  @map("bio_en")
-  bioTe        String?  @map("bio_te")
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  displayOrder Int       @map("display_order")
+  photoUrl     String?   @map("photo_url")
+  bioEn        String?   @map("bio_en")
+  bioTe        String?   @map("bio_te")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   @@index([displayOrder])
+  @@index([deletedAt])
   @@map("committee_member")
 }
 
@@ -327,6 +381,10 @@ enum PostStatus {
   archived
 }
 
+/// Blog/News posts. `type` is retained from Phase 3 for backward compatibility,
+/// but Phase 5 introduces a dedicated, richer `Event` model (below) for actual
+/// events (categories, registrations, attendance) — new code should only create
+/// rows here with `type = news`.
 model EventNewsPost {
   id                String     @id @default(uuid())
   type              PostType
@@ -344,24 +402,32 @@ model EventNewsPost {
   authorAdminId     String?    @map("author_admin_id")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
+  deletedAt         DateTime?  @map("deleted_at")
 
   author AdminUser? @relation("PostAuthor", fields: [authorAdminId], references: [id], onDelete: SetNull)
 
   @@index([type, publishedAt])
+  @@index([deletedAt])
   @@map("event_news_post")
 }
 
 model GalleryAlbum {
-  id           String   @id @default(uuid())
-  nameEn       String   @map("name_en")
-  nameTe       String?  @map("name_te")
+  id           String    @id @default(uuid())
+  nameEn       String    @map("name_en")
+  nameTe       String?   @map("name_te")
   category     String?
-  displayOrder Int      @default(0) @map("display_order")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  /// Optional link so an album can double as an event's photo gallery
+  /// ("Event Gallery" — Phase 5 Event module requirement).
+  eventId      String?   @map("event_id")
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   items GalleryItem[]
+  event Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
+  @@index([deletedAt])
   @@map("gallery_album")
 }
 
@@ -371,18 +437,23 @@ enum MediaType {
 }
 
 model GalleryItem {
-  id           String    @id @default(uuid())
-  albumId      String    @map("album_id")
-  mediaType    MediaType @map("media_type")
-  mediaUrl     String    @map("media_url")
-  altTextEn    String?   @map("alt_text_en")
-  altTextTe    String?   @map("alt_text_te")
-  displayOrder Int       @default(0) @map("display_order")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id                 String    @id @default(uuid())
+  albumId            String    @map("album_id")
+  mediaType          MediaType @map("media_type")
+  mediaUrl           String    @map("media_url")
+  /// Cloudinary asset id — needed to delete/re-transform the asset later
+  /// (not derivable from `mediaUrl` alone once transformations are applied).
+  cloudinaryPublicId String?   @map("cloudinary_public_id")
+  altTextEn          String?   @map("alt_text_en")
+  altTextTe          String?   @map("alt_text_te")
+  displayOrder       Int       @default(0) @map("display_order")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  deletedAt          DateTime? @map("deleted_at")
 
   album GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
   @@index([albumId, displayOrder])
+  @@index([deletedAt])
   @@map("gallery_item")
 }
 
@@ -398,6 +469,7 @@ model Volunteer {
   registeredAt DateTime @default(now()) @map("registered_at")
 
   applications VolunteerApplication[]
+  assignments  VolunteerAssignment[]
 
   @@index([email])
   @@map("volunteer")
@@ -439,29 +511,37 @@ model VolunteerApplication {
 // Documents & Contact — documentation/07-System-Modules.md §3.9, §3.11
 // ------------------------------------------------------------------------------
 
+/// `certificate_12ab` covers the client's "12A" ask — 12AB is the current form
+/// of that certificate under Indian tax law since the 12A regime was
+/// superseded; no separate `certificate_12a` value is added to avoid modeling
+/// a form that no longer exists.
 enum DocumentCategory {
   registration_certificate
   certificate_12ab
   certificate_80g
+  pan_card
   annual_report
   audit_report
   financial_statement
 }
 
 model DocumentRepo {
-  id            String           @id @default(uuid())
-  category      DocumentCategory
-  titleEn       String           @map("title_en")
-  titleTe       String?          @map("title_te")
-  fileUrl       String           @map("file_url")
-  publishedDate DateTime?        @map("published_date") @db.Date
-  publicVisible Boolean          @default(false) @map("public_visible")
-  uploadedBy    String?          @map("uploaded_by")
-  createdAt     DateTime         @default(now()) @map("created_at")
+  id                 String           @id @default(uuid())
+  category           DocumentCategory
+  titleEn            String           @map("title_en")
+  titleTe            String?          @map("title_te")
+  fileUrl            String           @map("file_url")
+  cloudinaryPublicId String?          @map("cloudinary_public_id")
+  publishedDate      DateTime?        @map("published_date") @db.Date
+  publicVisible      Boolean          @default(false) @map("public_visible")
+  uploadedBy         String?          @map("uploaded_by")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  deletedAt          DateTime?        @map("deleted_at")
 
   uploader AdminUser? @relation("DocumentUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
 
   @@index([category, publicVisible])
+  @@index([deletedAt])
   @@map("document_repo")
 }
 
@@ -498,4 +578,280 @@ model PageContent {
   editor AdminUser? @relation("PageContentEditor", fields: [updatedBy], references: [id], onDelete: SetNull)
 
   @@map("page_content")
+}
+
+// ==============================================================================
+// Phase 5 — Business Modules & Content Management System
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+// Homepage / marketing content — documentation/03-Functional-Requirements.md
+// FR-HOME-05 (testimonials), FR-HOME-01 (hero banner)
+// ------------------------------------------------------------------------------
+
+model Testimonial {
+  id           String    @id @default(uuid())
+  authorName   String    @map("author_name")
+  authorRole   String?   @map("author_role")
+  quoteEn      String    @map("quote_en")
+  quoteTe      String?   @map("quote_te")
+  photoUrl     String?   @map("photo_url")
+  displayOrder Int       @default(0) @map("display_order")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@index([active, displayOrder])
+  @@index([deletedAt])
+  @@map("testimonial")
+}
+
+model HeroBanner {
+  id           String    @id @default(uuid())
+  titleEn      String    @map("title_en")
+  titleTe      String?   @map("title_te")
+  subtitleEn   String?   @map("subtitle_en")
+  subtitleTe   String?   @map("subtitle_te")
+  imageUrl     String    @map("image_url")
+  ctaLabelEn   String?   @map("cta_label_en")
+  ctaLabelTe   String?   @map("cta_label_te")
+  ctaUrl       String?   @map("cta_url")
+  displayOrder Int       @default(0) @map("display_order")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@index([active, displayOrder])
+  @@index([deletedAt])
+  @@map("hero_banner")
+}
+
+enum SocialPlatform {
+  facebook
+  instagram
+  twitter
+  youtube
+  linkedin
+  whatsapp
+}
+
+model SocialMediaLink {
+  id           String         @id @default(uuid())
+  platform     SocialPlatform
+  url          String
+  displayOrder Int            @default(0) @map("display_order")
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@unique([platform])
+  @@map("social_media_link")
+}
+
+enum NavLocation {
+  header
+  footer
+}
+
+/// Self-referencing for a single level of nested (dropdown) menus — matches
+/// the primary/secondary nav split in design/01-Information-Architecture.md §4-5.
+model NavigationMenuItem {
+  id           String      @id @default(uuid())
+  labelEn      String      @map("label_en")
+  labelTe      String?     @map("label_te")
+  url          String
+  location     NavLocation
+  parentId     String?     @map("parent_id")
+  displayOrder Int         @default(0) @map("display_order")
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  deletedAt    DateTime?   @map("deleted_at")
+
+  parent   NavigationMenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children NavigationMenuItem[] @relation("MenuHierarchy")
+
+  @@index([location, displayOrder])
+  @@index([deletedAt])
+  @@map("navigation_menu_item")
+}
+
+/// Singleton (always a single row, id = "default") — site-wide configuration:
+/// Website Settings, Contact Information, and SEO Settings defaults, per
+/// design/09-Admin-Modules.md §16 "System Settings" and the Contact Info
+/// Editor in §5. Modeled as one row rather than a generic key-value table
+/// because the field set is small, fixed, and known in advance.
+model SiteSettings {
+  id                     String   @id @default("default")
+  siteNameEn             String   @default("Sai Yadadri Seva Ashram") @map("site_name_en")
+  siteNameTe             String?  @map("site_name_te")
+  taglineEn              String?  @map("tagline_en")
+  taglineTe              String?  @map("tagline_te")
+  logoUrl                String?  @map("logo_url")
+  faviconUrl             String?  @map("favicon_url")
+  contactAddressEn       String?  @map("contact_address_en")
+  contactAddressTe       String?  @map("contact_address_te")
+  contactPhone           String?  @map("contact_phone")
+  contactEmail           String?  @map("contact_email")
+  contactHoursEn         String?  @map("contact_hours_en")
+  whatsappNumber         String?  @map("whatsapp_number")
+  mapLatitude            Decimal? @map("map_latitude") @db.Decimal(9, 6)
+  mapLongitude           Decimal? @map("map_longitude") @db.Decimal(9, 6)
+  defaultMetaTitle       String?  @map("default_meta_title")
+  defaultMetaDescription String?  @map("default_meta_description")
+  defaultOgImageUrl      String?  @map("default_og_image_url")
+  footerTextEn           String?  @map("footer_text_en")
+  footerTextTe           String?  @map("footer_text_te")
+  copyrightText          String?  @map("copyright_text")
+  maintenanceMode        Boolean  @default(false) @map("maintenance_mode")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  updatedBy              String?  @map("updated_by")
+
+  editor AdminUser? @relation("SiteSettingsEditor", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("site_settings")
+}
+
+/// Covers both "Activities" and "Services" from the Phase 5 CMS list — no
+/// separate "Services" concept exists anywhere in the Phase 1/2 source-of-truth
+/// documents, so the two are modeled as one entity rather than inventing a
+/// second, functionally-identical table (see DEVELOPMENT_PROGRESS.md).
+model Activity {
+  id               String    @id @default(uuid())
+  slug             String    @unique
+  titleEn          String    @map("title_en")
+  titleTe          String?   @map("title_te")
+  descriptionEn    String?   @map("description_en")
+  descriptionTe    String?   @map("description_te")
+  iconOrImageUrl   String?   @map("icon_or_image_url")
+  linkedCategoryId String?   @map("linked_category_id")
+  displayOrder     Int       @default(0) @map("display_order")
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  linkedCategory DonationCategory? @relation(fields: [linkedCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([active, displayOrder])
+  @@index([deletedAt])
+  @@map("activity")
+}
+
+// ------------------------------------------------------------------------------
+// Volunteer assignments — documentation/07-System-Modules.md volunteer domain,
+// extended in Phase 5 for the Volunteer Coordinator's day-to-day task tracking.
+// ------------------------------------------------------------------------------
+
+enum AssignmentStatus {
+  assigned
+  in_progress
+  completed
+  cancelled
+}
+
+model VolunteerAssignment {
+  id                String           @id @default(uuid())
+  volunteerId       String           @map("volunteer_id")
+  titleEn           String           @map("title_en")
+  descriptionEn     String?          @map("description_en")
+  assignedDate      DateTime         @map("assigned_date") @db.Date
+  status            AssignmentStatus @default(assigned)
+  assignedByAdminId String?          @map("assigned_by_admin_id")
+  notes             String?
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  volunteer       Volunteer  @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  assignedByAdmin AdminUser? @relation("AssignmentAssignedBy", fields: [assignedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([volunteerId, status])
+  @@map("volunteer_assignment")
+}
+
+// ------------------------------------------------------------------------------
+// Events — dedicated module (categories, registrations, attendance), separate
+// from the simpler EventNewsPost "news" model — see that model's doc-comment.
+// ------------------------------------------------------------------------------
+
+model EventCategory {
+  id        String    @id @default(uuid())
+  nameEn    String    @map("name_en")
+  nameTe    String?   @map("name_te")
+  slug      String    @unique
+  active    Boolean   @default(true)
+  deletedAt DateTime? @map("deleted_at")
+
+  events Event[]
+
+  @@index([deletedAt])
+  @@map("event_category")
+}
+
+enum EventStatus {
+  draft
+  published
+  cancelled
+  completed
+}
+
+model Event {
+  id                   String      @id @default(uuid())
+  categoryId           String?     @map("category_id")
+  titleEn              String      @map("title_en")
+  titleTe              String?     @map("title_te")
+  descriptionEn        String?     @map("description_en")
+  descriptionTe        String?     @map("description_te")
+  slug                 String      @unique
+  startDate            DateTime    @map("start_date")
+  endDate              DateTime?   @map("end_date")
+  location             String?
+  capacity             Int?
+  registrationDeadline DateTime?   @map("registration_deadline")
+  featuredImageUrl     String?     @map("featured_image_url")
+  status               EventStatus @default(draft)
+  metaTitleEn          String?     @map("meta_title_en")
+  metaDescriptionEn    String?     @map("meta_description_en")
+  createdByAdminId     String?     @map("created_by_admin_id")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+  deletedAt            DateTime?   @map("deleted_at")
+
+  category       EventCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdByAdmin AdminUser?          @relation("EventCreatedBy", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  registrations  EventRegistration[]
+  galleryAlbums  GalleryAlbum[]
+
+  @@index([status, startDate])
+  @@index([categoryId])
+  @@index([deletedAt])
+  @@map("event")
+}
+
+enum EventRegistrationStatus {
+  registered
+  cancelled
+  waitlisted
+}
+
+model EventRegistration {
+  id           String                  @id @default(uuid())
+  eventId      String                  @map("event_id")
+  name         String
+  email        String
+  phone        String?
+  registeredAt DateTime                @default(now()) @map("registered_at")
+  status       EventRegistrationStatus @default(registered)
+  /// "Attendance" tracking — Phase 5 Event module requirement, folded into the
+  /// registration record rather than a separate table since a check-in is
+  /// always 1:1 with exactly one registration.
+  checkedIn    Boolean                 @default(false) @map("checked_in")
+  checkedInAt  DateTime?               @map("checked_in_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
+  @@map("event_registration")
 }

@@ -1,0 +1,25 @@
+import { z } from 'zod';
+
+export const updateSiteSettingsSchema = z.object({
+  siteNameEn: z.string().min(1).max(200).optional(),
+  siteNameTe: z.string().max(200).optional(),
+  taglineEn: z.string().max(300).optional(),
+  taglineTe: z.string().max(300).optional(),
+  logoUrl: z.string().url().optional(),
+  faviconUrl: z.string().url().optional(),
+  contactAddressEn: z.string().max(500).optional(),
+  contactAddressTe: z.string().max(500).optional(),
+  contactPhone: z.string().max(30).optional(),
+  contactEmail: z.string().email().optional(),
+  contactHoursEn: z.string().max(200).optional(),
+  whatsappNumber: z.string().max(30).optional(),
+  mapLatitude: z.coerce.number().min(-90).max(90).optional(),
+  mapLongitude: z.coerce.number().min(-180).max(180).optional(),
+  defaultMetaTitle: z.string().max(200).optional(),
+  defaultMetaDescription: z.string().max(500).optional(),
+  defaultOgImageUrl: z.string().url().optional(),
+  footerTextEn: z.string().max(1000).optional(),
+  footerTextTe: z.string().max(1000).optional(),
+  copyrightText: z.string().max(300).optional(),
+  maintenanceMode: z.boolean().optional(),
+});

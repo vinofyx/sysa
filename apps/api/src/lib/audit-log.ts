@@ -2,6 +2,7 @@ import { prisma } from '@lib/prisma';
 import { logger } from '@lib/logger';
 
 export type AuditAction =
+  // Auth (Phase 4)
   | 'LOGIN_SUCCESS'
   | 'LOGIN_FAILED'
   | 'ACCOUNT_LOCKED'
@@ -20,7 +21,26 @@ export type AuditAction =
   | 'ROLE_CREATED'
   | 'ROLE_UPDATED'
   | 'ROLE_DELETED'
-  | 'PROFILE_UPDATED';
+  | 'PROFILE_UPDATED'
+  // Generic CRUD verbs (Phase 5) — paired with a specific `entityType` string
+  // (e.g. 'testimonial', 'donation', 'event') to disambiguate which module a
+  // given entry belongs to, rather than enumerating one action name per
+  // module here (kept centrally maintainable as new modules are added).
+  | 'CREATED'
+  | 'UPDATED'
+  | 'DELETED'
+  | 'RESTORED'
+  | 'STATUS_CHANGED'
+  | 'PUBLISHED'
+  | 'UNPUBLISHED'
+  | 'VERIFIED'
+  | 'REJECTED'
+  | 'REORDERED'
+  | 'BULK_DELETED'
+  | 'BULK_UPDATED'
+  | 'EXPORTED'
+  | 'UPLOADED'
+  | 'SETTINGS_UPDATED';
 
 interface WriteAuditLogInput {
   adminUserId: string;

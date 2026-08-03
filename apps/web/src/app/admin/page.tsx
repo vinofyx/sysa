@@ -1,6 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Line,
+  LineChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import {
   BarChart3,
   CalendarDays,
@@ -14,15 +24,74 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/admin/stat-card';
 import { useMe } from '@/hooks/use-auth';
 import { useUsersCount } from '@/hooks/use-users';
+import { apiClient } from '@/lib/api-client';
 import { env } from '@/lib/env';
+import type { PaginatedResult } from '@/types/auth';
+
+interface DonationAnalytics {
+  totalAmount: number;
+  byMonth: { month: string; total: number }[];
+}
+
+function currency(value: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function firstOfMonthIso(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+}
 
 export default function AdminDashboardPage() {
   const { data: user } = useMe();
   const canViewUsers = user?.permissions.includes('users:view') ?? false;
+  const canViewDonations = user?.permissions.includes('donations:view') ?? false;
+  const canViewVolunteers = user?.permissions.includes('volunteers:view') ?? false;
+  const canViewEvents = user?.permissions.includes('events:view') ?? false;
+
   const usersCount = useUsersCount(canViewUsers);
+
+  const analytics = useQuery<DonationAnalytics>({
+    queryKey: ['donation-analytics', 'dashboard'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ analytics: DonationAnalytics }>(
+        '/donations/analytics',
+        {
+          params: { dateFrom: firstOfMonthIso() },
+        },
+      );
+      return data.analytics;
+    },
+    enabled: canViewDonations,
+  });
+
+  const volunteersCount = useQuery<PaginatedResult<unknown>>({
+    queryKey: ['volunteers', 'dashboard-count'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/volunteers', { params: { page: 1, pageSize: 1 } });
+      return data;
+    },
+    enabled: canViewVolunteers,
+  });
+
+  const eventsCount = useQuery<PaginatedResult<unknown>>({
+    queryKey: ['events', 'dashboard-count'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/events', {
+        params: { page: 1, pageSize: 1, status: 'published' },
+      });
+      return data;
+    },
+    enabled: canViewEvents,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,9 +104,6 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* KPI tiles — design/09-Admin-Modules.md §4. Only "Admin Users" reflects real
-          data in this phase; the rest are explicit placeholders until their
-          respective business modules ship (Phase 5/6+) — no fabricated numbers. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Admin Users"
@@ -46,27 +112,56 @@ export default function AdminDashboardPage() {
           isLoading={canViewUsers && usersCount.isLoading}
           comingSoon={!canViewUsers}
         />
-        <StatCard label="Donations (This Month)" icon={Wallet} comingSoon />
-        <StatCard label="Active Volunteers" icon={Users} comingSoon />
-        <StatCard label="Upcoming Events" icon={CalendarDays} comingSoon />
+        <StatCard
+          label="Donations (This Month)"
+          icon={Wallet}
+          value={analytics.data ? currency(analytics.data.totalAmount) : undefined}
+          isLoading={canViewDonations && analytics.isLoading}
+          comingSoon={!canViewDonations}
+        />
+        <StatCard
+          label="Registered Volunteers"
+          icon={Users}
+          value={volunteersCount.data?.pagination.total}
+          isLoading={canViewVolunteers && volunteersCount.isLoading}
+          comingSoon={!canViewVolunteers}
+        />
+        <StatCard
+          label="Published Events"
+          icon={CalendarDays}
+          value={eventsCount.data?.pagination.total}
+          isLoading={canViewEvents && eventsCount.isLoading}
+          comingSoon={!canViewEvents}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Chart placeholder — explicitly requested as a placeholder for this phase. */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Donation Trends</CardTitle>
-            <CardDescription>
-              Live charts will appear here once the donation module (Phase 5) is implemented.
-            </CardDescription>
+            <CardDescription>Completed donations by month.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border-muted-foreground/25 text-muted-foreground flex h-56 items-center justify-center rounded-md border border-dashed">
-              <div className="flex flex-col items-center gap-2 text-sm">
-                <BarChart3 className="size-8" />
-                Chart placeholder
+            {!canViewDonations ? (
+              <div className="border-muted-foreground/25 text-muted-foreground flex h-56 items-center justify-center rounded-md border border-dashed">
+                <div className="flex flex-col items-center gap-2 text-sm">
+                  <BarChart3 className="size-8" />
+                  You don&apos;t have permission to view donation data.
+                </div>
               </div>
-            </div>
+            ) : analytics.isLoading ? (
+              <Skeleton className="h-56 w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height={224}>
+                <LineChart data={analytics.data?.byMonth ?? []}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₹${v / 1000}k`} />
+                  <Tooltip formatter={(value) => currency(Number(value))} />
+                  <Line type="monotone" dataKey="total" stroke="var(--primary)" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -80,7 +175,8 @@ export default function AdminDashboardPage() {
               <Bell className="size-8" />
               <p>You&apos;re all caught up.</p>
               <p className="text-xs">
-                Notifications will appear here once content and donation modules are live.
+                A dedicated notification/activity feed isn&apos;t built yet — check the Audit Log or
+                each module&apos;s list page for recent changes.
               </p>
             </div>
           </CardContent>
