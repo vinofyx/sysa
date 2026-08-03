@@ -1,0 +1,20 @@
+# Phase 1/2 documentation deliverables are content, not code — never auto-reformatted.
+documentation/
+design/
+docs/
+
+# Build outputs / dependencies
+node_modules/
+.next/
+dist/
+build/
+out/
+coverage/
+
+# Generated / lockfiles
+package-lock.json
+next-env.d.ts
+*.tsbuildinfo
+
+# Prisma migrations (SQL, not JS/TS/CSS formatted by prettier)
+apps/api/prisma/migrations/

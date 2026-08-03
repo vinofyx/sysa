@@ -1,0 +1,98 @@
+﻿Business Requirements Document (BRD)Sai Yadadri Seva Ashram – Website & Donation Platform
+Prepared for: Sai Yadadri Seva AshramPrepared by: Vinofyx
+1. Project Objective
+Develop a modern, responsive website with an integrated donation/e-commerce system, admin dashboard, volunteer management, reports, bilingual support (English/Telugu), SEO, and secure payment gateway.
+2. Website Modules
+Home (Hero banner, welcome message, quick donate, events, testimonials)
+About Us (History, Vision, Mission, Founder, Committee, Treasurer Message)
+Activities (Vanaprastha Ashram, Wellness Centre, Annaprasadam, Goshala, Daily Sevas, Medical Camps)
+Donations (UPI, Razorpay, Bank Transfer)
+Donation Categories (Annaprasadam, Gosala, Old Age Home, Building Fund, General Donation)
+Donor Corner (Major donors, Monthly donors, CSR partners)
+Events & News
+Gallery (Photo & Video)
+Volunteer Registration & Internship
+Reports & Transparency
+Appeals & Current Needs
+Contact Us & Social Media
+Admin Dashboard
+3. Functional Requirements
+User registration/login (optional for donors)
+Online donations with payment receipt
+Donation history and acknowledgement
+Event management
+Volunteer application management
+Gallery management
+News/blog management
+Document management (80G, 12AB, audit reports etc.)
+Multi-language content
+Search engine optimization
+WhatsApp integration
+Email notifications
+Role-based admin access
+Analytics dashboard
+4. Information Required from the Ashram
+Organization Name
+Logo (SVG/PNG)
+Registration Number
+PAN
+12AB Certificate
+80G Certificate
+Society Registration Certificate
+Vision & Mission
+History
+Founder Details
+Managing Committee Details
+Treasurer Message
+About each activity
+Donation categories and descriptions
+Bank Details
+UPI ID
+Razorpay Account
+Photos & Videos
+Testimonials
+Latest News & Events
+Gallery Images
+Annual Reports
+Audit Reports
+Financial Statements
+CSR Partner Details
+Contact Numbers
+Official Email
+WhatsApp Number
+Google Map Location
+Office Timings
+Social Media Links
+Domain Name
+Hosting Access
+5. Non-Functional Requirements
+Mobile responsive
+Fast loading
+SSL security
+SEO optimized
+Backup & Recovery
+Scalable architecture
+Accessibility
+Cross-browser compatibility
+6. Admin Features
+Manage pages
+Manage donations
+Manage donors
+Generate reports
+Manage volunteers
+Upload gallery
+Manage events/news
+Export data
+7. Deliverables
+UI/UX Design
+Frontend
+Backend APIs
+Database
+Admin Panel
+Payment Integration
+Testing
+Deployment
+Training
+Documentation
+8. Technology Recommendation
+Frontend: Next.js/ReactBackend: Node.js (Express)Database: PostgreSQL or MongoDBPayments: RazorpayCloud: Hostinger VPS/AWSStorage: Cloudinary/AWS S3

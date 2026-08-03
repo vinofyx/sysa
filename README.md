@@ -1,0 +1,163 @@
+# Sai Yadadri Seva Ashram Platform
+
+Production-ready website and donation platform for **Sai Yadadri Seva Ashram** (Regd. No. 423/2019), a registered social service society in Hyderabad, Telangana, operating the Vanaprasthasramam Old Age Home and associated Annaprasadam, Goshala, Education, and Medical Support programs.
+
+This repository is currently at the **project foundation** stage (Phase 3). No business features, public pages, or admin functionality are implemented yet — see [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md) for what's done and what's next.
+
+## Documentation
+
+This codebase is built directly from three prior planning phases. Read them in this order before touching code:
+
+1. [`documentation/`](documentation/MASTER_PROJECT_PLAN.md) — Business Requirements, SRS, Functional/Non-Functional Requirements, Database Requirements, Roles & Permissions, Security Requirements, etc. (16 documents)
+2. [`design/`](design/SYSTEM_DESIGN.md) — Information Architecture, Sitemap, User/Admin Flows, Wireframes, Design System, Database ERD, API Architecture, Folder Structure, Deployment Architecture (15 documents)
+3. [`docs/`](docs/PROJECT_CONTEXT.md) — Extracted source-of-truth data from the client's original documents (brochure, committee list, bank details, etc.)
+
+## Technology Stack
+
+| Layer          | Technology                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend       | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui, React Hook Form, Zod, TanStack Query, Axios, Framer Motion |
+| Backend        | Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, JWT, bcrypt, Multer, Cloudinary SDK, Nodemailer, Winston                        |
+| Infrastructure | Docker, Docker Compose, Nginx, PM2, GitHub Actions, ESLint, Prettier, Husky                                                           |
+
+Full justification for every choice: [`documentation/11-Technology-Stack.md`](documentation/11-Technology-Stack.md).
+
+## Repository Structure
+
+```
+sysa/
+├── apps/
+│   ├── web/              # Next.js 15 frontend (public site + admin dashboard shell)
+│   └── api/               # Express + TypeScript backend API
+├── infrastructure/
+│   ├── nginx/             # Reverse proxy configuration
+│   └── pm2/                # PM2 process manager config (non-Docker VPS deployment path)
+├── .github/workflows/     # CI pipeline
+├── docs/                  # Source client documents + extracted project context
+├── documentation/         # Phase 1 — BRD, SRS, requirements, etc.
+├── design/                # Phase 2 — IA, wireframes, design system, architecture
+├── docker-compose.yml     # Local/single-host orchestration (Postgres + API + Web + Nginx)
+└── package.json           # npm workspaces root
+```
+
+Full rationale: [`design/14-Folder-Structure.md`](design/14-Folder-Structure.md).
+
+## Prerequisites
+
+- Node.js ≥ 20 (see `.nvmrc`)
+- npm ≥ 10
+- Docker + Docker Compose (for local Postgres, or full containerized dev)
+- Git
+
+## Getting Started (Local Development)
+
+### 1. Clone and install
+
+```bash
+git clone <repository-url> sysa
+cd sysa
+npm install
+```
+
+This installs dependencies for the root workspace and both `apps/web` and `apps/api` in one pass (npm workspaces), and sets up Git hooks (Husky) automatically via the `prepare` script.
+
+### 2. Configure environment variables
+
+Copy each example file and fill in real values:
+
+```bash
+cp .env.example .env                       # Docker Compose orchestration variables
+cp apps/api/.env.example apps/api/.env      # Backend runtime variables
+cp apps/web/.env.example apps/web/.env.local # Frontend runtime variables
+```
+
+At minimum, generate strong JWT secrets:
+
+```bash
+openssl rand -base64 48   # run twice — once for JWT_ACCESS_SECRET, once for JWT_REFRESH_SECRET
+```
+
+Cloudinary, Razorpay, and SMTP credentials are optional for local foundation work — the app boots and logs a clear warning if they're unset (see `apps/api/src/integrations/`). They become required once the corresponding features are implemented.
+
+### 3. Start PostgreSQL
+
+**Option A — Docker (recommended):**
+
+```bash
+docker compose up -d postgres
+```
+
+**Option B — local Postgres install:** create a database matching your `apps/api/.env` `DATABASE_URL`.
+
+### 4. Set up the database schema
+
+```bash
+npm run prisma:generate --workspace=apps/api
+npm run prisma:migrate --workspace=apps/api    # creates the initial migration — see note below
+npm run prisma:seed --workspace=apps/api        # seeds RBAC roles/permissions + donation categories
+```
+
+> **Note:** No migration has been committed yet in this foundation phase (no Postgres instance was available in the environment that generated this scaffold). Running `prisma:migrate` for the first time against your local Postgres will create `apps/api/prisma/migrations/<timestamp>_init/` — commit that folder once generated.
+
+### 5. Run the dev servers
+
+```bash
+npm run dev
+```
+
+This runs both the API (`http://localhost:4000`) and the web app (`http://localhost:3000`) concurrently. Or run them individually:
+
+```bash
+npm run dev:api
+npm run dev:web
+```
+
+### 6. Verify
+
+- Frontend: [http://localhost:3000](http://localhost:3000) — should show the foundation placeholder page.
+- API health check: [http://localhost:4000/api/v1/health](http://localhost:4000/api/v1/health) — should return `{"status":"ok", ...}` once Postgres is reachable.
+
+## Running with Docker Compose (Full Stack)
+
+```bash
+cp .env.example .env   # fill in real values first
+docker compose up -d --build
+```
+
+This starts Postgres, the API, the Next.js frontend, and an Nginx reverse proxy (`http://localhost` by default). See [`design/15-Deployment-Architecture.md`](design/15-Deployment-Architecture.md) for the full topology.
+
+## Available Scripts (root)
+
+| Script                                             | Description                              |
+| -------------------------------------------------- | ---------------------------------------- |
+| `npm run dev`                                      | Run both apps concurrently in watch mode |
+| `npm run build`                                    | Build both apps for production           |
+| `npm run lint` / `npm run lint:fix`                | Lint both apps                           |
+| `npm run typecheck`                                | Type-check both apps (no emit)           |
+| `npm run format` / `npm run format:check`          | Prettier across the whole repo           |
+| `npm run prisma:generate` / `:migrate` / `:studio` | Prisma commands, scoped to `apps/api`    |
+
+Per-app scripts are documented in `apps/web/package.json` and `apps/api/package.json`.
+
+## Code Quality Gates
+
+- **ESLint** (flat config, per app) + **Prettier** — run automatically on staged files via **Husky** + **lint-staged** on every commit.
+- **Commit messages** are checked for a minimum length by a Husky `commit-msg` hook.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) runs lint, typecheck, format-check, a full build, an API health-check smoke test, and a dependency audit on every push/PR to `main`/`develop`.
+
+## Known Security Advisories (Tracked, Not Blocking)
+
+`npm audit` currently reports advisories in two places that are **not independently fixable at the application level** without breaking the toolchain:
+
+1. **`postcss`/`sharp` bundled inside `next`'s own dependency tree** — internal to Next.js 15.5.x's build pipeline; `npm audit fix --force` would downgrade Next.js to an ancient v9 release, which is not a real fix. Tracked for resolution via a future Next.js patch/minor upgrade.
+2. **`tar` (via `bcrypt` → `node-pre-gyp`)** — used only at `npm install` time to fetch bcrypt's prebuilt native binary from a trusted registry/GitHub release, not at runtime against user input. A forced major-version override was tested and rejected because it produces an invalid dependency tree (`npm ls` flags it). Low real-world exposure given the install-time-only, trusted-source usage.
+
+Both are documented here rather than silently ignored — re-audit (`npm audit`) after any `next`, `sharp`, or `bcrypt` version bump.
+
+## Contributing / Next Steps
+
+See [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md) for exactly what's implemented, what's deferred, and the recommended next development phase.
+
+---
+
+**Project source of truth:** [`documentation/MASTER_PROJECT_PLAN.md`](documentation/MASTER_PROJECT_PLAN.md) · [`design/SYSTEM_DESIGN.md`](design/SYSTEM_DESIGN.md)

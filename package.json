@@ -1,0 +1,39 @@
+{
+  "name": "sai-yadadri-seva-ashram-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sai Yadadri Seva Ashram — Website & Donation Platform (monorepo root)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c blue,green \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "start:web": "npm run start --workspace=apps/web",
+    "start:api": "npm run start --workspace=apps/api",
+    "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/api",
+    "lint:fix": "npm run lint:fix --workspace=apps/web && npm run lint:fix --workspace=apps/api",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore --ignore-path .prettierignore",
+    "typecheck": "npm run typecheck --workspace=apps/web && npm run typecheck --workspace=apps/api",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
+    "prisma:studio": "npm run prisma:studio --workspace=apps/api",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.6.9"
+  }
+}
