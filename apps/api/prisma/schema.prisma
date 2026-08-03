@@ -5,8 +5,10 @@
 //   - documentation/08-Database-Requirements.md (Phase 1 — entities & business rules)
 //   - design/12-Database-ERD.md (Phase 2 — full cardinalities & bilingual pattern)
 //
-// This is foundational schema configuration only (Phase 3). No seed/business logic
-// beyond the donation_category reference data (see prisma/seed.ts) is implemented here.
+// Phase 4 additions: production authentication (sessions/refresh-token rotation,
+// password reset, email verification, account lockout) and an expanded, fully
+// configurable RBAC role set — see DEVELOPMENT_PROGRESS.md for the reconciliation
+// note against the simpler 4-role matrix in documentation/10-Roles-and-Permissions.md.
 // ==============================================================================
 
 generator client {
@@ -58,36 +60,98 @@ model RolePermission {
 }
 
 model AdminUser {
-  id           String    @id @default(uuid())
-  name         String
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  roleId       String    @map("role_id")
-  active       Boolean   @default(true)
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid())
+  name                String
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  roleId              String    @map("role_id")
+  active              Boolean   @default(true)
+  emailVerified       Boolean   @default(false) @map("email_verified")
+  emailVerifiedAt     DateTime? @map("email_verified_at")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  passwordChangedAt   DateTime? @map("password_changed_at")
+  lastLoginAt         DateTime? @map("last_login_at")
+  lastLoginIp         String?   @map("last_login_ip")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  role                 Role                   @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  auditLogs            AuditLog[]
-  authoredPosts        EventNewsPost[]        @relation("PostAuthor")
-  uploadedDocuments     DocumentRepo[]         @relation("DocumentUploader")
-  reviewedApplications VolunteerApplication[] @relation("ApplicationReviewer")
-  updatedPageContents  PageContent[]          @relation("PageContentEditor")
+  role                    Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  auditLogs               AuditLog[]
+  authoredPosts           EventNewsPost[]          @relation("PostAuthor")
+  uploadedDocuments       DocumentRepo[]           @relation("DocumentUploader")
+  reviewedApplications    VolunteerApplication[]   @relation("ApplicationReviewer")
+  updatedPageContents     PageContent[]            @relation("PageContentEditor")
+  sessions                Session[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([roleId])
+  @@index([email])
   @@map("admin_user")
 }
 
+/// One row per active login (device/browser). The JWT access token's `sid` claim
+/// references this row's id, so authorization can be revoked immediately
+/// (logout / logout-all-devices) rather than waiting for short-lived access-token
+/// expiry — see design/13-API-Architecture.md §4.1 and apps/api/src/services/auth.service.ts.
+model Session {
+  id               String    @id @default(uuid())
+  adminUserId      String    @map("admin_user_id")
+  refreshTokenHash String    @map("refresh_token_hash")
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  lastUsedAt       DateTime  @default(now()) @map("last_used_at")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId, revokedAt])
+  @@index([expiresAt])
+  @@map("session")
+}
+
+model PasswordResetToken {
+  id          String    @id @default(uuid())
+  adminUserId String    @map("admin_user_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+  @@map("password_reset_token")
+}
+
+model EmailVerificationToken {
+  id          String    @id @default(uuid())
+  adminUserId String    @map("admin_user_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+  @@map("email_verification_token")
+}
+
 model AuditLog {
-  id           String   @id @default(uuid())
-  adminUserId  String   @map("admin_user_id")
-  action       String
-  entityType   String   @map("entity_type")
-  entityId     String?  @map("entity_id")
-  beforeState  Json?    @map("before_state")
-  afterState   Json?    @map("after_state")
-  timestamp    DateTime @default(now())
+  id          String   @id @default(uuid())
+  adminUserId String   @map("admin_user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  beforeState Json?    @map("before_state")
+  afterState  Json?    @map("after_state")
+  timestamp   DateTime @default(now())
 
   adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Restrict)
 
@@ -108,15 +172,15 @@ enum DonorTier {
 }
 
 model Donor {
-  id                 String   @id @default(uuid())
-  name               String
-  email              String   @unique
-  phone              String
-  panNumberMasked    String?  @map("pan_number_masked")
-  recognitionOptIn   Boolean  @default(false) @map("recognition_opt_in")
-  donorTier          DonorTier @default(one_time) @map("donor_tier")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(uuid())
+  name             String
+  email            String    @unique
+  phone            String
+  panNumberMasked  String?   @map("pan_number_masked")
+  recognitionOptIn Boolean   @default(false) @map("recognition_opt_in")
+  donorTier        DonorTier @default(one_time) @map("donor_tier")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   donations Donation[]
 
@@ -124,16 +188,16 @@ model Donor {
 }
 
 model DonationCategory {
-  id              String   @id @default(uuid())
-  code            String   @unique
-  nameEn          String   @map("name_en")
-  nameTe          String?  @map("name_te")
-  descriptionEn   String?  @map("description_en")
-  descriptionTe   String?  @map("description_te")
-  hasPresetTiers  Boolean  @default(false) @map("has_preset_tiers")
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  code           String   @unique
+  nameEn         String   @map("name_en")
+  nameTe         String?  @map("name_te")
+  descriptionEn  String?  @map("description_en")
+  descriptionTe  String?  @map("description_te")
+  hasPresetTiers Boolean  @default(false) @map("has_preset_tiers")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   donations Donation[]
   appeals   Appeal[]
@@ -164,19 +228,19 @@ enum DonationSource {
 }
 
 model Donation {
-  id                 String         @id @default(uuid())
-  donorId            String         @map("donor_id")
-  categoryId         String         @map("category_id")
-  appealId           String?        @map("appeal_id")
-  amount             Decimal        @db.Decimal(12, 2)
-  currency           String         @default("INR")
-  paymentMethod      PaymentMethod  @map("payment_method")
-  paymentGatewayRef  String?        @map("payment_gateway_ref")
-  status             DonationStatus @default(pending)
-  source             DonationSource @default(online)
-  internalNote       String?        @map("internal_note")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  completedAt        DateTime?      @map("completed_at")
+  id                String         @id @default(uuid())
+  donorId           String         @map("donor_id")
+  categoryId        String         @map("category_id")
+  appealId          String?        @map("appeal_id")
+  amount            Decimal        @db.Decimal(12, 2)
+  currency          String         @default("INR")
+  paymentMethod     PaymentMethod  @map("payment_method")
+  paymentGatewayRef String?        @map("payment_gateway_ref")
+  status            DonationStatus @default(pending)
+  source            DonationSource @default(online)
+  internalNote      String?        @map("internal_note")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  completedAt       DateTime?      @map("completed_at")
 
   donor    Donor            @relation(fields: [donorId], references: [id], onDelete: Restrict)
   category DonationCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -190,11 +254,11 @@ model Donation {
 }
 
 model Receipt {
-  id             String   @id @default(uuid())
-  donationId     String   @unique @map("donation_id")
-  receiptNumber  String   @unique @map("receipt_number")
-  pdfUrl         String?  @map("pdf_url")
-  issuedAt       DateTime @default(now()) @map("issued_at")
+  id            String   @id @default(uuid())
+  donationId    String   @unique @map("donation_id")
+  receiptNumber String   @unique @map("receipt_number")
+  pdfUrl        String?  @map("pdf_url")
+  issuedAt      DateTime @default(now()) @map("issued_at")
 
   donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
 
@@ -208,19 +272,19 @@ enum AppealStatus {
 }
 
 model Appeal {
-  id                 String       @id @default(uuid())
-  categoryId         String       @map("category_id")
-  titleEn            String       @map("title_en")
-  titleTe            String?      @map("title_te")
-  descriptionEn      String?      @map("description_en")
-  descriptionTe      String?      @map("description_te")
-  targetAmount       Decimal      @db.Decimal(12, 2) @map("target_amount")
-  raisedAmountCache  Decimal      @default(0) @db.Decimal(12, 2) @map("raised_amount_cache")
-  startDate          DateTime?    @map("start_date") @db.Date
-  endDate            DateTime?    @map("end_date") @db.Date
-  status             AppealStatus @default(active)
-  createdAt          DateTime     @default(now()) @map("created_at")
-  updatedAt          DateTime     @updatedAt @map("updated_at")
+  id                String       @id @default(uuid())
+  categoryId        String       @map("category_id")
+  titleEn           String       @map("title_en")
+  titleTe           String?      @map("title_te")
+  descriptionEn     String?      @map("description_en")
+  descriptionTe     String?      @map("description_te")
+  targetAmount      Decimal      @map("target_amount") @db.Decimal(12, 2)
+  raisedAmountCache Decimal      @default(0) @map("raised_amount_cache") @db.Decimal(12, 2)
+  startDate         DateTime?    @map("start_date") @db.Date
+  endDate           DateTime?    @map("end_date") @db.Date
+  status            AppealStatus @default(active)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   category  DonationCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   donations Donation[]
@@ -233,16 +297,16 @@ model Appeal {
 // ------------------------------------------------------------------------------
 
 model CommitteeMember {
-  id            String   @id @default(uuid())
-  name          String
-  designation   String
-  displayOrder  Int      @map("display_order")
-  photoUrl      String?  @map("photo_url")
-  bioEn         String?  @map("bio_en")
-  bioTe         String?  @map("bio_te")
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  name         String
+  designation  String
+  displayOrder Int      @map("display_order")
+  photoUrl     String?  @map("photo_url")
+  bioEn        String?  @map("bio_en")
+  bioTe        String?  @map("bio_te")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@index([displayOrder])
   @@map("committee_member")
@@ -264,22 +328,22 @@ enum PostStatus {
 }
 
 model EventNewsPost {
-  id                 String     @id @default(uuid())
-  type               PostType
-  titleEn            String     @map("title_en")
-  titleTe            String?    @map("title_te")
-  bodyEn             String?    @map("body_en")
-  bodyTe             String?    @map("body_te")
-  slug               String     @unique
-  eventDate          DateTime?  @map("event_date") @db.Date
-  publishedAt        DateTime?  @map("published_at")
-  status             PostStatus @default(draft)
-  featuredImageUrl   String?    @map("featured_image_url")
-  metaTitleEn        String?    @map("meta_title_en")
-  metaDescriptionEn  String?    @map("meta_description_en")
-  authorAdminId      String?    @map("author_admin_id")
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
+  id                String     @id @default(uuid())
+  type              PostType
+  titleEn           String     @map("title_en")
+  titleTe           String?    @map("title_te")
+  bodyEn            String?    @map("body_en")
+  bodyTe            String?    @map("body_te")
+  slug              String     @unique
+  eventDate         DateTime?  @map("event_date") @db.Date
+  publishedAt       DateTime?  @map("published_at")
+  status            PostStatus @default(draft)
+  featuredImageUrl  String?    @map("featured_image_url")
+  metaTitleEn       String?    @map("meta_title_en")
+  metaDescriptionEn String?    @map("meta_description_en")
+  authorAdminId     String?    @map("author_admin_id")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
   author AdminUser? @relation("PostAuthor", fields: [authorAdminId], references: [id], onDelete: SetNull)
 
@@ -288,13 +352,13 @@ model EventNewsPost {
 }
 
 model GalleryAlbum {
-  id            String   @id @default(uuid())
-  nameEn        String   @map("name_en")
-  nameTe        String?  @map("name_te")
-  category      String?
-  displayOrder  Int      @default(0) @map("display_order")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  nameEn       String   @map("name_en")
+  nameTe       String?  @map("name_te")
+  category     String?
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   items GalleryItem[]
 
@@ -307,14 +371,14 @@ enum MediaType {
 }
 
 model GalleryItem {
-  id            String    @id @default(uuid())
-  albumId       String    @map("album_id")
-  mediaType     MediaType @map("media_type")
-  mediaUrl      String    @map("media_url")
-  altTextEn     String?   @map("alt_text_en")
-  altTextTe     String?   @map("alt_text_te")
-  displayOrder  Int       @default(0) @map("display_order")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  albumId      String    @map("album_id")
+  mediaType    MediaType @map("media_type")
+  mediaUrl     String    @map("media_url")
+  altTextEn    String?   @map("alt_text_en")
+  altTextTe    String?   @map("alt_text_te")
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   album GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
@@ -327,11 +391,11 @@ model GalleryItem {
 // ------------------------------------------------------------------------------
 
 model Volunteer {
-  id            String   @id @default(uuid())
-  name          String
-  email         String
-  phone         String
-  registeredAt  DateTime @default(now()) @map("registered_at")
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  phone        String
+  registeredAt DateTime @default(now()) @map("registered_at")
 
   applications VolunteerApplication[]
 
@@ -352,17 +416,17 @@ enum VolunteerApplicationStatus {
 }
 
 model VolunteerApplication {
-  id                    String                     @id @default(uuid())
-  volunteerId           String                     @map("volunteer_id")
-  type                  VolunteerApplicationType
-  academicBackground    String?                    @map("academic_background")
-  areaOfInterest        String?                    @map("area_of_interest")
-  resumeUrl             String?                    @map("resume_url")
-  status                VolunteerApplicationStatus @default(submitted)
-  internalNote          String?                    @map("internal_note")
-  reviewedBy            String?                    @map("reviewed_by")
-  submittedAt           DateTime                   @default(now()) @map("submitted_at")
-  statusUpdatedAt        DateTime?                  @updatedAt @map("status_updated_at")
+  id                 String                     @id @default(uuid())
+  volunteerId        String                     @map("volunteer_id")
+  type               VolunteerApplicationType
+  academicBackground String?                    @map("academic_background")
+  areaOfInterest     String?                    @map("area_of_interest")
+  resumeUrl          String?                    @map("resume_url")
+  status             VolunteerApplicationStatus @default(submitted)
+  internalNote       String?                    @map("internal_note")
+  reviewedBy         String?                    @map("reviewed_by")
+  submittedAt        DateTime                   @default(now()) @map("submitted_at")
+  statusUpdatedAt    DateTime?                  @updatedAt @map("status_updated_at")
 
   volunteer Volunteer  @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
   reviewer  AdminUser? @relation("ApplicationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
@@ -385,15 +449,15 @@ enum DocumentCategory {
 }
 
 model DocumentRepo {
-  id              String           @id @default(uuid())
-  category        DocumentCategory
-  titleEn         String           @map("title_en")
-  titleTe         String?          @map("title_te")
-  fileUrl         String           @map("file_url")
-  publishedDate   DateTime?        @map("published_date") @db.Date
-  publicVisible   Boolean          @default(false) @map("public_visible")
-  uploadedBy      String?          @map("uploaded_by")
-  createdAt       DateTime         @default(now()) @map("created_at")
+  id            String           @id @default(uuid())
+  category      DocumentCategory
+  titleEn       String           @map("title_en")
+  titleTe       String?          @map("title_te")
+  fileUrl       String           @map("file_url")
+  publishedDate DateTime?        @map("published_date") @db.Date
+  publicVisible Boolean          @default(false) @map("public_visible")
+  uploadedBy    String?          @map("uploaded_by")
+  createdAt     DateTime         @default(now()) @map("created_at")
 
   uploader AdminUser? @relation("DocumentUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
 
@@ -408,13 +472,13 @@ enum ContactSubmissionStatus {
 }
 
 model ContactSubmission {
-  id           String                  @id @default(uuid())
-  name         String
-  email        String
-  phone        String?
-  message      String
-  status       ContactSubmissionStatus @default(new)
-  submittedAt  DateTime                @default(now()) @map("submitted_at")
+  id          String                  @id @default(uuid())
+  name        String
+  email       String
+  phone       String?
+  message     String
+  status      ContactSubmissionStatus @default(new)
+  submittedAt DateTime                @default(now()) @map("submitted_at")
 
   @@map("contact_submission")
 }
@@ -424,12 +488,12 @@ model ContactSubmission {
 // ------------------------------------------------------------------------------
 
 model PageContent {
-  id          String   @id @default(uuid())
-  pageKey     String   @unique @map("page_key")
-  blocksEn    Json     @map("blocks_en")
-  blocksTe    Json?    @map("blocks_te")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  updatedBy   String?  @map("updated_by")
+  id        String   @id @default(uuid())
+  pageKey   String   @unique @map("page_key")
+  blocksEn  Json     @map("blocks_en")
+  blocksTe  Json?    @map("blocks_te")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
 
   editor AdminUser? @relation("PageContentEditor", fields: [updatedBy], references: [id], onDelete: SetNull)
 

@@ -2,7 +2,7 @@
 
 Production-ready website and donation platform for **Sai Yadadri Seva Ashram** (Regd. No. 423/2019), a registered social service society in Hyderabad, Telangana, operating the Vanaprasthasramam Old Age Home and associated Annaprasadam, Goshala, Education, and Medical Support programs.
 
-This repository is currently at the **project foundation** stage (Phase 3). No business features, public pages, or admin functionality are implemented yet — see [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md) for what's done and what's next.
+This repository has completed **Phase 4 — Core Application Framework**: production authentication (JWT + httpOnly cookies, refresh rotation, password reset, email verification, account lockout, session management), a fully configurable RBAC system (10 roles), the core backend APIs (auth/users/roles/permissions/profile, Swagger-documented), and the frontend framework (auth pages, protected admin shell, dashboard shell, profile/settings pages, error pages). No donation, content, volunteer, event, or gallery business modules are implemented yet — see [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md) for full status.
 
 ## Documentation
 
@@ -93,11 +93,16 @@ docker compose up -d postgres
 
 ```bash
 npm run prisma:generate --workspace=apps/api
-npm run prisma:migrate --workspace=apps/api    # creates the initial migration — see note below
-npm run prisma:seed --workspace=apps/api        # seeds RBAC roles/permissions + donation categories
+npm run prisma:migrate --workspace=apps/api    # applies apps/api/prisma/migrations/20260803101658_init/
+npm run prisma:seed --workspace=apps/api        # seeds RBAC roles/permissions + donation categories + a bootstrap Super Admin
 ```
 
-> **Note:** No migration has been committed yet in this foundation phase (no Postgres instance was available in the environment that generated this scaffold). Running `prisma:migrate` for the first time against your local Postgres will create `apps/api/prisma/migrations/<timestamp>_init/` — commit that folder once generated.
+> **Note:** The committed migration was generated via `prisma migrate diff` (no live Postgres was available in the environment that authored it) and has not yet been applied against a real database — running `prisma:migrate` above will be the first time it is. If Prisma reports drift, resolve it locally and commit any follow-up migration it generates.
+
+The seed script creates one bootstrap **Super Admin** account so you can log in immediately:
+
+- Email: value of `SEED_SUPER_ADMIN_EMAIL` in `apps/api/.env` (default `superadmin@sysaindia.org`)
+- Password: value of `SEED_SUPER_ADMIN_PASSWORD` in `apps/api/.env` — **set this explicitly**; the fallback dev-only password is printed as a warning by the seed script and must never be used outside local development.
 
 ### 5. Run the dev servers
 
@@ -114,8 +119,10 @@ npm run dev:web
 
 ### 6. Verify
 
-- Frontend: [http://localhost:3000](http://localhost:3000) — should show the foundation placeholder page.
+- Frontend: [http://localhost:3000](http://localhost:3000) — public placeholder home page.
+- Admin login: [http://localhost:3000/login](http://localhost:3000/login) — sign in with the seeded Super Admin above, lands on `/admin` (dashboard shell).
 - API health check: [http://localhost:4000/api/v1/health](http://localhost:4000/api/v1/health) — should return `{"status":"ok", ...}` once Postgres is reachable.
+- API docs (Swagger UI): [http://localhost:4000/api/v1/docs](http://localhost:4000/api/v1/docs).
 
 ## Running with Docker Compose (Full Stack)
 

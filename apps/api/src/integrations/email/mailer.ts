@@ -4,10 +4,10 @@ import { env } from '@config/env';
 import { logger } from '@lib/logger';
 
 /**
- * Transactional email transporter — foundational config only.
- * Actual send workflows (donation receipts, volunteer confirmations, contact
- * acknowledgments — see documentation/03-Functional-Requirements.md FR-NOTIF-01)
- * are implemented in the feature-development phase.
+ * Transactional email transporter. Auth emails (verification, password reset,
+ * security notices — see ./templates/auth.templates.ts) are wired up in Phase 4;
+ * donation receipts and other business-domain emails (FR-NOTIF-01) follow in the
+ * feature-development phase.
  */
 let transporter: Transporter | null = null;
 
@@ -33,4 +33,40 @@ export function getMailer(): Transporter {
   });
 
   return transporter;
+}
+
+interface SendMailInput {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * Sends an email if SMTP is configured; otherwise logs the attempt and no-ops.
+ * This keeps local/dev environments (no SMTP credentials) fully functional for
+ * every OTHER auth flow — the caller still records the intended action (e.g. a
+ * password-reset token is still created) even if delivery is unavailable.
+ */
+export async function sendMail(input: SendMailInput): Promise<void> {
+  if (!env.SMTP_HOST) {
+    logger.warn(`Email not sent (SMTP not configured): "${input.subject}" to ${input.to}`);
+    return;
+  }
+
+  try {
+    await getMailer().sendMail({
+      from: env.EMAIL_FROM,
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+    });
+  } catch (error) {
+    logger.error('Failed to send email', {
+      to: input.to,
+      subject: input.subject,
+      error: error instanceof Error ? error.message : error,
+    });
+  }
 }

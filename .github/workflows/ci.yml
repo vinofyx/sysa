@@ -82,13 +82,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply database schema
+      - name: Apply database migrations
         working-directory: apps/api
-        # Uses `db push` (not `migrate deploy`) because no committed migration history
-        # exists yet — see DEVELOPMENT_PROGRESS.md "Next Steps". Switch this step to
-        # `prisma migrate deploy` once the first migration is generated via
-        # `npm run prisma:migrate` against a real Postgres instance.
-        run: npx prisma db push --accept-data-loss --skip-generate
+        run: npx prisma migrate deploy
+
+      - name: Seed reference data
+        working-directory: apps/api
+        run: npx tsx prisma/seed.ts
 
       - name: Build API
         run: npm run build --workspace=apps/api

@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import bcrypt from 'bcrypt';
 
 import { env } from '@config/env';
@@ -13,4 +15,16 @@ export async function hashPassword(plainText: string): Promise<string> {
 
 export async function comparePassword(plainText: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plainText, hash);
+}
+
+/**
+ * Generates a random, policy-compliant password that is never revealed to anyone —
+ * used only as an unusable placeholder when a Super Admin creates a new admin
+ * account. The new user sets their real password via the "Forgot Password" flow
+ * after verifying their email (see src/services/user.service.ts createUser).
+ */
+export function generateRandomPassword(): string {
+  const random = randomBytes(24).toString('base64url');
+  // Guarantee the complexity regex is satisfied regardless of what randomBytes produced.
+  return `Aa1!${random}`;
 }

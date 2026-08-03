@@ -23,6 +23,13 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+  COOKIE_DOMAIN: z.string().optional(),
+
+  // Account lockout & token TTL policy (documentation/12-Security-Requirements.md SEC-AUTH-04)
+  ACCOUNT_LOCK_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  ACCOUNT_LOCK_DURATION_MINUTES: z.coerce.number().int().positive().default(15),
+  PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+  EMAIL_VERIFICATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(24),
 
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
@@ -42,7 +49,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
-  EMAIL_FROM: z.string().email().optional(),
+  EMAIL_FROM: z.string().email().default('no-reply@sysaindia.org'),
 
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),

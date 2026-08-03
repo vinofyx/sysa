@@ -1,66 +1,127 @@
 /**
- * Prisma seed script — reference data only (no business/feature data).
+ * Prisma seed script — reference data + one bootstrap account (no business/content data).
  *
  * Seeds:
- *   1. RBAC roles + permissions catalogue (documentation/10-Roles-and-Permissions.md)
+ *   1. Full RBAC permission catalogue + 10-role set (Phase 4 instruction — supersedes
+ *      the simpler 4-role matrix in documentation/10-Roles-and-Permissions.md for actual
+ *      implementation; see DEVELOPMENT_PROGRESS.md for the reconciliation note)
  *   2. Donation categories with verified pricing (docs/PROJECT_CONTEXT.md §5)
+ *   3. One bootstrap Super Admin account, so the platform is loggable-into on a fresh
+ *      database. Credentials come from SEED_SUPER_ADMIN_EMAIL/SEED_SUPER_ADMIN_PASSWORD
+ *      env vars (dev-only fallback defaults below) — change/rotate before production use.
  *
  * Run via: npm run prisma:seed --workspace=apps/api
  */
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 const PERMISSIONS = [
+  // Content (Home/About/Activities/Appeals/Contact static content)
   'content:view',
   'content:edit',
   'content:publish',
+  // Events & News
+  'events:view',
+  'events:manage',
+  // Gallery
+  'gallery:view',
+  'gallery:manage',
+  // Committee roster
+  'committee:view',
+  'committee:manage',
+  // Donations
   'donations:view',
   'donations:create_manual',
   'donations:flag_refund',
   'donations:export',
+  // Donors
   'donors:view',
   'donors:manage_recognition',
+  // Appeals / campaigns
+  'appeals:view',
+  'appeals:manage',
+  // Volunteers
   'volunteers:view',
   'volunteers:manage_status',
-  'gallery:manage',
-  'events:manage',
-  'committee:manage',
+  // Document repository
   'documents:view',
   'documents:upload',
   'documents:publish',
+  // Reporting
   'reports:generate',
+  // System — users, roles, permissions, audit, settings
+  'users:view',
   'users:manage',
+  'roles:view',
+  'roles:manage',
+  'permissions:view',
   'audit:view',
   'settings:manage',
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   'Super Admin': PERMISSIONS,
-  'Content Admin': [
+
+  Admin: PERMISSIONS.filter(
+    (p) => !['users:manage', 'roles:manage', 'settings:manage', 'audit:view'].includes(p),
+  ),
+
+  'Content Manager': [
     'content:view',
     'content:edit',
     'content:publish',
-    'donors:view',
-    'gallery:manage',
-    'events:manage',
+    'committee:view',
     'committee:manage',
     'documents:view',
   ],
-  'Finance Admin': [
-    'content:view',
+
+  'Donation Manager': [
     'donations:view',
     'donations:create_manual',
     'donations:flag_refund',
-    'donations:export',
     'donors:view',
     'donors:manage_recognition',
+    'appeals:view',
+    'appeals:manage',
+    'reports:generate',
+  ],
+
+  'Volunteer Manager': ['volunteers:view', 'volunteers:manage_status', 'reports:generate'],
+
+  'Event Manager': ['events:view', 'events:manage', 'content:view'],
+
+  'Gallery Manager': ['gallery:view', 'gallery:manage'],
+
+  'Report Manager': [
+    'reports:generate',
+    'donations:view',
+    'volunteers:view',
+    'documents:view',
+    'content:view',
+  ],
+
+  'Finance Manager': [
+    'donations:view',
+    'donations:export',
     'documents:view',
     'documents:upload',
     'documents:publish',
     'reports:generate',
   ],
-  'Volunteer Coordinator': ['volunteers:view', 'volunteers:manage_status', 'reports:generate'],
+
+  Viewer: [
+    'content:view',
+    'events:view',
+    'gallery:view',
+    'committee:view',
+    'donations:view',
+    'donors:view',
+    'appeals:view',
+    'volunteers:view',
+    'documents:view',
+  ],
 };
 
 // Verified pricing — docs/PROJECT_CONTEXT.md §5. Do not alter without client confirmation.
@@ -116,12 +177,14 @@ async function main() {
   }
 
   console.log('Seeding roles + role-permission mappings...');
+  const roleIdByName: Record<string, string> = {};
   for (const [roleName, permissionCodes] of Object.entries(ROLE_PERMISSIONS)) {
     const role = await prisma.role.upsert({
       where: { name: roleName },
       update: {},
       create: { name: roleName },
     });
+    roleIdByName[roleName] = role.id;
 
     const permissions = await prisma.permission.findMany({
       where: { code: { in: [...permissionCodes] } },
@@ -141,6 +204,38 @@ async function main() {
       update: {},
       create: category,
     });
+  }
+
+  console.log('Seeding bootstrap Super Admin account...');
+  const superAdminEmail = process.env.SEED_SUPER_ADMIN_EMAIL || 'superadmin@sysaindia.org';
+  const superAdminPassword = process.env.SEED_SUPER_ADMIN_PASSWORD || 'ChangeMe!12345';
+
+  const existing = await prisma.adminUser.findUnique({ where: { email: superAdminEmail } });
+  if (!existing) {
+    const passwordHash = await bcrypt.hash(superAdminPassword, 12);
+    await prisma.adminUser.create({
+      data: {
+        name: 'Super Admin',
+        email: superAdminEmail,
+        passwordHash,
+        roleId: roleIdByName['Super Admin'],
+        active: true,
+        // Pre-verified so the bootstrap account is immediately usable without a
+        // configured SMTP provider — see apps/api/README.md for the production caveat.
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        passwordChangedAt: new Date(),
+      },
+    });
+    console.log(`  Created bootstrap Super Admin: ${superAdminEmail}`);
+    if (!process.env.SEED_SUPER_ADMIN_PASSWORD) {
+      console.warn(
+        '  ⚠️  Using the DEFAULT dev-only password. Set SEED_SUPER_ADMIN_PASSWORD before seeding ' +
+          'a real environment, and change the password on first login regardless.',
+      );
+    }
+  } else {
+    console.log(`  Super Admin ${superAdminEmail} already exists — skipping.`);
   }
 
   console.log('✅ Seed complete.');
