@@ -84,13 +84,7 @@ export default async function NewsDetailPage({ params }: Props) {
       />
       {post.featuredImageUrl && (
         <div className="relative mx-auto h-64 max-w-4xl overflow-hidden rounded-xl sm:h-96">
-          <Image
-            src={post.featuredImageUrl}
-            alt={title}
-            fill
-            unoptimized
-            className="object-cover"
-          />
+          <Image src={post.featuredImageUrl} alt={title} fill className="object-cover" />
         </div>
       )}
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">

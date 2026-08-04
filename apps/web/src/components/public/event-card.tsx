@@ -25,7 +25,6 @@ export function EventCard({ event, locale }: { event: PublicEvent; locale: strin
             src={event.featuredImageUrl}
             alt={title}
             fill
-            unoptimized
             className="object-cover transition-transform group-hover:scale-105"
           />
         ) : (

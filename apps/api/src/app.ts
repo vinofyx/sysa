@@ -20,6 +20,13 @@ import { v1Router } from '@routes/v1';
 export function createApp(): Application {
   const app = express();
 
+  // Trust the first hop reverse proxy (Nginx per design/15-Deployment-Architecture.md)
+  // so `req.ip` reflects the real client IP rather than the proxy's — without
+  // this, express-rate-limit buckets every request from behind the proxy
+  // together, letting one client's traffic exhaust the shared limit for
+  // everyone else. Harmless in local dev (no proxy in front).
+  app.set('trust proxy', 1);
+
   // Security headers (SEC baseline — documentation/12-Security-Requirements.md §7)
   app.use(helmet());
 

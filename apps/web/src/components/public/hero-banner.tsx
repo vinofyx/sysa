@@ -25,14 +25,7 @@ export async function HeroBannerSection({ banners }: { banners: HeroBanner[] }) 
 
         return (
           <div key={banner.id} className="relative h-[60vh] sm:h-[65vh] lg:h-[80vh]">
-            <Image
-              src={banner.imageUrl}
-              alt={title}
-              fill
-              unoptimized
-              priority
-              className="object-cover"
-            />
+            <Image src={banner.imageUrl} alt={title} fill priority className="object-cover" />
             <div className="from-pub-primary-900/80 absolute inset-0 bg-gradient-to-t via-black/20 to-transparent" />
             <div className="relative mx-auto flex h-full max-w-3xl flex-col items-center justify-end gap-4 px-4 pb-16 text-center text-white">
               <h1 className="font-pub-heading text-3xl font-bold text-balance sm:text-5xl">

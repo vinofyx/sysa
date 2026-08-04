@@ -119,7 +119,19 @@
     "verifyCode": "Verify Code",
     "logout": "Log out",
     "noDonationsYet": "No donations found for this account yet.",
-    "receiptNotReady": "Your receipt is being prepared and will be available shortly."
+    "receiptNotReady": "Your receipt is being prepared and will be available shortly.",
+    "upiIdLabel": "UPI ID",
+    "bankComingSoonTitle": "Coming Soon",
+    "bankComingSoonDescription": "Contact us for bank transfer details.",
+    "categoriesComingSoonTitle": "Coming Soon",
+    "faqReceiptQuestion": "Will I receive a donation receipt?",
+    "faqReceiptAnswer": "Yes — once your payment is verified, a receipt is generated and emailed to you automatically.",
+    "faqVerifyTimeQuestion": "How long does verification take?",
+    "faqVerifyTimeAnswer": "Our Finance team typically verifies bank transfer claims within a few working days of submission.",
+    "faqOnlineQuestion": "Can I donate online with a card?",
+    "faqOnlineAnswer": "Yes — use the \"Donate Online\" form above to pay securely by UPI, card, or net banking via Razorpay. If you would rather transfer directly, the bank/UPI details and confirmation form below are also available.",
+    "faqHistoryQuestion": "Can I view my past donations?",
+    "faqHistoryAnswer": "Yes — visit the Donation History page and log in with the email you donated with to receive a one-time code."
   },
   "Volunteer": {
     "heading": "Volunteer With Us",

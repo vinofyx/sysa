@@ -44,13 +44,7 @@ export default async function CommitteePage() {
               <div key={member.id} className="flex flex-col items-center text-center">
                 <div className="bg-pub-primary-100 relative size-24 overflow-hidden rounded-full sm:size-28">
                   {member.photoUrl ? (
-                    <Image
-                      src={member.photoUrl}
-                      alt={member.name}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
+                    <Image src={member.photoUrl} alt={member.name} fill className="object-cover" />
                   ) : (
                     <div className="text-pub-primary-700 flex size-full items-center justify-center text-2xl font-semibold">
                       {member.name.slice(0, 1)}

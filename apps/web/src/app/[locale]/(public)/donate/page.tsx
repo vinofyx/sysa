@@ -69,7 +69,7 @@ export default async function DonatePage() {
             {tDonate('categoriesHeading')}
           </h2>
           {categories.length === 0 ? (
-            <EmptyState icon={Landmark} title="Coming soon" />
+            <EmptyState icon={Landmark} title={tDonate('categoriesComingSoonTitle')} />
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categories.map((category) => {
@@ -176,7 +176,7 @@ export default async function DonatePage() {
                 )}
                 {settings.upiId && (
                   <p className="pt-2">
-                    <span className="text-pub-neutral-500">UPI ID: </span>
+                    <span className="text-pub-neutral-500">{tDonate('upiIdLabel')}: </span>
                     {settings.upiId}
                   </p>
                 )}
@@ -190,7 +190,6 @@ export default async function DonatePage() {
                       alt="UPI QR code"
                       width={180}
                       height={180}
-                      unoptimized
                       className="rounded-lg border"
                     />
                   </div>
@@ -199,8 +198,8 @@ export default async function DonatePage() {
             ) : (
               <EmptyState
                 icon={Landmark}
-                title="Coming soon"
-                description="Contact us for bank transfer details."
+                title={tDonate('bankComingSoonTitle')}
+                description={tDonate('bankComingSoonDescription')}
               />
             )}
           </div>
@@ -213,29 +212,27 @@ export default async function DonatePage() {
           </h2>
           <Accordion>
             <AccordionItem value="receipt">
-              <AccordionTrigger>Will I receive a donation receipt?</AccordionTrigger>
+              <AccordionTrigger>{tDonate('faqReceiptQuestion')}</AccordionTrigger>
               <AccordionContent>
-                <RichContent html="<p>Yes — once your bank transfer or UPI payment is verified, a receipt is generated and emailed to you automatically.</p>" />
+                <RichContent html={`<p>${tDonate('faqReceiptAnswer')}</p>`} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="verify-time">
-              <AccordionTrigger>How long does verification take?</AccordionTrigger>
+              <AccordionTrigger>{tDonate('faqVerifyTimeQuestion')}</AccordionTrigger>
               <AccordionContent>
-                <RichContent html="<p>Our Finance team typically verifies bank transfer claims within a few working days of submission.</p>" />
+                <RichContent html={`<p>${tDonate('faqVerifyTimeAnswer')}</p>`} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="online">
-              <AccordionTrigger>Can I donate online with a card?</AccordionTrigger>
+              <AccordionTrigger>{tDonate('faqOnlineQuestion')}</AccordionTrigger>
               <AccordionContent>
-                <RichContent html="<p>Yes — use the “Donate Online” form above to pay securely by UPI, card, or net banking via Razorpay. If you'd rather transfer directly, the bank/UPI details and confirmation form below are also available.</p>" />
+                <RichContent html={`<p>${tDonate('faqOnlineAnswer')}</p>`} />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="history">
-              <AccordionTrigger>Can I view my past donations?</AccordionTrigger>
+              <AccordionTrigger>{tDonate('faqHistoryQuestion')}</AccordionTrigger>
               <AccordionContent>
-                <RichContent
-                  html={`<p>Yes — visit the <a href="/donate/history">Donation History</a> page and log in with the email you donated with to receive a one-time code.</p>`}
-                />
+                <RichContent html={`<p>${tDonate('faqHistoryAnswer')}</p>`} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

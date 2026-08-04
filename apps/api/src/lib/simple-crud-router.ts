@@ -4,7 +4,7 @@ import type { ZodType } from 'zod';
 import { authenticate } from '@middleware/authenticate.middleware';
 import { requirePermission } from '@middleware/authorize.middleware';
 import { validate } from '@middleware/validate.middleware';
-import { paginationQuerySchema, idParamSchema } from '@validation/common.schema';
+import { paginationQuerySchema, idParamSchema, bulkReorderSchema } from '@validation/common.schema';
 import { toSkipTake, paginate } from '@utils/pagination';
 import { writeAuditLog } from '@lib/audit-log';
 import { ApiError } from '@utils/api-error';
@@ -167,9 +167,10 @@ export function buildSimpleCrudRouter<TEntity>(
     router.patch(
       '/bulk/reorder',
       requirePermission(options.managePermission),
+      validate({ body: bulkReorderSchema }),
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const items = req.body.items as { id: string; displayOrder: number }[];
+          const { items } = req.body as { items: { id: string; displayOrder: number }[] };
           await repo.reorder!(items);
           await writeAuditLog({
             adminUserId: req.user!.id,

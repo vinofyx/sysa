@@ -35,7 +35,6 @@ export async function SiteHeader({ settings, navItems }: SiteHeaderProps) {
               alt={siteName}
               width={36}
               height={36}
-              unoptimized
               className="size-9 rounded-md object-contain"
             />
           ) : null}

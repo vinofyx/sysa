@@ -56,7 +56,6 @@ export default async function TestimonialsPage() {
                         alt={testimonial.authorName}
                         width={40}
                         height={40}
-                        unoptimized
                         className="size-10 rounded-full object-cover"
                       />
                     )}

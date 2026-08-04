@@ -64,7 +64,6 @@ export function ImageUploadField({ value, onChange, disabled, className }: Image
             alt="Uploaded preview"
             width={160}
             height={160}
-            unoptimized
             className="size-40 rounded-lg border object-cover"
           />
           {!disabled && (

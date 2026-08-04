@@ -92,13 +92,7 @@ export default async function EventDetailPage({ params }: Props) {
       />
       {event.featuredImageUrl && (
         <div className="relative mx-auto h-64 max-w-5xl overflow-hidden rounded-xl sm:h-96">
-          <Image
-            src={event.featuredImageUrl}
-            alt={title}
-            fill
-            unoptimized
-            className="object-cover"
-          />
+          <Image src={event.featuredImageUrl} alt={title} fill className="object-cover" />
         </div>
       )}
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 py-12 sm:px-6 lg:grid-cols-3">

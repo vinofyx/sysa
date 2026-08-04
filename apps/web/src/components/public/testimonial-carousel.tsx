@@ -33,7 +33,6 @@ export async function TestimonialCarousel({ testimonials }: { testimonials: Test
                   alt={testimonial.authorName}
                   width={44}
                   height={44}
-                  unoptimized
                   className="size-11 rounded-full object-cover"
                 />
               )}

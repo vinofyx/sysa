@@ -23,3 +23,14 @@ export const idParamSchema = z.object({
 export const bulkIdsSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, 'At least one id is required'),
 });
+
+export const bulkReorderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        displayOrder: z.coerce.number().int().min(0),
+      }),
+    )
+    .min(1, 'At least one item is required'),
+});

@@ -42,7 +42,6 @@ export function GalleryGrid({ items, locale }: { items: GalleryItem[]; locale: s
                 width={400}
                 height={400}
                 loading="lazy"
-                unoptimized
                 className="w-full object-cover transition-transform group-hover:scale-105"
               />
             ) : (
@@ -95,7 +94,6 @@ export function GalleryGrid({ items, locale }: { items: GalleryItem[]; locale: s
                   alt={altText(active)}
                   width={1200}
                   height={800}
-                  unoptimized
                   className="max-h-[80vh] w-full rounded-lg object-contain"
                 />
               ) : isEmbeddableVideo(active.mediaUrl) ? (

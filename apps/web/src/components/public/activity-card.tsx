@@ -20,7 +20,6 @@ export function ActivityCard({ activity, locale }: { activity: Activity; locale:
             src={activity.iconOrImageUrl}
             alt={title}
             fill
-            unoptimized
             className="object-cover transition-transform group-hover:scale-105"
           />
         ) : (

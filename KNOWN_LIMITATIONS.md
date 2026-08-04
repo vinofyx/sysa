@@ -1,0 +1,68 @@
+# Known Limitations
+
+## Sai Yadadri Seva Ashram Platform
+
+This document is a single, honest place to check "has this actually been tested against something real?" before treating any part of this codebase as proven-in-production. It consolidates limitations noted throughout DEVELOPMENT_PROGRESS.md's per-phase sections plus new findings from this final production-readiness review.
+
+---
+
+## 1. Environment Limitations (carried through every phase)
+
+**No live PostgreSQL, Razorpay account, Cloudinary account, or SMTP provider has existed in any environment this project has been built in, across all 7 phases.** This is the single largest category of "not yet proven" work in the codebase:
+
+| Component                  | What's verified                                                                                                                           | What isn't                                                                                                                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database schema/migrations | Hand-written SQL reviewed for correctness against the Prisma schema; consistent, additive-only pattern across every phase                 | Never actually applied to a real Postgres instance — the first `prisma:deploy` in a real environment is genuinely the first test                                                                                                       |
+| Authentication             | Every code path reviewed; password hashing/JWT signing/session logic unit-testable-in-principle                                           | Never exercised end-to-end (real login → session → protected route → logout) against a live session store                                                                                                                              |
+| Razorpay integration       | Signature verification confirmed live via `curl` (rejects bad signatures correctly); order/verify/webhook/retry logic fully code-reviewed | **No real payment has ever been captured.** No live Checkout modal has ever been opened. No live webhook has ever been delivered by Razorpay. This is the highest-priority item to verify before go-live (see GO_LIVE_CHECKLIST.md §4) |
+| File uploads               | MIME/size validation confirmed via code review; multer configuration correct                                                              | Never actually uploaded to Cloudinary — the upload round-trip (buffer → Cloudinary → returned URL → stored) is unverified against the real API                                                                                         |
+| Email                      | Templates render correctly (verified via direct function calls / component review); graceful no-op confirmed when SMTP is absent          | No email has ever been delivered to a real inbox — HTML rendering across real email clients (Gmail, Outlook) is unverified                                                                                                             |
+| Receipt PDF generation     | pdfkit layout code-reviewed                                                                                                               | No PDF has ever actually been generated and visually inspected in this environment (pdfkit itself is a mature, widely-used library — the risk here is in this project's specific layout code, not the library)                         |
+
+**Practical implication**: treat every "✅ Correct by inspection" or "code-reviewed" note throughout QA_REPORT.md, SECURITY_REPORT.md, PERFORMANCE_REPORT.md as exactly that — a careful reading of the code that found no defect, not a runtime-proven guarantee. GO_LIVE_CHECKLIST.md exists specifically to close this gap before real users depend on the system.
+
+---
+
+## 2. Security — Accepted Risks (see SECURITY_REPORT.md §15 for full detail)
+
+1. **No cryptographic CSRF token** — mitigated by SameSite=Lax cookies + strict single-origin CORS + JSON-only mutating endpoints, which together close the practical CSRF exploitation paths for this specific architecture. Would need revisiting if a second frontend origin is ever added.
+2. **File upload MIME checking is client-reported, not content-verified** (magic-byte sniffing not implemented). Mitigated by: no server-side execution of uploads, Cloudinary re-encoding images on ingest, narrow endpoint scoping + rate limits, human review before publish.
+3. **Content-Security-Policy requires `'unsafe-inline'`** for `script-src`/`style-src`, because Next.js App Router's inline hydration bootstrap has no nonce infrastructure wired into this project. The CSP still meaningfully restricts third-party script/frame/image/connect origins (not a no-op) — a nonce-based strict CSP is a real follow-up but was judged too risky to implement untested in this environment.
+
+---
+
+## 3. Performance — Not Yet Measured
+
+- No load testing has been run against any endpoint (no live database to generate realistic latency against). PERFORMANCE_REPORT.md's structural review (indexes, query patterns, pagination) found no obvious problems, but real p50/p95 latency numbers don't exist yet.
+- No Lighthouse/PageSpeed/Core Web Vitals measurement has been taken against a live, content-populated deployment — the pages currently render against an empty/unreachable database in every test performed so far, which isn't representative of real page weight once CMS content (images, rich text) is populated.
+
+---
+
+## 4. SEO — Content-Dependent Gaps
+
+- Structured data, meta descriptions, and OG images are all correctly _wired_ (verified — see SEO_REPORT.md), but their actual quality depends entirely on what the client enters into the CMS. A technically-correct-but-empty `description` field produces a technically-correct-but-unhelpful meta tag. This is a content task (Phase 8), not a code task.
+- Real search-engine indexing behavior (how Google actually renders/ranks the site) can only be observed after a real, public, indexed deployment — nothing in this codebase can predict that.
+
+---
+
+## 5. Legal / Compliance Content Gaps
+
+- **Privacy Policy, Terms & Conditions, Refund Policy, Disclaimer** pages exist and are fully wired to the CMS (`/admin/content/legal`), but currently show a "Coming Soon" placeholder because no real legal text has ever been supplied to this project. **This must be resolved before go-live** — publishing a donation platform without real legal/refund terms is a genuine compliance risk for the client, not a cosmetic gap. Tracked in GO_LIVE_CHECKLIST.md §5.
+- 80G/12A tax-exemption status is treated throughout the codebase as **unverified** (the public `TrustBadge` component's `tax-exempt` variant is documented as "should only be rendered once the client's 12A/80G certification is confirmed"; the receipt PDF deliberately omits an 80G number). If the client's certification is in fact current, someone needs to explicitly confirm that and update these two places — the codebase defaults to the conservative, honest assumption in the absence of that confirmation.
+- Bank account details, UPI ID, and registration number shown on the public site come entirely from admin-entered `SiteSettings` fields — nothing is fabricated, but nothing has been double-checked against the client's actual current banking details either (that's a content-entry responsibility, not a code defect).
+
+---
+
+## 6. Architectural Choices Documented as Deliberate (not gaps, but worth knowing)
+
+- **`force-dynamic` on the public site** — every public page is server-rendered per-request rather than statically cached, trading some cacheability for CMS-publish freshness. See PERFORMANCE_REPORT.md §6 for the reasoning and a future-ISR recommendation.
+- **Donor accounts are OTP-based, not password-based** — a deliberate, lighter-weight choice for a low-risk convenience feature (viewing one's own donation history), not an oversight. See `lib/donor-jwt.ts`.
+- **No recurring/subscription donations** — explicitly out of scope per the client's Phase 7 instructions ("Do not implement recurring subscriptions"). The `DonationFrequency` enum's `monthly` value is classification-only (lets an admin tag a donation as intended-to-be-monthly for reporting) — it does not trigger any automated re-billing.
+- **No refund initiation flow beyond signature/duplicate handling** — explicitly out of scope per the client's Phase 7 instructions ("Do not implement refunds unless required by Razorpay APIs"). The `refunded` donation status exists for admins to flag a refund that was processed manually/externally via the Razorpay Dashboard, not to trigger one from this application.
+- **Admin/public design systems are intentionally visually distinct** (separate Tailwind token namespaces) — not a bug, a documented design decision from Phase 2.
+
+---
+
+## 7. What This Document Is Not
+
+This is not a list of bugs — the fixes found during this final review are already applied and documented in QA_REPORT.md §12. This is a transparent account of what **cannot** be known without a real deployment, so that whoever takes this to production does so with accurate expectations rather than false confidence from a clean `npm run build`.

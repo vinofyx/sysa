@@ -217,7 +217,6 @@ export default function GalleryAlbumDetailPage() {
                     alt={item.altTextEn ?? album.nameEn}
                     width={300}
                     height={300}
-                    unoptimized
                     className="size-full object-cover"
                   />
                 ) : (

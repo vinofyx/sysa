@@ -25,7 +25,6 @@ export function NewsCard({ post, locale }: { post: NewsPost; locale: string }) {
             src={post.featuredImageUrl}
             alt={title}
             fill
-            unoptimized
             className="object-cover transition-transform group-hover:scale-105"
           />
         ) : (

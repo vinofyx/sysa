@@ -148,7 +148,6 @@ export default function HeroBannersPage() {
             alt={row.titleEn}
             width={80}
             height={45}
-            unoptimized
             className="h-11 w-20 rounded-md border object-cover"
           />
         ) : (
