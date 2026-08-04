@@ -964,6 +964,22 @@ const phase5Paths: OpenAPIV3.PathsObject = {
       responses: { '201': { description: 'Uploaded' }, '401': errorResponse },
     },
   },
+  '/media/upload/resume': {
+    post: {
+      tags: ['Media'],
+      summary: 'Public, rate-limited resume upload for the Volunteer/Internship form (Phase 6)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
+          },
+        },
+      },
+      responses: { '201': { description: 'Uploaded' }, '429': errorResponse },
+    },
+  },
   '/documents/{id}': {
     get: {
       tags: ['Documents'],
@@ -982,6 +998,111 @@ const phase5Paths: OpenAPIV3.PathsObject = {
       summary: 'Delete a document — cleans up its Cloudinary asset (requires documents:publish)',
       parameters: [idPathParam],
       responses: { '200': { description: 'Deleted' }, '404': errorResponse },
+    },
+  },
+};
+
+const phase6Paths: OpenAPIV3.PathsObject = {
+  '/hero-banners/public': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'List active hero banners (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/testimonials/public': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'List active testimonials (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/activities/public': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'List active activities/services (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/activities/public/{slug}': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'Get an active activity by slug (public)',
+      security: [],
+      parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' }, '404': errorResponse },
+    },
+  },
+  '/committee/public': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'List active committee members (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/social-links/public': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'List active social media links (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/navigation/public': {
+    get: {
+      tags: ['Public Content'],
+      summary: 'Get the header/footer navigation tree (public)',
+      security: [],
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+  '/contact': {
+    post: {
+      tags: ['Contact'],
+      summary: 'Submit the public contact form (rate-limited)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['name', 'email', 'message'],
+              properties: {
+                name: { type: 'string' },
+                email: { type: 'string', format: 'email' },
+                phone: { type: 'string' },
+                message: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      responses: { '201': { description: 'Submitted' }, '429': errorResponse },
+    },
+  },
+  '/contact/newsletter': {
+    post: {
+      tags: ['Contact'],
+      summary: 'Subscribe an email to the newsletter (rate-limited, idempotent by email)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['email'],
+              properties: { email: { type: 'string', format: 'email' } },
+            },
+          },
+        },
+      },
+      responses: { '201': { description: 'Subscribed' }, '429': errorResponse },
     },
   },
 };
@@ -1045,6 +1166,12 @@ export const openApiDocument: OpenAPIV3.Document = {
       name: 'Media',
       description: 'Generic image-hosting utility for CMS fields that store a plain URL',
     },
+    {
+      name: 'Public Content',
+      description:
+        'Public read-only endpoints for Hero Banners, Testimonials, Activities, Committee, Social Links, and Navigation (Phase 6)',
+    },
+    { name: 'Contact', description: 'Public contact form + newsletter signup (Phase 6)' },
   ],
   components: {
     securitySchemes: { cookieAuth, bearerAuth },
@@ -1054,6 +1181,7 @@ export const openApiDocument: OpenAPIV3.Document = {
   security: [{ cookieAuth: [] }],
   paths: {
     ...phase5Paths,
+    ...phase6Paths,
     '/health': {
       get: {
         tags: ['Health'],

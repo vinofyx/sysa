@@ -2,11 +2,11 @@
 
 ## Sai Yadadri Seva Ashram Platform
 
-|                   |                                                                   |
-| ----------------- | ----------------------------------------------------------------- |
-| **Current Phase** | Phase 5 — Business Modules & Content Management System (Complete) |
-| **Date**          | 2026-08-03                                                        |
-| **Status**        | Awaiting client approval to proceed to the next phase             |
+|                   |                                                       |
+| ----------------- | ----------------------------------------------------- |
+| **Current Phase** | Phase 6 — Public Website (Complete)                   |
+| **Date**          | 2026-08-04                                            |
+| **Status**        | Awaiting client approval to proceed to the next phase |
 
 ---
 
@@ -19,7 +19,7 @@
 | **Phase 3**  | Project Initialization & Codebase Foundation                                                                                                                                                                                                                                                                     | ✅ Complete                                                                                  |
 | **Phase 4**  | Core Application Framework — Authentication, RBAC, Database, Backend APIs, Frontend layouts/shell, Admin Dashboard shell                                                                                                                                                                                         | ✅ Complete                                                                                  |
 | **Phase 5**  | Business Modules & Content Management System — re-scoped by explicit client instruction from the originally-planned "Public Site" to: all backend business-module APIs (CMS, Donations, Volunteers, Events, News, Gallery, Documents) **and** the complete admin CMS frontend for every module                   | ✅ Complete — this document, §9–§13                                                          |
-| **Phase 6**  | Core Development — Public Site (Home, About, Activities, Gallery, Events, Contact) + Donation Platform (Razorpay integration, checkout, receipts)                                                                                                                                                                | ⏳ Not started                                                                               |
+| **Phase 6**  | Public Website — every public page consuming the Phase 5 CMS APIs, bilingual (English/Telugu) via `next-intl`, SEO, sitemap/robots, accessibility                                                                                                                                                                | ✅ Complete — this document, §14–§18                                                         |
 | **Phase 7**  | Content Population & Bilingual Translation                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
 | **Phase 8**  | QA, Security Testing & Accessibility Audit                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
 | **Phase 9**  | UAT with Client                                                                                                                                                                                                                                                                                                  | ⏳ Not started                                                                               |
@@ -270,3 +270,119 @@ Same root cause as every prior phase: **no live PostgreSQL instance is available
 ## 13. Phase 5 Approval Gate
 
 Per the phased, approval-gated process this project follows: **this phase is complete and the codebase builds cleanly with zero TypeScript errors, zero ESLint errors, and zero build errors on both apps** (verified via `npm run lint`, `npm run typecheck`, and `npm run build` from the repository root). Stopping here for client approval before proceeding to the next phase (public-facing site + donation checkout).
+
+---
+
+## 14. Phase 6 — What Was Built: Backend Integration Gaps
+
+Per your instruction, Phase 5's admin CMS and business-module APIs were used as the only source of truth; the public site consumes them directly. A handful of small, additive gaps had to be closed first — none of them touch existing endpoints' behavior:
+
+- **`apps/api/prisma/schema.prisma`**: added `NewsletterSubscriber`; added `category`/`tags` to `EventNewsPost` (the Phase 6 spec explicitly requires News categories/tags, which didn't exist); added `bankAccountName`, `bankAccountNumber`, `bankIfscCode`, `bankName`, `bankBranch`, `upiId`, `upiQrImageUrl` to `SiteSettings` (the Donation page's required "Bank Details / UPI QR" section had no backing fields — fabricating account numbers for a real NGO would be actively harmful, so real nullable fields were added instead, surfaced in a new admin Settings card, and the public page falls back to a "coming soon / contact us" state until an admin fills them in).
+- Three small hand-written migrations (no live DB in this environment, same constraint as every prior phase): `20260803212356_phase6_newsletter_subscriber`, `20260803214500_news_category_tags`, `20260803220000_site_settings_bank_details`.
+- **`apps/api/src/routes/v1/public-content.routes.ts`** (new): unauthenticated `GET /hero-banners/public`, `/testimonials/public`, `/activities/public`(+`/:slug`), `/committee/public`, `/social-links/public`, `/navigation/public` — the Phase 5 admin routers for these modules were authenticated-only.
+- **`apps/api/src/routes/v1/contact.routes.ts`** (new): `POST /contact` (contact form) and `POST /contact/newsletter` (upsert-by-email subscribe), both rate-limited.
+- **`POST /media/upload/resume`** added to `media.routes.ts` — public, rate-limited, Cloudinary `resourceType: 'raw'` — needed for the Volunteer application form's resume upload.
+- News category/tags, legal-page `PageContent` keys (`privacy-policy`/`terms-conditions`/`refund-policy`/`disclaimer`), and site-settings bank/UPI fields wired end-to-end through validation → repository → service → routes → Swagger, and retrofitted into the existing Phase 5 admin News editor and Settings page.
+- `apps/api/src/config/swagger.ts`: added `Public Content`/`Contact` tags and a `phase6Paths` object, mirroring the `phase5Paths` pattern.
+
+No existing Phase 4/5 endpoint's request/response shape changed — every addition is either a new route or a new optional field.
+
+---
+
+## 15. Phase 6 — What Was Built: Public Website
+
+### 15.1 Internationalization & routing
+
+- `next-intl` v4, locales `en`/`te`, `localePrefix: 'always'` (`/en/...`, `/te/...`), default locale `en`. Config in `src/i18n/{routing,navigation,request}.ts`; full translation catalogues in `messages/{en,te}.json`.
+- `app/(public)/*` moved to `app/[locale]/(public)/*`; a new nested `app/[locale]/layout.tsx` (no `<html>`/`<body>` — the single root `app/layout.tsx` is untouched and still shared with `/admin` and `/(auth)`) applies the public site's fonts (Poppins/Inter/Noto Sans Telugu) scoped to a `lang`-tagged wrapper `<div>`, so the admin panel's Geist fonts are unaffected.
+- `src/middleware.ts` now combines two independent concerns in one file: the Phase 4 presence-only `/admin/*` auth-cookie guard (unchanged) and `next-intl`'s locale-detection middleware for everything else, explicitly excluding the auth pages (`/login`, `/forgot-password`, etc.) which intentionally stay unlocalized.
+- `<LanguageSwitcher>` component + locale-aware `Link`/`redirect`/`usePathname`/`useRouter` (`i18n/navigation.ts`) used throughout the public site so every internal link keeps the current locale automatically.
+
+### 15.2 Design system separation
+
+- Public site tokens (`--color-pub-*`, `--font-pub-*`, `--shadow-pub-*`) live in a **separate** `app/[locale]/public.css` (Tailwind v4 `@theme inline`), never touching `globals.css`'s admin/shadcn tokens — per `design/06-Design-System.md`'s explicit statement that admin and public are visually distinct families. No admin page was reskinned.
+
+### 15.3 Pages built (all under `app/[locale]/(public)/`, all server-rendered against live CMS APIs, zero hardcoded content)
+
+| Page(s)                                                                      | Route(s)                                                                      | Source                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home                                                                         | `/`                                                                           | Hero Banner, Featured Activities, Latest News, Upcoming Events, Donation Appeal, Statistics, Testimonials, Gallery Preview, Volunteer CTA, Contact CTA, Newsletter — all live-fetched, in parallel |
+| About / History / Vision / Mission / Founder / Committee / Treasurer Message | `/about`, `/about/{history,vision,mission,founder,committee,treasurer}`       | `PageContent` blocks (About) + `CommitteeMember` list (Committee)                                                                                                                                  |
+| Activities & Services                                                        | `/activities`, `/activities/[slug]`, `/services` (redirects to `/activities`) | `Activity` — one entity, matching the Phase 5 backend decision                                                                                                                                     |
+| Volunteer                                                                    | `/volunteer`                                                                  | Registration form → `VolunteerApplication` (incl. resume upload)                                                                                                                                   |
+| Events                                                                       | `/events`, `/events/[slug]`                                                   | Upcoming/Past tabs, calendar view (hand-rolled month grid), registration form, share buttons, `EventJsonLd`                                                                                        |
+| News                                                                         | `/news`, `/news/[slug]`                                                       | Client-side search/category-filter/pagination over `/news/public`, `ArticleJsonLd`                                                                                                                 |
+| Gallery                                                                      | `/gallery`                                                                    | Albums → lightbox grid, client search/filter, lazy-loaded images                                                                                                                                   |
+| Testimonials                                                                 | `/testimonials`                                                               | Full `Testimonial` list                                                                                                                                                                            |
+| Donation                                                                     | `/donate`                                                                     | Categories, Campaigns/Appeals (with progress bars), Bank Details/UPI QR (conditional on data present), FAQ accordion                                                                               |
+| Contact                                                                      | `/contact`                                                                    | Contact form → `POST /contact`, Google Maps embed (lat/lng from Site Settings), working hours, phone/email/WhatsApp                                                                                |
+| Privacy Policy / Terms & Conditions / Refund Policy / Disclaimer             | `/privacy-policy`, `/terms-conditions`, `/refund-policy`, `/disclaimer`       | `PageContent` (new legal page keys) — shows a "Coming Soon" empty state until an admin publishes real legal text (never fabricated)                                                                |
+| Search Results                                                               | `/search`                                                                     | Client-side substring match over activities/events/news (no dedicated search backend exists — documented in code, not hidden)                                                                      |
+| 404 / 500                                                                    | `app/[locale]/not-found.tsx`, `app/[locale]/error.tsx`                        | Locale-aware, reuses the Phase 4 `StatusPage` shell                                                                                                                                                |
+
+Homepage and every list/detail page fetch is a real `await` against the Phase 5/6 backend — no mock data, no dummy placeholder text.
+
+### 15.4 Reusable public components (`components/public/`)
+
+`json-ld.tsx`, `carousel.tsx` (auto-advance, respects `prefers-reduced-motion`, pauses on hover/focus), `hero-banner.tsx`, `page-hero.tsx`, `activity-card.tsx`, `event-card.tsx`, `news-card.tsx`, `testimonial-carousel.tsx`, `progress-bar.tsx`, `stat-card.tsx`, `gallery-lightbox.tsx`, `rich-content.tsx` (sanitizes + "Coming Soon" empty state), `language-switcher.tsx`, `mobile-menu.tsx`, `whatsapp-fab.tsx`, `newsletter-form.tsx`, `site-header.tsx`, `site-footer.tsx`, `volunteer-form.tsx`, `events-calendar.tsx`, `events-browser.tsx`, `event-registration-form.tsx`, `share-buttons.tsx`, `news-browser.tsx`, `gallery-browser.tsx`, `bank-transfer-claim-form.tsx`, `contact-form.tsx`.
+
+### 15.5 SEO & performance
+
+- `lib/seo.ts`: `buildMetadata()` (canonical + hreflang for every locale + OG/Twitter cards) used on every page; `ngoJsonLd()`, `breadcrumbJsonLd()`, `eventJsonLd()`, `articleJsonLd()` builders, rendered via a generic `<JsonLd>` component.
+- `app/sitemap.ts` / `app/robots.ts` — dynamic, generated from live content (with `.catch(() => [])` fallbacks so a DB outage degrades to a smaller sitemap rather than failing the build).
+- `export const dynamic = 'force-dynamic'` on the public layout — pages are server-rendered per-request rather than statically prerendered at build time (which would require a live backend during `next build`).
+- Images use `next/image`; gallery grid lazy-loads; route-level code splitting is automatic per Next.js App Router.
+
+### 15.6 Security
+
+- **`lib/sanitize.ts`**: server-side `isomorphic-dompurify` wrapper (`sanitizeRichText()`) — the Phase 5 admin editor already sanitizes on save; every public page sanitizes again on render (defense-in-depth per `documentation/12-Security-Requirements.md`'s XSS requirement), and this is the only way to safely render CMS HTML from a Server Component, where the admin's client-only DOMPurify import can't run.
+- `lib/public-api.ts`'s `publicApiClient` normalizes every Axios error into a plain `Error` before it can reach a Client Component error boundary (see §16.2) — prevents information leakage from raw Axios internals while still surfacing a real, useful message.
+
+---
+
+## 16. Phase 6 — Admin CMS Integration
+
+- `/admin/news`: added Category (text) and Tags (comma-separated) fields, wired to the new backend fields.
+- `/admin/settings`: added a "Bank transfer & UPI details" card (7 fields, incl. image upload for the QR code) to the Website Settings tab.
+- `/admin/content/legal` (new page): tabbed editor for the 4 legal pages, each an independent `PageContent` record with its own autosave — same pattern as the Phase 5 About/Home editors.
+
+### 16.1 Real bugs found and fixed during this phase
+
+1. **RSC → Client error boundary crash on a real backend outage.** An uncaught `AxiosError` thrown inside a Server Component (e.g. `getSocialLinks()` in the public layout) crashed with a cascading, misleading secondary error ("Only plain objects can be passed to Client Components... AxiosHeaders objects are not supported... Functions cannot be passed directly...") that completely masked the actual problem (database unreachable). **Fixed** with a response interceptor on `publicApiClient` (`lib/public-api.ts`) that converts any error into a plain `Error` before it propagates. Verified in-browser: the error boundary now renders the correct, translated "Something Went Wrong / Try again / Go Home" message instead of crashing.
+2. **Copy-paste bugs in two form components** — `bank-transfer-claim-form.tsx` and `contact-form.tsx` both had nonsensical conditional JSX left over from copying a similar field (`{tCommon('all') && 'optional'}` as a label, and a broken submit-button-label ternary). Fixed to plain, correct text in both files.
+3. **Stale `.next` type cache** after moving `(public)` → `[locale]/(public)` caused a false-positive `tsc` failure referencing the old path; fixed by clearing `apps/web/.next` and re-running typecheck (clean afterward).
+
+### 16.2 Known pre-existing issue (not introduced this phase, not fixed)
+
+Browser console testing of the new `app/[locale]/error.tsx` surfaced a Base UI dev-mode warning: _"A component that acts as a button expected a native `<button>`... at Button (`components/ui/button.tsx`) at StatusPage (`components/shared/status-page.tsx`)"_. This traces to the Phase 4 `StatusPage` shared component's plain `<Button onClick={onRetry} variant="outline">Try again</Button>` usage — code that was **not modified this phase**, just exercised for the first time in a live browser check because it's the first error boundary in the project to be rendered with the browser dev tools open. It is a non-blocking accessibility console warning (the button still renders and functions correctly), not a functional regression. Per your instruction not to modify completed phases unless integration is required, this was left as-is and is flagged here for a future cleanup pass rather than silently fixed or silently ignored.
+
+---
+
+## 17. Phase 6 Build Verification Results
+
+| Check                                |                                                                                                            Frontend (`apps/web`)                                                                                                             |           Backend (`apps/api`)            |
+| ------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------: |
+| `npm run lint` (from repo root)      |                                                                                                        ✅ Pass, 0 errors, 0 warnings                                                                                                         |       ✅ Pass, 0 errors, 0 warnings       |
+| `npm run typecheck` (from repo root) |                                                                                                              ✅ Pass, 0 errors                                                                                                               |             ✅ Pass, 0 errors             |
+| `npm run format:check`               |                                                                                            ✅ Pass (48 new files auto-formatted once, then clean)                                                                                            |                                           |
+| `npm run build` (from repo root)     |                                                                ✅ Pass — full production build incl. all `[locale]` static/dynamic public routes (en+te) and all admin routes                                                                |       ✅ Pass (`tsc` + `tsc-alias`)       |
+| Runtime smoke test (browser)         | ✅ `/` redirects to `/en`; error boundary degrades gracefully with correct translated copy on DB outage; `/en/about` spot-checked; console shows only the expected "DB unreachable" errors (§18) plus the known pre-existing warning (§16.2) | ✅ Both dev servers boot cleanly together |
+
+All checks were run **from the repository root**, exactly as instructed, and iterated until fully clean.
+
+---
+
+## 18. Phase 6 Known Limitation (Environment)
+
+Same root cause as every prior phase: **no live PostgreSQL instance is available in this build environment.**
+
+- `force-dynamic` on the public layout keeps the build itself unaffected (pages aren't prerendered against a live backend at build time), and `sitemap.ts`/`robots.ts` degrade gracefully (empty dynamic sections) rather than failing the build.
+- A full end-to-end browser walkthrough of every public page with real content (hero banners, activities, events, news, gallery images, donation categories) has **not** been possible — verification relied on `lint`/`typecheck`/`build` plus a live-browser check of the graceful-degradation path (confirmed working: DB-unavailable errors are caught and rendered as a clean, translated error page rather than crashing).
+- **Action required before UAT**: apply all Phase 5 + Phase 6 migrations against a real Postgres instance, seed real CMS content (hero banners, activities, at least one event/news post, gallery album, testimonials, committee members, bank/UPI details), then walk every public page in both `en` and `te` locales, plus the two new admin pages (`/admin/content/legal`, the Settings bank/UPI card).
+- Cloudinary credentials are still not configured in this environment, so the new `/media/upload/resume` endpoint is wired correctly but untested against the real Cloudinary API.
+
+---
+
+## 19. Phase 6 Approval Gate
+
+Per the phased, approval-gated process this project follows: **this phase is complete and the codebase builds cleanly with zero TypeScript errors, zero ESLint errors, and zero build errors on both apps** (verified via `npm run lint`, `npm run typecheck`, and `npm run build` from the repository root, all passing). The public website consumes only real Phase 5/6 CMS APIs — no hardcoded content, no dummy data. Stopping here for client approval before proceeding to the next phase.

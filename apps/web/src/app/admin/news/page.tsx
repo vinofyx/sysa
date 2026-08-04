@@ -46,6 +46,8 @@ interface NewsPost {
   bodyEn: string | null;
   status: PostStatus;
   featuredImageUrl: string | null;
+  category: string | null;
+  tags: string[];
   metaTitleEn: string | null;
   metaDescriptionEn: string | null;
   publishedAt: string | null;
@@ -62,6 +64,8 @@ const newsSchema = z.object({
   bodyEn: z.string().max(20000).optional().or(z.literal('')),
   status: z.enum(['draft', 'published', 'archived']),
   featuredImageUrl: z.string().optional().or(z.literal('')),
+  category: z.string().max(100).optional().or(z.literal('')),
+  tags: z.string().max(500).optional().or(z.literal('')),
   metaTitleEn: z.string().max(200).optional().or(z.literal('')),
   metaDescriptionEn: z.string().max(500).optional().or(z.literal('')),
 });
@@ -74,6 +78,8 @@ const EMPTY_VALUES: NewsFormValues = {
   bodyEn: '',
   status: 'draft',
   featuredImageUrl: '',
+  category: '',
+  tags: '',
   metaTitleEn: '',
   metaDescriptionEn: '',
 };
@@ -120,6 +126,8 @@ export default function NewsPage() {
       bodyEn: row.bodyEn ?? '',
       status: row.status,
       featuredImageUrl: row.featuredImageUrl ?? '',
+      category: row.category ?? '',
+      tags: row.tags.join(', '),
       metaTitleEn: row.metaTitleEn ?? '',
       metaDescriptionEn: row.metaDescriptionEn ?? '',
     });
@@ -131,6 +139,13 @@ export default function NewsPage() {
       ...values,
       bodyEn: values.bodyEn || undefined,
       featuredImageUrl: values.featuredImageUrl || undefined,
+      category: values.category || undefined,
+      tags: values.tags
+        ? values.tags
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : [],
       metaTitleEn: values.metaTitleEn || undefined,
       metaDescriptionEn: values.metaDescriptionEn || undefined,
     };
@@ -312,6 +327,34 @@ export default function NewsPage() {
               </FormItem>
             )}
           />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category (optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g. Updates" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags (comma-separated, optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="annadanam, goshala" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <FormField
             control={form.control}
             name="status"

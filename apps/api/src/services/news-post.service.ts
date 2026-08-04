@@ -12,12 +12,14 @@ interface NewsPostInput {
   slug: string;
   status: 'draft' | 'published' | 'archived';
   featuredImageUrl?: string;
+  category?: string;
+  tags?: string[];
   metaTitleEn?: string;
   metaDescriptionEn?: string;
 }
 
 export async function listNewsPosts(
-  filters: { status?: string; search?: string },
+  filters: { status?: string; category?: string; search?: string },
   page: number,
   pageSize: number,
 ) {

@@ -1,0 +1,159 @@
+{
+  "Nav": {
+    "home": "హోమ్",
+    "about": "మా గురించి",
+    "history": "చరిత్ర",
+    "vision": "దార్శనికత",
+    "mission": "లక్ష్యం",
+    "founder": "వ్యవస్థాపకులు",
+    "committee": "నిర్వహణ కమిటీ",
+    "treasurer": "కోశాధికారి సందేశం",
+    "activities": "కార్యక్రమాలు",
+    "services": "సేవలు",
+    "volunteer": "వాలంటీర్",
+    "events": "ఈవెంట్‌లు",
+    "news": "వార్తలు",
+    "gallery": "గ్యాలరీ",
+    "testimonials": "అభిప్రాయాలు",
+    "donate": "విరాళం",
+    "contact": "సంప్రదించండి",
+    "adminLogin": "అడ్మిన్ లాగిన్",
+    "search": "శోధించండి",
+    "menu": "మెనూ"
+  },
+  "Common": {
+    "donateNow": "ఇప్పుడు విరాళం ఇవ్వండి",
+    "learnMore": "మా కథను తెలుసుకోండి",
+    "readMore": "మరింత చదవండి",
+    "viewAll": "అన్నీ చూడండి",
+    "loadMore": "మరిన్ని లోడ్ చేయండి",
+    "register": "నమోదు చేసుకోండి",
+    "submit": "సమర్పించండి",
+    "subscribe": "సభ్యత్వం పొందండి",
+    "share": "పంచుకోండి",
+    "close": "మూసివేయండి",
+    "loading": "లోడ్ అవుతోంది…",
+    "noResults": "ఫలితాలు కనబడలేదు",
+    "comingSoon": "త్వరలో అందుబాటులో",
+    "goHome": "హోమ్‌కు వెళ్లండి",
+    "tryAgain": "మళ్ళీ ప్రయత్నించండి",
+    "back": "వెనుకకు",
+    "next": "తదుపరి",
+    "previous": "మునుపటి",
+    "all": "అన్నీ"
+  },
+  "Home": {
+    "impactStatsHeading": "మా ప్రభావం",
+    "activitiesHeading": "మేము చేసేది",
+    "activitiesSubheading": "ఆశ్రమం నిర్వహించే కార్యక్రమాలు మరియు సేవలు",
+    "newsHeading": "తాజా వార్తలు",
+    "eventsHeading": "రాబోయే ఈవెంట్‌లు",
+    "appealHeading": "ప్రస్తుత అభ్యర్థన",
+    "testimonialsHeading": "ప్రజలు ఏమంటున్నారు",
+    "galleryHeading": "గ్యాలరీ",
+    "volunteerCtaHeading": "వాలంటీర్‌గా చేరండి",
+    "volunteerCtaBody": "మా కార్యక్రమాలకు మద్దతుగా మీ సమయం మరియు నైపుణ్యాలను అందించండి.",
+    "contactCtaHeading": "మమ్మల్ని సంప్రదించండి",
+    "contactCtaBody": "మీకు ఏదైనా ప్రశ్న ఉందా? మేము మీ నుండి వినడానికి ఇష్టపడతాము.",
+    "newsletterHeading": "మాతో అనుసంధానంలో ఉండండి",
+    "newsletterBody": "మా కార్యక్రమాలు మరియు అభ్యర్థనల గురించి తాజా సమాచారం కోసం సభ్యత్వం పొందండి.",
+    "newsletterPlaceholder": "మీ ఇమెయిల్ చిరునామా"
+  },
+  "Footer": {
+    "quickLinks": "త్వరిత లింక్‌లు",
+    "followUs": "మమ్మల్ని అనుసరించండి",
+    "contactUs": "మమ్మల్ని సంప్రదించండి",
+    "legal": "చట్టపరమైనవి",
+    "newsletterHeading": "వార్తాలేఖ",
+    "regdNo": "నమోదు సంఖ్య",
+    "rightsReserved": "అన్ని హక్కులు కలిగి ఉన్నారు."
+  },
+  "Forms": {
+    "name": "పేరు",
+    "email": "ఇమెయిల్",
+    "phone": "ఫోన్",
+    "message": "సందేశం",
+    "namePlaceholder": "మీ పూర్తి పేరు",
+    "emailPlaceholder": "you@example.com",
+    "phonePlaceholder": "మీ ఫోన్ నంబర్",
+    "messagePlaceholder": "మేము ఎలా సహాయం చేయగలం?",
+    "submitting": "సమర్పిస్తోంది…",
+    "successTitle": "ధన్యవాదాలు!",
+    "errorTitle": "ఏదో తప్పు జరిగింది"
+  },
+  "Donate": {
+    "categoriesHeading": "విరాళ వర్గాలు",
+    "campaignsHeading": "ప్రచారాలు",
+    "bankDetailsHeading": "బ్యాంక్ బదిలీ వివరాలు",
+    "upiHeading": "UPI ద్వారా చెల్లించడానికి స్కాన్ చేయండి",
+    "appealsHeading": "ప్రస్తుత అభ్యర్థనలు",
+    "faqHeading": "తరచుగా అడిగే ప్రశ్నలు",
+    "accountName": "ఖాతా పేరు",
+    "accountNumber": "ఖాతా సంఖ్య",
+    "ifsc": "IFSC కోడ్",
+    "bankName": "బ్యాంక్ పేరు",
+    "branch": "శాఖ",
+    "claimTransfer": "నేను బదిలీ చేశాను",
+    "claimTransferBody": "ఇప్పటికే బ్యాంక్ బదిలీ లేదా UPI చెల్లింపు పంపారా? మేము దానిని ధృవీకరించి మీ రసీదు పంపడానికి మాకు తెలియజేయండి.",
+    "raised": "సేకరించినది",
+    "target": "లక్ష్యం",
+    "customAmount": "అనుకూల మొత్తం"
+  },
+  "Volunteer": {
+    "heading": "మాతో వాలంటీర్‌గా చేరండి",
+    "subheading": "వాలంటీర్ లేదా ఇంటర్న్‌గా చేరి మార్పు తీసుకురండి.",
+    "typeVolunteer": "వాలంటీర్",
+    "typeInternship": "ఇంటర్న్‌షిప్",
+    "areaOfInterest": "ఆసక్తి ఉన్న రంగం",
+    "academicBackground": "విద్యా నేపథ్యం",
+    "resume": "రెజ్యూమ్ / సీవీ",
+    "successMessage": "ధన్యవాదాలు — మేము త్వరలో మిమ్మల్ని సంప్రదిస్తాము."
+  },
+  "Events": {
+    "upcoming": "రాబోయేవి",
+    "past": "గత",
+    "calendarView": "క్యాలెండర్ వీక్షణ",
+    "listView": "జాబితా వీక్షణ",
+    "registerForEvent": "ఈ ఈవెంట్ కోసం నమోదు చేసుకోండి",
+    "registrationClosed": "నమోదు మూసివేయబడింది",
+    "capacityFull": "ఈ ఈవెంట్ నిండిపోయింది — మిమ్మల్ని వెయిట్‌లిస్ట్‌లో చేరుస్తాము.",
+    "successMessage": "మీరు నమోదు అయ్యారు! మిమ్మల్ని కలవడానికి ఎదురుచూస్తున్నాము."
+  },
+  "News": {
+    "categories": "వర్గాలు",
+    "tags": "ట్యాగ్‌లు",
+    "publishedOn": "ప్రచురించిన తేదీ"
+  },
+  "Gallery": {
+    "albums": "ఆల్బమ్‌లు",
+    "photos": "ఫోటోలు",
+    "videos": "వీడియోలు",
+    "searchPlaceholder": "ఆల్బమ్‌లను శోధించండి…"
+  },
+  "Contact": {
+    "heading": "మమ్మల్ని సంప్రదించండి",
+    "formHeading": "మాకు సందేశం పంపండి",
+    "workingHours": "పని వేళలు",
+    "phone": "ఫోన్",
+    "email": "ఇమెయిల్",
+    "whatsapp": "వాట్సాప్",
+    "address": "చిరునామా"
+  },
+  "Legal": {
+    "privacyPolicy": "గోప్యతా విధానం",
+    "termsConditions": "నిబంధనలు & షరతులు",
+    "refundPolicy": "వాపసు విధానం",
+    "disclaimer": "నిరాకరణ"
+  },
+  "Errors": {
+    "notFoundTitle": "పేజీ కనబడలేదు",
+    "notFoundBody": "మీరు వెతుకుతున్న పేజీ లేదు లేదా తరలించబడింది.",
+    "serverErrorTitle": "ఏదో తప్పు జరిగింది",
+    "serverErrorBody": "ఊహించని లోపం సంభవించింది. దయచేసి మళ్ళీ ప్రయత్నించండి."
+  },
+  "Search": {
+    "heading": "శోధన ఫలితాలు",
+    "placeholder": "సైట్‌లో శోధించండి…",
+    "resultsFor": "కోసం ఫలితాలు"
+  }
+}

@@ -51,6 +51,13 @@ const websiteSchema = z.object({
   footerTextEn: z.string().max(1000).optional().or(z.literal('')),
   copyrightText: z.string().max(300).optional().or(z.literal('')),
   maintenanceMode: z.boolean(),
+  bankAccountName: z.string().max(200).optional().or(z.literal('')),
+  bankAccountNumber: z.string().max(50).optional().or(z.literal('')),
+  bankIfscCode: z.string().max(20).optional().or(z.literal('')),
+  bankName: z.string().max(200).optional().or(z.literal('')),
+  bankBranch: z.string().max(200).optional().or(z.literal('')),
+  upiId: z.string().max(100).optional().or(z.literal('')),
+  upiQrImageUrl: z.string().optional().or(z.literal('')),
 });
 type WebsiteFormValues = z.infer<typeof websiteSchema>;
 
@@ -80,6 +87,13 @@ function WebsiteSettingsTab() {
       footerTextEn: '',
       copyrightText: '',
       maintenanceMode: false,
+      bankAccountName: '',
+      bankAccountNumber: '',
+      bankIfscCode: '',
+      bankName: '',
+      bankBranch: '',
+      upiId: '',
+      upiQrImageUrl: '',
     },
   });
   const hydrated = React.useRef(false);
@@ -99,6 +113,13 @@ function WebsiteSettingsTab() {
         footerTextEn: data.footerTextEn ?? '',
         copyrightText: data.copyrightText ?? '',
         maintenanceMode: data.maintenanceMode,
+        bankAccountName: data.bankAccountName ?? '',
+        bankAccountNumber: data.bankAccountNumber ?? '',
+        bankIfscCode: data.bankIfscCode ?? '',
+        bankName: data.bankName ?? '',
+        bankBranch: data.bankBranch ?? '',
+        upiId: data.upiId ?? '',
+        upiQrImageUrl: data.upiQrImageUrl ?? '',
       });
       hydrated.current = true;
     }
@@ -117,6 +138,13 @@ function WebsiteSettingsTab() {
       whatsappNumber: values.whatsappNumber || undefined,
       footerTextEn: values.footerTextEn || undefined,
       copyrightText: values.copyrightText || undefined,
+      bankAccountName: values.bankAccountName || undefined,
+      bankAccountNumber: values.bankAccountNumber || undefined,
+      bankIfscCode: values.bankIfscCode || undefined,
+      bankName: values.bankName || undefined,
+      bankBranch: values.bankBranch || undefined,
+      upiId: values.upiId || undefined,
+      upiQrImageUrl: values.upiQrImageUrl || undefined,
     };
     updateMutation
       .mutateAsync(payload)
@@ -275,6 +303,119 @@ function WebsiteSettingsTab() {
                 </FormItem>
               )}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Bank transfer &amp; UPI details</CardTitle>
+            <CardDescription>
+              Shown on the public Donate page for manual bank transfers — left blank hides that
+              section entirely rather than showing placeholder details.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="bankAccountName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account name (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!canManage} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bankAccountNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account number (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!canManage} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="bankIfscCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>IFSC code (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!canManage} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bankName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bank name (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!canManage} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bankBranch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!canManage} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="upiId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>UPI ID (optional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="ashram@upi" disabled={!canManage} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="upiQrImageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>UPI QR code image (optional)</FormLabel>
+                    <FormControl>
+                      <ImageUploadField
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={!canManage}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </CardContent>
         </Card>
 

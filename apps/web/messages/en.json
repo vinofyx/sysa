@@ -1,0 +1,159 @@
+{
+  "Nav": {
+    "home": "Home",
+    "about": "About Us",
+    "history": "History",
+    "vision": "Vision",
+    "mission": "Mission",
+    "founder": "Founder",
+    "committee": "Managing Committee",
+    "treasurer": "Treasurer's Message",
+    "activities": "Activities",
+    "services": "Services",
+    "volunteer": "Volunteer",
+    "events": "Events",
+    "news": "News",
+    "gallery": "Gallery",
+    "testimonials": "Testimonials",
+    "donate": "Donate",
+    "contact": "Contact",
+    "adminLogin": "Admin Login",
+    "search": "Search",
+    "menu": "Menu"
+  },
+  "Common": {
+    "donateNow": "Donate Now",
+    "learnMore": "Learn Our Story",
+    "readMore": "Read More",
+    "viewAll": "View All",
+    "loadMore": "Load More",
+    "register": "Register",
+    "submit": "Submit",
+    "subscribe": "Subscribe",
+    "share": "Share",
+    "close": "Close",
+    "loading": "Loading…",
+    "noResults": "No results found",
+    "comingSoon": "Coming Soon",
+    "goHome": "Go Home",
+    "tryAgain": "Try Again",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "all": "All"
+  },
+  "Home": {
+    "impactStatsHeading": "Our Impact",
+    "activitiesHeading": "What We Do",
+    "activitiesSubheading": "Programs and services run by the Ashram",
+    "newsHeading": "Latest News",
+    "eventsHeading": "Upcoming Events",
+    "appealHeading": "Current Appeal",
+    "testimonialsHeading": "What People Say",
+    "galleryHeading": "Gallery",
+    "volunteerCtaHeading": "Become a Volunteer",
+    "volunteerCtaBody": "Give your time and skills to support our programs.",
+    "contactCtaHeading": "Get in Touch",
+    "contactCtaBody": "Have a question? We'd love to hear from you.",
+    "newsletterHeading": "Stay Connected",
+    "newsletterBody": "Subscribe for updates on our programs and appeals.",
+    "newsletterPlaceholder": "Your email address"
+  },
+  "Footer": {
+    "quickLinks": "Quick Links",
+    "followUs": "Follow Us",
+    "contactUs": "Contact Us",
+    "legal": "Legal",
+    "newsletterHeading": "Newsletter",
+    "regdNo": "Regd. No.",
+    "rightsReserved": "All rights reserved."
+  },
+  "Forms": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "message": "Message",
+    "namePlaceholder": "Your full name",
+    "emailPlaceholder": "you@example.com",
+    "phonePlaceholder": "Your phone number",
+    "messagePlaceholder": "How can we help?",
+    "submitting": "Submitting…",
+    "successTitle": "Thank you!",
+    "errorTitle": "Something went wrong"
+  },
+  "Donate": {
+    "categoriesHeading": "Donation Categories",
+    "campaignsHeading": "Campaigns",
+    "bankDetailsHeading": "Bank Transfer Details",
+    "upiHeading": "Scan to Pay via UPI",
+    "appealsHeading": "Current Appeals",
+    "faqHeading": "Frequently Asked Questions",
+    "accountName": "Account Name",
+    "accountNumber": "Account Number",
+    "ifsc": "IFSC Code",
+    "bankName": "Bank Name",
+    "branch": "Branch",
+    "claimTransfer": "I've Made a Transfer",
+    "claimTransferBody": "Already sent a bank transfer or UPI payment? Let us know so we can verify it and send your receipt.",
+    "raised": "Raised",
+    "target": "Target",
+    "customAmount": "Custom Amount"
+  },
+  "Volunteer": {
+    "heading": "Volunteer With Us",
+    "subheading": "Join us as a volunteer or intern and make a difference.",
+    "typeVolunteer": "Volunteer",
+    "typeInternship": "Internship",
+    "areaOfInterest": "Area of Interest",
+    "academicBackground": "Academic Background",
+    "resume": "Resume / CV",
+    "successMessage": "Thank you — we will be in touch soon."
+  },
+  "Events": {
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "calendarView": "Calendar View",
+    "listView": "List View",
+    "registerForEvent": "Register for this Event",
+    "registrationClosed": "Registration Closed",
+    "capacityFull": "This event is full — you'll be added to the waitlist.",
+    "successMessage": "You're registered! We look forward to seeing you."
+  },
+  "News": {
+    "categories": "Categories",
+    "tags": "Tags",
+    "publishedOn": "Published on"
+  },
+  "Gallery": {
+    "albums": "Albums",
+    "photos": "Photos",
+    "videos": "Videos",
+    "searchPlaceholder": "Search albums…"
+  },
+  "Contact": {
+    "heading": "Contact Us",
+    "formHeading": "Send Us a Message",
+    "workingHours": "Working Hours",
+    "phone": "Phone",
+    "email": "Email",
+    "whatsapp": "WhatsApp",
+    "address": "Address"
+  },
+  "Legal": {
+    "privacyPolicy": "Privacy Policy",
+    "termsConditions": "Terms & Conditions",
+    "refundPolicy": "Refund Policy",
+    "disclaimer": "Disclaimer"
+  },
+  "Errors": {
+    "notFoundTitle": "Page Not Found",
+    "notFoundBody": "The page you're looking for doesn't exist or has been moved.",
+    "serverErrorTitle": "Something Went Wrong",
+    "serverErrorBody": "An unexpected error occurred. Please try again."
+  },
+  "Search": {
+    "heading": "Search Results",
+    "placeholder": "Search the site…",
+    "resultsFor": "Results for"
+  }
+}

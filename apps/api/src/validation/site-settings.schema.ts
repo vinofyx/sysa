@@ -22,4 +22,11 @@ export const updateSiteSettingsSchema = z.object({
   footerTextTe: z.string().max(1000).optional(),
   copyrightText: z.string().max(300).optional(),
   maintenanceMode: z.boolean().optional(),
+  bankAccountName: z.string().max(200).optional(),
+  bankAccountNumber: z.string().max(50).optional(),
+  bankIfscCode: z.string().max(20).optional(),
+  bankName: z.string().max(200).optional(),
+  bankBranch: z.string().max(200).optional(),
+  upiId: z.string().max(100).optional(),
+  upiQrImageUrl: z.string().url().optional(),
 });

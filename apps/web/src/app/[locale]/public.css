@@ -1,0 +1,46 @@
+/**
+ * Public-site-only design tokens (design/06-Design-System.md). Deliberately
+ * namespaced (`--color-pub-*`, `--font-pub-*`) rather than overriding the
+ * shared shadcn tokens in `src/app/globals.css` — the admin CMS is a
+ * "visually distinct family" per the design system, and redefining
+ * `--color-primary` etc. globally would silently reskin the admin panel too.
+ * Public components use `bg-pub-primary-700`, `font-pub-heading`, etc.
+ */
+@theme inline {
+  --color-pub-primary-900: #0f3d25;
+  --color-pub-primary-700: #1b6b3f;
+  --color-pub-primary-500: #2e9b5c;
+  --color-pub-primary-100: #e3f5ea;
+
+  --color-pub-gold-700: #b8860b;
+  --color-pub-gold-500: #d4a017;
+  --color-pub-gold-100: #fbf3dc;
+
+  --color-pub-neutral-white: #ffffff;
+  --color-pub-neutral-50: #f7f8f6;
+  --color-pub-neutral-200: #e2e5e1;
+  --color-pub-neutral-500: #6b7269;
+  --color-pub-neutral-900: #1a1d1a;
+
+  --color-pub-success: #1b6b3f;
+  --color-pub-warning: #b8860b;
+  --color-pub-error: #c23b3b;
+  --color-pub-info: #2e6b9e;
+
+  --font-pub-heading: var(--font-poppins), var(--font-noto-telugu), sans-serif;
+  --font-pub-body: var(--font-inter), var(--font-noto-telugu), sans-serif;
+
+  --shadow-pub-sm: 0 1px 2px rgba(15, 61, 37, 0.06);
+  --shadow-pub-md: 0 4px 12px rgba(15, 61, 37, 0.1);
+  --shadow-pub-lg: 0 12px 32px rgba(15, 61, 37, 0.14);
+}
+
+.font-public {
+  font-family: var(--font-pub-body);
+  color: var(--color-pub-neutral-900);
+  background-color: var(--color-pub-neutral-white);
+}
+
+.font-public :lang(te) {
+  line-height: 1.65;
+}

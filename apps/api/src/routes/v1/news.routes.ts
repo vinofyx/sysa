@@ -15,11 +15,25 @@ import { prisma } from '@lib/prisma';
 
 export const newsRouter = Router();
 
-// Public — Events & News listing (design/02-Sitemap.md).
-newsRouter.get('/public', async (_req, res, next) => {
+const publicNewsQuerySchema = z.object({
+  category: z.string().max(100).optional(),
+});
+
+// Public — Events & News listing (design/02-Sitemap.md). `category`/`tags`
+// filtering and search/pagination are done client-side by the public site
+// (the full published set is small enough not to warrant server pagination
+// here — every other `/public` list endpoint in this API follows the same
+// "return the full published collection" pattern).
+newsRouter.get('/public', validate({ query: publicNewsQuerySchema }), async (req, res, next) => {
   try {
+    const { category } = req.query as unknown as z.infer<typeof publicNewsQuerySchema>;
     const posts = await prisma.eventNewsPost.findMany({
-      where: { type: 'news', deletedAt: null, status: 'published' },
+      where: {
+        type: 'news',
+        deletedAt: null,
+        status: 'published',
+        ...(category ? { category } : {}),
+      },
       orderBy: { publishedAt: 'desc' },
     });
     res.status(200).json({ posts });

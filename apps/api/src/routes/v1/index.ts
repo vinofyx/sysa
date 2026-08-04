@@ -15,6 +15,8 @@ import { socialLinksRouter } from '@routes/v1/social-links.routes';
 import { navigationRouter } from '@routes/v1/navigation.routes';
 import { activitiesRouter } from '@routes/v1/activities.routes';
 import { committeeRouter } from '@routes/v1/committee.routes';
+import { publicContentRouter } from '@routes/v1/public-content.routes';
+import { contactRouter } from '@routes/v1/contact.routes';
 
 import { donationCategoriesRouter } from '@routes/v1/donation-categories.routes';
 import { appealsRouter } from '@routes/v1/appeals.routes';
@@ -47,6 +49,10 @@ v1Router.use('/permissions', permissionsRouter);
 v1Router.use('/profile', profileRouter);
 
 // Content Management System
+// publicContentRouter registers exact-path public routes (e.g. GET /hero-banners/public)
+// for the six buildSimpleCrudRouter-based modules below — mounted first so those
+// exact matches short-circuit before reaching each admin router's blanket `authenticate`.
+v1Router.use('/', publicContentRouter);
 v1Router.use('/site-settings', siteSettingsRouter);
 v1Router.use('/page-content', pageContentRouter);
 v1Router.use('/hero-banners', heroBannersRouter);
@@ -55,6 +61,7 @@ v1Router.use('/social-links', socialLinksRouter);
 v1Router.use('/navigation', navigationRouter);
 v1Router.use('/activities', activitiesRouter);
 v1Router.use('/committee', committeeRouter);
+v1Router.use('/contact', contactRouter);
 
 // Donation module
 v1Router.use('/donation-categories', donationCategoriesRouter);

@@ -397,6 +397,11 @@ model EventNewsPost {
   publishedAt       DateTime?  @map("published_at")
   status            PostStatus @default(draft)
   featuredImageUrl  String?    @map("featured_image_url")
+  /// News-only (`type='news'`) categorization — Phase 6 public site
+  /// requirement (category filter + tags). Nullable/empty on events, which
+  /// don't use this field.
+  category          String?
+  tags              String[]   @default([])
   metaTitleEn       String?    @map("meta_title_en")
   metaDescriptionEn String?    @map("meta_description_en")
   authorAdminId     String?    @map("author_admin_id")
@@ -563,6 +568,19 @@ model ContactSubmission {
   @@map("contact_submission")
 }
 
+/// Public website newsletter signup (Phase 6) — deliberately minimal (just an
+/// email + subscribed flag) since no email-campaign/newsletter-sending system
+/// exists in this project's scope yet; this only captures interest.
+model NewsletterSubscriber {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  subscribed   Boolean   @default(true)
+  subscribedAt DateTime  @default(now()) @map("subscribed_at")
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+
+  @@map("newsletter_subscriber")
+}
+
 // ------------------------------------------------------------------------------
 // CMS singleton content — design/12-Database-ERD.md §4 "page_content"
 // ------------------------------------------------------------------------------
@@ -706,6 +724,15 @@ model SiteSettings {
   footerTextTe           String?  @map("footer_text_te")
   copyrightText          String?  @map("copyright_text")
   maintenanceMode        Boolean  @default(false) @map("maintenance_mode")
+  /// Bank transfer / UPI details shown on the public Donate page — nullable
+  /// like every other settings field (Phase 6), never fabricated defaults.
+  bankAccountName        String?  @map("bank_account_name")
+  bankAccountNumber      String?  @map("bank_account_number")
+  bankIfscCode           String?  @map("bank_ifsc_code")
+  bankName               String?  @map("bank_name")
+  bankBranch             String?  @map("bank_branch")
+  upiId                  String?  @map("upi_id")
+  upiQrImageUrl          String?  @map("upi_qr_image_url")
   updatedAt              DateTime @updatedAt @map("updated_at")
   updatedBy              String?  @map("updated_by")
 

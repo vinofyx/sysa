@@ -25,6 +25,13 @@ export interface SiteSettings {
   footerTextEn: string | null;
   copyrightText: string | null;
   maintenanceMode: boolean;
+  bankAccountName: string | null;
+  bankAccountNumber: string | null;
+  bankIfscCode: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
+  upiId: string | null;
+  upiQrImageUrl: string | null;
 }
 
 const key = ['site-settings'] as const;

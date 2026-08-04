@@ -5,7 +5,14 @@ import type { AxiosError } from 'axios';
 
 import { apiClient, type ApiErrorBody } from '@/lib/api-client';
 
-export type PageKey = 'home' | 'about' | 'contact';
+export type PageKey =
+  | 'home'
+  | 'about'
+  | 'contact'
+  | 'privacy-policy'
+  | 'terms-conditions'
+  | 'refund-policy'
+  | 'disclaimer';
 
 export interface PageContent {
   pageKey: string;

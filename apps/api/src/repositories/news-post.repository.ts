@@ -7,12 +7,14 @@ export function findMany(params: {
   skip?: number;
   take?: number;
   status?: string;
+  category?: string;
   search?: string;
 }) {
   const where: Prisma.EventNewsPostWhereInput = {
     type: 'news',
     deletedAt: null,
     ...(params.status ? { status: params.status as Prisma.EnumPostStatusFilter['equals'] } : {}),
+    ...(params.category ? { category: params.category } : {}),
     ...(params.search ? { titleEn: { contains: params.search, mode: 'insensitive' } } : {}),
   };
   return Promise.all([
