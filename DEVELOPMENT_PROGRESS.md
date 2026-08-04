@@ -160,12 +160,15 @@ Per the phased, approval-gated process this project follows: **this phase is com
 
 Annotated tags marking each completed, approved phase (local-only — no remote is configured for this repository). Phases 1–3 were delivered together in a single squashed "Initial commit," so their tags share one commit hash; Phase 4 landed as its own commit.
 
-| Tag                          | Commit                                          | Description                                                                 |
-| ---------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
-| `v0.1-project-documentation` | `ecb1cbb` (Initial commit)                      | Phase 1 - Business Analysis, BRD, SRS, Requirements Documentation           |
-| `v0.2-system-design`         | `ecb1cbb` (Initial commit)                      | Phase 2 - UI/UX, Architecture, Database Design, API Design                  |
-| `v0.3-project-foundation`    | `ecb1cbb` (Initial commit)                      | Phase 3 - Project Foundation, Monorepo Setup, Docker, CI/CD, Infrastructure |
-| `v0.4-authentication-core`   | `87625d9` (Phase 4: core application framework) | Phase 4 - Authentication, RBAC, Core Framework, Admin Shell                 |
+| Tag                          | Commit                                           | Description                                                                 |
+| ---------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `v0.1-project-documentation` | `ecb1cbb` (Initial commit)                       | Phase 1 - Business Analysis, BRD, SRS, Requirements Documentation           |
+| `v0.2-system-design`         | `ecb1cbb` (Initial commit)                       | Phase 2 - UI/UX, Architecture, Database Design, API Design                  |
+| `v0.3-project-foundation`    | `ecb1cbb` (Initial commit)                       | Phase 3 - Project Foundation, Monorepo Setup, Docker, CI/CD, Infrastructure |
+| `v0.4-authentication-core`   | `87625d9` (Phase 4: core application framework)  | Phase 4 - Authentication, RBAC, Core Framework, Admin Shell                 |
+| `v0.5-business-modules`      | `ec484d5` (feat: complete admin cms frontend)    | Phase 5 - Business Modules and Admin CMS                                    |
+| `v0.6-public-website`        | `08e0c14` (feat: complete public website)        | Phase 6 - Complete Public Website                                           |
+| `v0.7-razorpay-integration`  | `5c5a570` (feat: implement razorpay integration) | Phase 7 - Production Ready Razorpay Integration                             |
 
 Verify locally with `git tag -l -n1` (list) or `git show <tag>` (full annotation + commit details).
 
