@@ -12,7 +12,7 @@ This guide walks through deploying the platform using the infrastructure already
 Internet → Nginx (infrastructure/nginx/) → ┬─ /api/* → apps/api (Express, port 4000)
                                             └─ /*     → apps/web (Next.js, port 3000)
                                                               │
-                                                        apps/api → PostgreSQL 16
+                                                        apps/api → MySQL 8.0+
 ```
 
 Two deployment paths are both fully configured in this repo:
@@ -28,7 +28,7 @@ Both share the same Nginx routing config (`infrastructure/nginx/conf.d/default.c
 
 | Requirement                                                 | Notes                                                                                                                                                                                                                     |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL 16                                               | Provided by `docker-compose.yml`'s `postgres` service, or an external managed instance (RDS, Supabase, etc.)                                                                                                              |
+| MySQL 8.0+ (utf8mb4 / utf8mb4_0900_ai_ci)                   | Provided by `docker-compose.yml`'s `mysql` service, or an external managed instance (RDS/Aurora MySQL, PlanetScale, DigitalOcean Managed MySQL, etc.) — see [MYSQL_MIGRATION_REPORT.md](MYSQL_MIGRATION_REPORT.md)        |
 | Node.js ≥ 20                                                | Matches `engines.node` in both `apps/api/package.json` and `apps/web/package.json`                                                                                                                                        |
 | Cloudinary account                                          | For gallery/document/receipt-PDF/resume storage — **not yet configured in any environment this project has been built in; required before go-live**                                                                       |
 | Razorpay merchant account (live or test mode)               | **Not yet configured** — pending client KYC per `documentation/16-Assumptions-and-Dependencies.md` D-01. This is the single most important pre-launch dependency — see GO_LIVE_CHECKLIST.md                               |
@@ -44,7 +44,7 @@ Copy `.env.example` (root) and `apps/api/.env.example` to real `.env` files and 
 ### 3.1 Required (app will not boot without these)
 
 ```bash
-DATABASE_URL=postgresql://user:password@host:5432/dbname?schema=public
+DATABASE_URL=mysql://user:password@host:3306/dbname
 JWT_ACCESS_SECRET=<32+ random characters>
 JWT_REFRESH_SECRET=<32+ random characters, different from the above>
 ```

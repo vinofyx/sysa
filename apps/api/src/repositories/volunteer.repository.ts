@@ -25,10 +25,7 @@ export async function findOrCreate(input: { name: string; email: string; phone: 
 export function findMany(params: { skip?: number; take?: number; search?: string }) {
   const where: Prisma.VolunteerWhereInput = params.search
     ? {
-        OR: [
-          { name: { contains: params.search, mode: 'insensitive' } },
-          { email: { contains: params.search, mode: 'insensitive' } },
-        ],
+        OR: [{ name: { contains: params.search } }, { email: { contains: params.search } }],
       }
     : {};
   return Promise.all([

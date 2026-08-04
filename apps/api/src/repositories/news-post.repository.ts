@@ -15,7 +15,7 @@ export function findMany(params: {
     deletedAt: null,
     ...(params.status ? { status: params.status as Prisma.EnumPostStatusFilter['equals'] } : {}),
     ...(params.category ? { category: params.category } : {}),
-    ...(params.search ? { titleEn: { contains: params.search, mode: 'insensitive' } } : {}),
+    ...(params.search ? { titleEn: { contains: params.search } } : {}),
   };
   return Promise.all([
     prisma.eventNewsPost.findMany({

@@ -9,6 +9,8 @@
 | **Date** | 2026-08-03 |
 | **Traceability** | Derived from [01-BRD.md](01-BRD.md); elaborated in [03-Functional-Requirements.md](03-Functional-Requirements.md) and [04-Non-Functional-Requirements.md](04-Non-Functional-Requirements.md) |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not the PostgreSQL shown in this document's architecture diagram/database description below. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md). The rest of this document's requirements are database-engine-agnostic and unaffected.
+
 ---
 
 ## 1. Introduction

@@ -8,6 +8,8 @@
 | **Date** | 2026-08-03 |
 | **Traceability** | Elaborates [02-SRS.md §5](02-SRS.md#5-non-functional-requirements-summary) |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not PostgreSQL (referenced in NFR-SCALE-03 below). MySQL 8 has equivalent managed read-replica capability from every major cloud provider, so the scaling requirement itself is unaffected. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md).
+
 ---
 
 ## 1. Conventions

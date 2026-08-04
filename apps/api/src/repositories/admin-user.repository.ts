@@ -24,8 +24,12 @@ export function findMany(params: {
     ...(params.search
       ? {
           OR: [
-            { name: { contains: params.search, mode: 'insensitive' } },
-            { email: { contains: params.search, mode: 'insensitive' } },
+            // MySQL's utf8mb4_0900_ai_ci (or utf8mb4_unicode_ci) collation is
+            // case-insensitive by default, so `contains` is already
+            // case-insensitive here — no `mode: 'insensitive'` option exists
+            // for MySQL in Prisma (PostgreSQL/MongoDB only).
+            { name: { contains: params.search } },
+            { email: { contains: params.search } },
           ],
         }
       : {}),

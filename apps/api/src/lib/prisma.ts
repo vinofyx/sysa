@@ -8,7 +8,7 @@ import { logger } from '@lib/logger';
  *
  * In development, Next.js-style hot-reload equivalents (tsx watch) can create multiple
  * PrismaClient instances against the same dev server process; we cache the instance on
- * globalThis to avoid exhausting the Postgres connection pool during local development.
+ * globalThis to avoid exhausting the MySQL connection pool during local development.
  */
 declare global {
   var __prisma: PrismaClient | undefined;

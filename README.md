@@ -17,7 +17,7 @@ This codebase is built directly from three prior planning phases. Read them in t
 | Layer          | Technology                                                                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Frontend       | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui, React Hook Form, Zod, TanStack Query, Axios, Framer Motion |
-| Backend        | Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, JWT, bcrypt, Multer, Cloudinary SDK, Nodemailer, Winston                        |
+| Backend        | Node.js, Express, TypeScript, Prisma ORM, MySQL 8, JWT, bcrypt, Multer, Cloudinary SDK, Nodemailer, Winston                           |
 | Infrastructure | Docker, Docker Compose, Nginx, PM2, GitHub Actions, ESLint, Prettier, Husky                                                           |
 
 Full justification for every choice: [`documentation/11-Technology-Stack.md`](documentation/11-Technology-Stack.md).
@@ -36,7 +36,7 @@ sysa/
 ├── docs/                  # Source client documents + extracted project context
 ├── documentation/         # Phase 1 — BRD, SRS, requirements, etc.
 ├── design/                # Phase 2 — IA, wireframes, design system, architecture
-├── docker-compose.yml     # Local/single-host orchestration (Postgres + API + Web + Nginx)
+├── docker-compose.yml     # Local/single-host orchestration (MySQL + API + Web + Nginx)
 └── package.json           # npm workspaces root
 ```
 
@@ -46,7 +46,7 @@ Full rationale: [`design/14-Folder-Structure.md`](design/14-Folder-Structure.md)
 
 - Node.js ≥ 20 (see `.nvmrc`)
 - npm ≥ 10
-- Docker + Docker Compose (for local Postgres, or full containerized dev)
+- Docker + Docker Compose (for local MySQL, or full containerized dev)
 - Git
 
 ## Getting Started (Local Development)
@@ -79,25 +79,25 @@ openssl rand -base64 48   # run twice — once for JWT_ACCESS_SECRET, once for J
 
 Cloudinary, Razorpay, and SMTP credentials are optional for local foundation work — the app boots and logs a clear warning if they're unset (see `apps/api/src/integrations/`). They become required once the corresponding features are implemented.
 
-### 3. Start PostgreSQL
+### 3. Start MySQL
 
 **Option A — Docker (recommended):**
 
 ```bash
-docker compose up -d postgres
+docker compose up -d mysql
 ```
 
-**Option B — local Postgres install:** create a database matching your `apps/api/.env` `DATABASE_URL`.
+**Option B — local MySQL install:** create a database matching your `apps/api/.env` `DATABASE_URL`, using `utf8mb4` / `utf8mb4_0900_ai_ci` (falls back to `utf8mb4_unicode_ci` on MySQL builds where `utf8mb4_0900_ai_ci` is unavailable) for correct English/Telugu/Unicode/emoji support.
 
 ### 4. Set up the database schema
 
 ```bash
 npm run prisma:generate --workspace=apps/api
-npm run prisma:migrate --workspace=apps/api    # applies apps/api/prisma/migrations/20260803101658_init/
+npm run prisma:migrate --workspace=apps/api    # applies apps/api/prisma/migrations/20260804120000_init_mysql/
 npm run prisma:seed --workspace=apps/api        # seeds RBAC roles/permissions + donation categories + a bootstrap Super Admin
 ```
 
-> **Note:** The committed migration was generated via `prisma migrate diff` (no live Postgres was available in the environment that authored it) and has not yet been applied against a real database — running `prisma:migrate` above will be the first time it is. If Prisma reports drift, resolve it locally and commit any follow-up migration it generates.
+> **Note:** The committed migration was generated via `prisma migrate diff` (no live MySQL was available in the environment that authored it) and has not yet been applied against a real database — running `prisma:migrate` above will be the first time it is. If Prisma reports drift, resolve it locally and commit any follow-up migration it generates. This project migrated from PostgreSQL to MySQL — see [MYSQL_MIGRATION_REPORT.md](MYSQL_MIGRATION_REPORT.md) for the full rationale and change list.
 
 The seed script creates one bootstrap **Super Admin** account so you can log in immediately:
 
@@ -121,7 +121,7 @@ npm run dev:web
 
 - Frontend: [http://localhost:3000](http://localhost:3000) — public placeholder home page.
 - Admin login: [http://localhost:3000/login](http://localhost:3000/login) — sign in with the seeded Super Admin above, lands on `/admin` (dashboard shell).
-- API health check: [http://localhost:4000/api/v1/health](http://localhost:4000/api/v1/health) — should return `{"status":"ok", ...}` once Postgres is reachable.
+- API health check: [http://localhost:4000/api/v1/health](http://localhost:4000/api/v1/health) — should return `{"status":"ok", ...}` once MySQL is reachable.
 - API docs (Swagger UI): [http://localhost:4000/api/v1/docs](http://localhost:4000/api/v1/docs).
 
 ## Running with Docker Compose (Full Stack)
@@ -131,7 +131,7 @@ cp .env.example .env   # fill in real values first
 docker compose up -d --build
 ```
 
-This starts Postgres, the API, the Next.js frontend, and an Nginx reverse proxy (`http://localhost` by default). See [`design/15-Deployment-Architecture.md`](design/15-Deployment-Architecture.md) for the full topology.
+This starts MySQL, the API, the Next.js frontend, and an Nginx reverse proxy (`http://localhost` by default). See [`design/15-Deployment-Architecture.md`](design/15-Deployment-Architecture.md) for the full topology.
 
 ## Available Scripts (root)
 

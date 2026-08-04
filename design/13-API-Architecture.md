@@ -9,6 +9,8 @@
 | **Date** | 2026-08-03 |
 | **Builds On** | [13-API-Requirements.md](../documentation/13-API-Requirements.md) (Phase 1, unmodified) — this document adds the layered architecture, request lifecycle, and auth-flow diagrams behind that endpoint catalogue |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not the PostgreSQL shown in this document's diagrams below. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md). The layering/request-lifecycle/auth-flow architecture itself is database-engine-agnostic and unaffected.
+
 ---
 
 ## 1. Purpose

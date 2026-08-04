@@ -41,10 +41,7 @@ function buildWhere(params: DonationFilters): Prisma.DonationWhereInput {
     ...(params.search
       ? {
           donor: {
-            OR: [
-              { name: { contains: params.search, mode: 'insensitive' } },
-              { email: { contains: params.search, mode: 'insensitive' } },
-            ],
+            OR: [{ name: { contains: params.search } }, { email: { contains: params.search } }],
           },
         }
       : {}),
@@ -195,13 +192,17 @@ export async function getAnalytics(dateFrom?: Date, dateTo?: Date): Promise<Dona
       where: dateFilter,
       _count: true,
     }),
+    // MySQL has no `date_trunc`/`to_char`/`::float` cast — `DATE_FORMAT`
+    // alone produces the same "YYYY-MM" grouping key in one step, and
+    // MySQL's SUM() over a DECIMAL column already returns a numeric value
+    // Prisma types correctly without an explicit cast.
     prisma.$queryRaw<{ month: string; total: number }[]>`
-      SELECT to_char(date_trunc('month', "created_at"), 'YYYY-MM') AS month,
-             COALESCE(SUM("amount"), 0)::float AS total
-      FROM "donation"
-      WHERE "status" = 'completed'
-        ${dateFrom ? Prisma.sql`AND "created_at" >= ${dateFrom}` : Prisma.empty}
-        ${dateTo ? Prisma.sql`AND "created_at" <= ${dateTo}` : Prisma.empty}
+      SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,
+             COALESCE(SUM(amount), 0) AS total
+      FROM donation
+      WHERE status = 'completed'
+        ${dateFrom ? Prisma.sql`AND created_at >= ${dateFrom}` : Prisma.empty}
+        ${dateTo ? Prisma.sql`AND created_at <= ${dateTo}` : Prisma.empty}
       GROUP BY 1
       ORDER BY 1
     `,

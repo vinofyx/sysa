@@ -15,8 +15,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// MySQL 8.0+ — migrated from PostgreSQL (see MYSQL_MIGRATION_PLAN.md /
+// MYSQL_MIGRATION_REPORT.md). Character set/collation (utf8mb4 /
+// utf8mb4_0900_ai_ci, falling back to utf8mb4_unicode_ci on MySQL <8.0.1)
+// are set at the database/server level, not per-field here — see
+// docker-compose.yml's `mysql` service.
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -457,7 +462,12 @@ model EventNewsPost {
   /// requirement (category filter + tags). Nullable/empty on events, which
   /// don't use this field.
   category          String?
-  tags              String[]   @default([])
+  /// JSON array of strings (e.g. `["annadanam","medical camp"]`) — MySQL has
+  /// no native scalar-array column type (PostgreSQL's `String[]` has no
+  /// direct equivalent), so this is stored as a JSON array instead. The
+  /// public API contract is unchanged: every consumer still receives/sends a
+  /// plain `string[]` over HTTP (see MYSQL_MIGRATION_REPORT.md).
+  tags              Json       @default("[]")
   metaTitleEn       String?    @map("meta_title_en")
   metaDescriptionEn String?    @map("meta_description_en")
   authorAdminId     String?    @map("author_admin_id")

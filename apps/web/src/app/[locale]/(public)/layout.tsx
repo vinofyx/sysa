@@ -8,7 +8,7 @@ import { getNavigation, getSiteSettings, getSocialLinks } from '@/lib/public-api
  * admin panel — rendered per-request rather than statically generated, so
  * content edits are reflected immediately without a rebuild/redeploy. This
  * also means `next build` never needs a live backend reachable at build time
- * (consistent with every prior phase's "no live Postgres in this build
+ * (consistent with every prior phase's "no live database in this build
  * environment" constraint — see DEVELOPMENT_PROGRESS.md). */
 export const dynamic = 'force-dynamic';
 

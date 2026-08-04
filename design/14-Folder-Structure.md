@@ -9,6 +9,8 @@
 | **Date** | 2026-08-03 |
 | **Note** | Structural specification only — **no code is generated**. This defines the project layout the Frontend/Backend Architects will scaffold during the build phase, consistent with the stack chosen in [11-Technology-Stack.md](../documentation/11-Technology-Stack.md) (Next.js + Node.js/Express + PostgreSQL, monorepo-friendly). |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not PostgreSQL. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md). The folder structure itself (`apps/api/prisma/`, monorepo layout) is unaffected — Prisma abstracts the provider difference below the schema/migrations layer.
+
 ---
 
 ## 1. Repository Strategy

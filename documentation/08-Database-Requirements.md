@@ -8,6 +8,8 @@
 | **Date** | 2026-08-03 |
 | **Target RDBMS** | PostgreSQL (see [11-Technology-Stack.md](11-Technology-Stack.md) for justification) |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform runs on **MySQL 8.0+** instead of PostgreSQL. This document's relational data-model requirements below are unaffected (the entities, attributes, and relationships are RDBMS-agnostic); only the target engine changed. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md) for the full rationale and implementation detail. The PostgreSQL-specific text below is preserved as the original planning record.
+
 ---
 
 ## 1. Purpose

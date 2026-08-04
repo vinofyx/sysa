@@ -10,6 +10,8 @@
 | **Prepared By** | Vinofyx — acting as Solution Architect, UI/UX Designer, Frontend Architect, Backend Architect, Database Architect, and DevOps Engineer |
 | **Source of Truth** | `documentation/` (Phase 1, unmodified) + `design/` (Phase 2, this package) |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not the PostgreSQL referenced elsewhere in this package's diagrams. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md).
+
 ---
 
 ## 1. Purpose

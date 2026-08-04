@@ -8,6 +8,8 @@
 | **Date** | 2026-08-03 |
 | **Baseline Input** | Client-supplied Requirements doc recommended: Next.js/React, Node.js (Express), PostgreSQL/MongoDB, Razorpay, Hostinger VPS/AWS, Cloudinary/AWS S3 — see [PROJECT_CONTEXT.md §12](../docs/PROJECT_CONTEXT.md) |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform runs on **MySQL 8.0+** instead of PostgreSQL (the database recommendation this document originally settled on, below). See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md) for the full rationale and implementation detail. The original PostgreSQL-vs-MongoDB analysis is preserved below as the planning-phase record — its relational-integrity/ACID-transaction reasoning applies equally to the MySQL choice actually implemented.
+
 ---
 
 ## 1. Purpose

@@ -9,6 +9,8 @@
 | **Date** | 2026-08-03 |
 | **Builds On** | [11-Technology-Stack.md](../documentation/11-Technology-Stack.md) (Phase 1, unmodified) |
 
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not the PostgreSQL referenced throughout this document (diagrams, Docker Compose service name, scaling-path notes below). See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md) and the actual, current `docker-compose.yml` at the repo root — the deployment topology (Nginx → API/Web → database) itself is unchanged.
+
 ---
 
 ## 1. Purpose

@@ -6,24 +6,40 @@
 #   docker compose up -d --build      # start everything
 #   docker compose logs -f api        # tail a service's logs
 #   docker compose down               # stop everything
-#   docker compose down -v            # stop and wipe the Postgres volume
+#   docker compose down -v            # stop and wipe the MySQL volume
 # ==============================================================================
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: sysa-postgres
+  mysql:
+    image: mysql:8.0
+    container_name: sysa-mysql
     restart: unless-stopped
+    # utf8mb4 + utf8mb4_0900_ai_ci for full English/Telugu/Unicode/emoji
+    # support (see MYSQL_MIGRATION_REPORT.md) — if targeting a MySQL build
+    # where utf8mb4_0900_ai_ci is unavailable (pre-8.0.1), fall back to
+    # utf8mb4_unicode_ci here and re-generate the migration accordingly.
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-sysa_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sysa_password}
-      POSTGRES_DB: ${POSTGRES_DB:-sysa_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me}
+      MYSQL_USER: ${MYSQL_USER:-sysa_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-sysa_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sysa_db}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '${MYSQL_PORT:-3306}:3306'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-sysa_user} -d ${POSTGRES_DB:-sysa_db}']
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          'localhost',
+          '-u',
+          'root',
+          '-p${MYSQL_ROOT_PASSWORD:-change-me}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,14 +53,14 @@ services:
     container_name: sysa-api
     restart: unless-stopped
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 4000
       API_URL: ${API_URL:-http://localhost:4000}
       WEB_URL: ${WEB_URL:-http://localhost:3000}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-sysa_user}:${POSTGRES_PASSWORD:-sysa_password}@postgres:5432/${POSTGRES_DB:-sysa_db}?schema=public
+      DATABASE_URL: mysql://${MYSQL_USER:-sysa_user}:${MYSQL_PASSWORD:-sysa_password}@mysql:3306/${MYSQL_DATABASE:-sysa_db}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       CORS_ORIGIN: ${WEB_URL:-http://localhost:3000}
@@ -104,6 +120,6 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  mysql_data:
   api_logs:
   api_uploads:

@@ -17,7 +17,7 @@ Ordered by dependency — items near the top block items below them. Check each 
 
 ## 2. Database
 
-- [ ] Production PostgreSQL instance provisioned (managed service or the `docker-compose.yml` postgres container with a real, non-default password)
+- [ ] Production MySQL 8.0+ instance provisioned (managed service or the `docker-compose.yml` `mysql` container with a real, non-default password), `utf8mb4`/`utf8mb4_0900_ai_ci` confirmed (see [MYSQL_MIGRATION_REPORT.md](MYSQL_MIGRATION_REPORT.md))
 - [ ] `npm run prisma:deploy` run against production — **this is the first time these migrations will ever touch a real database** in this project's history; watch the output carefully and have a rollback plan (see DEPLOYMENT_GUIDE.md §9)
 - [ ] `npm run prisma:seed` run — creates the RBAC roles/permissions and bootstrap Super Admin
 - [ ] Bootstrap Super Admin password changed immediately after first login (do not leave the seed-script default in place)
