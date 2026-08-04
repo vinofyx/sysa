@@ -1,13 +1,18 @@
 import axios from 'axios';
 
 import { env } from '@/lib/env';
+import type { PaginatedResult } from '@/types/auth';
 import type {
   Activity,
   Appeal,
+  CheckoutSession,
   CommitteeMember,
   DonationCategory,
+  DonationReceipt,
+  DonationStatusResult,
   GalleryAlbum,
   HeroBanner,
+  MyDonation,
   NavigationTree,
   NewsPost,
   PageContent,
@@ -23,11 +28,14 @@ import type {
  * unlike `lib/api-client.ts` (the admin/auth client), these endpoints never
  * return 401, so the silent-refresh interceptor there would be dead weight.
  * Safe to call from both Server Components (direct `await`) and Client
- * Components (via TanStack Query).
+ * Components (via TanStack Query). `withCredentials` is needed for the
+ * donor-history cookie session (Phase 7) — every other call here is
+ * unauthenticated and unaffected by it.
  */
 export const publicApiClient = axios.create({
   baseURL: `${env.NEXT_PUBLIC_API_URL}/api/v1`,
   timeout: 15_000,
+  withCredentials: true,
 });
 
 /** Next.js Server Components can only pass plain, serializable values down to
@@ -164,4 +172,88 @@ export async function getPublicNewsPostBySlug(slug: string): Promise<NewsPost | 
 export async function getGalleryAlbums(): Promise<GalleryAlbum[]> {
   const { data } = await publicApiClient.get<{ albums: GalleryAlbum[] }>('/gallery/public');
   return data.albums;
+}
+
+export interface InitiateDonationPayload {
+  donorName: string;
+  donorEmail: string;
+  donorPhone?: string;
+  panNumber?: string;
+  categoryId: string;
+  appealId?: string;
+  amount: number;
+  idempotencyKey: string;
+}
+
+export async function initiateDonation(payload: InitiateDonationPayload): Promise<CheckoutSession> {
+  const { data } = await publicApiClient.post<{ data: CheckoutSession }>(
+    '/donations/initiate',
+    payload,
+  );
+  return data.data;
+}
+
+export interface VerifyDonationPayload {
+  donationId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}
+
+export async function verifyDonationPayment(
+  payload: VerifyDonationPayload,
+): Promise<{ id: string; status: string }> {
+  const { data } = await publicApiClient.post<{ data: { id: string; status: string } }>(
+    '/donations/verify',
+    payload,
+  );
+  return data.data;
+}
+
+export async function retryDonationPayment(donationId: string): Promise<CheckoutSession> {
+  const { data } = await publicApiClient.post<{ data: CheckoutSession }>(
+    `/donations/${donationId}/retry`,
+  );
+  return data.data;
+}
+
+export async function getDonationStatus(
+  donationId: string,
+  token: string,
+): Promise<DonationStatusResult> {
+  const { data } = await publicApiClient.get<{ data: DonationStatusResult }>(
+    `/donations/${donationId}/status`,
+    { params: { token } },
+  );
+  return data.data;
+}
+
+export async function getDonationReceipt(
+  donationId: string,
+  token?: string,
+): Promise<DonationReceipt> {
+  const { data } = await publicApiClient.get<{ data: DonationReceipt }>(
+    `/donations/${donationId}/receipt`,
+    { params: token ? { token } : undefined },
+  );
+  return data.data;
+}
+
+export async function requestDonorOtp(email: string): Promise<void> {
+  await publicApiClient.post('/donor-auth/request-otp', { email });
+}
+
+export async function verifyDonorOtp(email: string, otp: string): Promise<void> {
+  await publicApiClient.post('/donor-auth/verify-otp', { email, otp });
+}
+
+export async function donorLogout(): Promise<void> {
+  await publicApiClient.post('/donor-auth/logout');
+}
+
+export async function getMyDonations(page: number, pageSize: number) {
+  const { data } = await publicApiClient.get<PaginatedResult<MyDonation>>('/donors/me/donations', {
+    params: { page, pageSize },
+  });
+  return data;
 }

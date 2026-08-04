@@ -147,9 +147,14 @@ model EmailVerificationToken {
   @@map("email_verification_token")
 }
 
+/// `adminUserId` is nullable (Phase 7) to allow system-initiated entries — a
+/// Razorpay webhook or payment-signature verification is a real security event
+/// worth auditing (documentation/12-Security-Requirements.md §7) but has no
+/// admin actor behind it. `onDelete: SetNull` (relaxed from `Restrict`) follows
+/// from that: the log entry must survive even if the FK target goes away.
 model AuditLog {
   id          String   @id @default(uuid())
-  adminUserId String   @map("admin_user_id")
+  adminUserId String?  @map("admin_user_id")
   action      String
   entityType  String   @map("entity_type")
   entityId    String?  @map("entity_id")
@@ -157,7 +162,7 @@ model AuditLog {
   afterState  Json?    @map("after_state")
   timestamp   DateTime @default(now())
 
-  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Restrict)
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
 
   @@index([adminUserId, timestamp])
   @@index([entityType, entityId])
@@ -251,8 +256,29 @@ model Donation {
   appealId          String?           @map("appeal_id")
   amount            Decimal           @db.Decimal(12, 2)
   currency          String            @default("INR")
-  paymentMethod     PaymentMethod     @map("payment_method")
-  paymentGatewayRef String?           @map("payment_gateway_ref")
+  /// Nullable: an online donation is `pending` from the moment its Razorpay
+  /// order is created, before the donor has chosen how to pay — Razorpay only
+  /// reports the actual method (card/upi/netbanking/wallet) once the payment
+  /// is captured. Manual/bank-transfer donations still set this at creation.
+  paymentMethod     PaymentMethod?    @map("payment_method")
+  /// Razorpay payment ID once captured (also the field manual-entry donations
+  /// have always used for an external reference) — unique so the same
+  /// gateway payment can never be attached to two Donation rows.
+  paymentGatewayRef String?           @unique @map("payment_gateway_ref")
+  /// Razorpay order ID, created synchronously on `/donations/initiate` — the
+  /// same order can accept multiple payment attempts, which is what makes
+  /// "Retry Payment" safe without creating a duplicate pending donation.
+  razorpayOrderId   String?           @unique @map("razorpay_order_id")
+  /// HMAC-SHA256(order_id + "|" + payment_id) returned by Razorpay Checkout,
+  /// stored for audit purposes after verification succeeds.
+  razorpaySignature String?           @map("razorpay_signature")
+  /// Human-readable reason a `failed` donation failed (from Razorpay's
+  /// `payment.failed` webhook payload or a signature-mismatch on verify).
+  failureReason     String?           @map("failure_reason")
+  /// Client-supplied key (one per checkout attempt) so `/donations/initiate`
+  /// is safe to retry on network failure without creating duplicate pending
+  /// rows (documentation/13-API-Requirements.md §7).
+  idempotencyKey    String?           @unique @map("idempotency_key")
   status            DonationStatus    @default(pending)
   source            DonationSource    @default(online)
   frequency         DonationFrequency @default(one_time)
@@ -271,6 +297,36 @@ model Donation {
   @@index([donorId])
   @@index([frequency])
   @@map("donation")
+}
+
+/// Idempotency ledger for the Razorpay webhook (design/13-API-Architecture.md
+/// §5): `eventId` is a SHA-256 hash of the raw webhook body, so an exact
+/// redelivery (Razorpay retries on any non-2xx response) is recognized and
+/// skipped rather than reprocessed into a duplicate receipt/email.
+model PaymentWebhookEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique @map("event_id")
+  eventType   String   @map("event_type")
+  payload     Json
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@map("payment_webhook_event")
+}
+
+/// One-time passcodes for the lightweight, optional donor login used only to
+/// view donation history (FR-DON-07, design/13-API-Architecture.md §4.2) —
+/// deliberately not a password-based account system.
+model DonorOtp {
+  id         String    @id @default(uuid())
+  donorEmail String    @map("donor_email")
+  otpHash    String    @map("otp_hash")
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([donorEmail, expiresAt])
+  @@map("donor_otp")
 }
 
 enum BankTransferStatus {

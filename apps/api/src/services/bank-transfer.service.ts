@@ -5,7 +5,7 @@ import { ApiError } from '@utils/api-error';
 import * as bankTransferRepo from '@repositories/bank-transfer-record.repository';
 import * as donorRepo from '@repositories/donor.repository';
 import * as donationRepo from '@repositories/donation.repository';
-import * as receiptRepo from '@repositories/receipt.repository';
+import { issueReceipt } from '@services/receipt.service';
 
 export interface SubmitClaimInput {
   donorName: string;
@@ -74,7 +74,7 @@ export async function verifyClaim(
     internalNote: `Verified bank transfer claim ${claim.id}${claim.bankReferenceUtr ? ` (UTR: ${claim.bankReferenceUtr})` : ''}`,
   });
 
-  await receiptRepo.createForDonation(donation.id);
+  await issueReceipt(donation.id);
   await bankTransferRepo.markVerified(id, verifiedByAdminId, donation.id);
 
   await writeAuditLog({

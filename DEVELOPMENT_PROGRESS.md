@@ -4,7 +4,7 @@
 
 |                   |                                                       |
 | ----------------- | ----------------------------------------------------- |
-| **Current Phase** | Phase 6 — Public Website (Complete)                   |
+| **Current Phase** | Phase 7 — Razorpay Payment Integration (Complete)     |
 | **Date**          | 2026-08-04                                            |
 | **Status**        | Awaiting client approval to proceed to the next phase |
 
@@ -20,11 +20,12 @@
 | **Phase 4**  | Core Application Framework — Authentication, RBAC, Database, Backend APIs, Frontend layouts/shell, Admin Dashboard shell                                                                                                                                                                                         | ✅ Complete                                                                                  |
 | **Phase 5**  | Business Modules & Content Management System — re-scoped by explicit client instruction from the originally-planned "Public Site" to: all backend business-module APIs (CMS, Donations, Volunteers, Events, News, Gallery, Documents) **and** the complete admin CMS frontend for every module                   | ✅ Complete — this document, §9–§13                                                          |
 | **Phase 6**  | Public Website — every public page consuming the Phase 5 CMS APIs, bilingual (English/Telugu) via `next-intl`, SEO, sitemap/robots, accessibility                                                                                                                                                                | ✅ Complete — this document, §14–§18                                                         |
-| **Phase 7**  | Content Population & Bilingual Translation                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
-| **Phase 8**  | QA, Security Testing & Accessibility Audit                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
-| **Phase 9**  | UAT with Client                                                                                                                                                                                                                                                                                                  | ⏳ Not started                                                                               |
-| **Phase 10** | Deployment & Go-Live                                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
-| **Phase 11** | Post-Launch Stabilization & Handover                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
+| **Phase 7**  | Razorpay Payment Integration — re-scoped by explicit client instruction from the originally-planned "Content Population & Bilingual Translation" to: a complete, production-ready Razorpay Orders/Checkout/webhook payment system for online donations                                                           | ✅ Complete — this document, §20–§25                                                         |
+| **Phase 8**  | Content Population & Bilingual Translation                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
+| **Phase 9**  | QA, Security Testing & Accessibility Audit                                                                                                                                                                                                                                                                       | ⏳ Not started                                                                               |
+| **Phase 10** | UAT with Client                                                                                                                                                                                                                                                                                                  | ⏳ Not started                                                                               |
+| **Phase 11** | Deployment & Go-Live                                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
+| **Phase 12** | Post-Launch Stabilization & Handover                                                                                                                                                                                                                                                                             | ⏳ Not started                                                                               |
 
 ---
 
@@ -386,3 +387,120 @@ Same root cause as every prior phase: **no live PostgreSQL instance is available
 ## 19. Phase 6 Approval Gate
 
 Per the phased, approval-gated process this project follows: **this phase is complete and the codebase builds cleanly with zero TypeScript errors, zero ESLint errors, and zero build errors on both apps** (verified via `npm run lint`, `npm run typecheck`, and `npm run build` from the repository root, all passing). The public website consumes only real Phase 5/6 CMS APIs — no hardcoded content, no dummy data. Stopping here for client approval before proceeding to the next phase.
+
+---
+
+## 20. Phase 7 — What Was Built: Database & Core Payment Infrastructure
+
+Per explicit client instruction, Phase 7 was re-scoped from the originally-planned "Content Population & Bilingual Translation" to a complete, production-ready **Razorpay payment integration** — Orders API, Standard Checkout, signature verification, webhook processing, receipts, and donation history — for online donations only (no other gateway, no subscriptions, no SMS, no refund flow beyond what Razorpay's own APIs require).
+
+### 20.1 Database
+
+- `apps/api/prisma/schema.prisma` extended:
+  - `Donation`: `paymentMethod` made **nullable** (an online donation is `pending` before the donor has chosen how to pay — Razorpay only reports the method once captured); `paymentGatewayRef` made **unique** (prevents the same gateway payment ever being attached to two donation rows — the core "Prevent Duplicate Payments" requirement); added `razorpayOrderId` (unique), `razorpaySignature`, `failureReason`, `idempotencyKey` (unique, powers safe client-side retry of `/donations/initiate`).
+  - New `PaymentWebhookEvent` model — idempotency ledger for the Razorpay webhook (`eventId` = SHA-256 of the raw request body), so a redelivered webhook is recognized and skipped rather than reprocessed into a duplicate receipt/email.
+  - New `DonorOtp` model — backs the lightweight, optional donor login used only to view donation history (FR-DON-07).
+  - `AuditLog.adminUserId` made **nullable** (`onDelete: SetNull`, relaxed from `Restrict`) — a Razorpay webhook or a failed signature check is a real security event worth auditing (documentation/12-Security-Requirements.md §7) but has no admin actor behind it.
+- Hand-written additive migration `20260804000000_phase7_razorpay_payments/` — no live Postgres in this environment, same constraint as every prior phase.
+
+### 20.2 Backend libraries
+
+| File                                       | Purpose                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `integrations/payments/razorpay.client.ts` | Lazy Razorpay SDK client — same "warn + throw a clear `ApiError`" guard pattern as `cloudinary.client.ts` when keys aren't configured                                                                                                                                                                                                                    |
+| `lib/razorpay-signature.ts`                | `verifyPaymentSignature()` (Checkout's `order_id\|payment_id` HMAC) and `verifyWebhookSignature()` (raw-body HMAC against the separate webhook secret) — both constant-time compares                                                                                                                                                                     |
+| `lib/donor-jwt.ts`                         | `signDonorToken`/`verifyDonorToken` (stateless donor session JWT, `type: 'donor'` discriminator so it can never be mistaken for an admin token) and `signDonationAccessToken`/`verifyDonationAccessToken` (stateless per-donation HMAC token — lets a guest poll status/retry/download a receipt using only the link from checkout, no account required) |
+| `app.ts`                                   | `express.json()`'s `verify` callback now also captures the raw request bytes onto `req.rawBody` — the webhook handler needs the exact raw bytes to compute its HMAC; every other route is unaffected and keeps using the parsed `req.body`                                                                                                               |
+
+### 20.3 Receipts — now real PDFs, everywhere
+
+- New dependencies: `razorpay` (official SDK), `pdfkit` + `@types/pdfkit`.
+- `services/receipt-pdf.service.ts` renders an actual receipt PDF (org name/reg no., receipt number, donor, category, amount, payment reference) — deliberately does **not** print an 80G/12A number, since that certification is still unverified (same honesty pattern as the public `TrustBadge` `tax-exempt` variant).
+- `services/receipt.service.ts`'s `issueReceipt()` is now the single entry point for turning a completed donation into a receipt: creates the `Receipt` row if missing, generates the PDF, uploads it to Cloudinary (`sysa/receipts`, `resource_type: raw`), and emails it. PDF/email failure never blocks the donation from being marked complete (logged for Finance to regenerate manually).
+- Wired into **all three** donation-completion paths — online payment verification, manual admin entry, and bank-transfer-claim verification — replacing the old bare `receiptRepo.createForDonation()` calls that never actually generated a PDF (a real, if latent, Phase 5 gap; fixing it here is integration, not scope creep, since consistent receipts are squarely this phase's deliverable).
+
+### 20.4 Donation checkout flow
+
+| Endpoint                     | Purpose                                                                                                                                                                                                                                                                                  |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /donations/initiate`   | Creates the Razorpay order **first** (so a gateway failure never leaves an orphan pending donation row), then the `Donation` row. Idempotent: a repeated call with the same client-generated `idempotencyKey` returns the existing session instead of creating a duplicate               |
+| `POST /donations/verify`     | Browser calls this immediately after Checkout's `handler` fires; verifies the `razorpay_signature`, fetches the payment server-to-server from Razorpay (never trusts the client-reported status), marks the donation completed, recalculates any linked appeal total, issues the receipt |
+| `POST /donations/:id/retry`  | Reopens a `pending`/`failed` donation against the **same** Razorpay order — Razorpay orders stay payable across multiple attempts until one is captured, so retry never creates a duplicate donation row                                                                                 |
+| `GET /donations/:id/status`  | Token-scoped poll (used by the Pending page's fallback reconciliation loop)                                                                                                                                                                                                              |
+| `GET /donations/:id/receipt` | Accepts the stateless token (guest), a donor session (own record only), or an admin session                                                                                                                                                                                              |
+
+`services/payment-verification.service.ts` separates the two trust boundaries deliberately: `completeDonationFromPayment()` is the shared "mark completed + receipt + audit" core, called either after `verifyAndCompletePayment()` checks the Checkout signature (browser path) or directly from the webhook (whose trust comes from the separate webhook HMAC, already checked before it ever calls in) — whichever arrives first wins, the other is a no-op.
+
+### 20.5 Webhook
+
+- `POST /webhooks/razorpay` (`services/webhook.service.ts`) — HMAC-signature-verified (not user-authenticated), handles `payment.captured` and `payment.failed` only (refunds are intentionally out of scope per explicit client instruction). Idempotent via `PaymentWebhookEvent`. Not rate-limited beyond the app-wide baseline — trust comes entirely from the signature, and no user-facing limit should ever drop a legitimate Razorpay delivery.
+
+### 20.6 Donor auth (FR-DON-07) & donation history
+
+- `services/donor-auth.service.ts` — email OTP, 5-minute TTL, anti-enumeration (identical response whether or not the email has a donation history, matching the existing forgot-password pattern), max 5 verify attempts.
+- `middleware/authenticate-donor.middleware.ts` + `sysa_donor_token` httpOnly cookie — stateless JWT check only, the deliberate lightweight tradeoff documented in `lib/donor-jwt.ts` (no DB session table, unlike admin auth).
+- `GET /donors/me/donations` (`services/donor-donations.service.ts`) explicitly re-shapes each row rather than returning the admin `Donation` include as-is — `internalNote` is an admin-only field that must never leak to the donor it's written about. Each row also mints a `receiptToken` (the same stateless per-donation token used everywhere else), so donation-history receipt links use the exact same `/donations/:id/receipt` path as the guest checkout flow.
+
+### 20.7 Security
+
+- Signature verification (Checkout + webhook), both constant-time.
+- Duplicate-payment prevention at two layers: an explicit `findByPaymentGatewayRef` check before completing, backed by the DB's own unique constraint (a `P2002` race is caught and mapped to `409 Conflict`).
+- Audit logging: `PAYMENT_INITIATED`, `PAYMENT_VERIFIED`, `PAYMENT_FAILED`, `PAYMENT_SIGNATURE_INVALID`, `WEBHOOK_RECEIVED`, `WEBHOOK_SIGNATURE_INVALID`, `DONOR_OTP_REQUESTED`, `DONOR_OTP_VERIFIED` — all via the now-nullable-`adminUserId` `writeAuditLog()`.
+- No credentials hardcoded anywhere — `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` were already scaffolded in `.env.example` (root and `apps/api`) since Phase 3 and remain blank, consumed only via `env.ts`.
+
+---
+
+## 21. Phase 7 — What Was Built: Admin Panel
+
+- `/admin/donations` extended: a **source filter** (All / Online (Razorpay) / Manual), a **payment-details dialog** (click any row) showing status, source, payment method, Razorpay order ID, Razorpay payment ID, failure reason if present, and a **Download Receipt** button when a PDF exists.
+- CSV export (`GET /donations/export`) extended with `razorpayOrderId`, `paymentGatewayRef`, `failureReason` columns.
+- No new permission codes needed — Razorpay transactions are `Donation` rows with `source: 'online'`, so the existing `donations:view`/`donations:export`/`donations:flag_refund` permissions already cover them.
+
+---
+
+## 22. Phase 7 — What Was Built: Public Website
+
+All new pages under `app/[locale]/(public)/donate/`, bilingual (en/te), consuming only the real endpoints above:
+
+| Page                   | Purpose                                                                                                                                                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/donate` (extended)   | New `DonationCheckoutForm` — category, optional appeal, preset/custom amount, donor details, optional PAN — embedded above the existing bank-transfer section; FAQ updated to reflect that online checkout now exists |
+| `/donate/success`      | Thank-you page; shows amount/category from `/donations/:id/status` when a token is present, links to the receipt if ready                                                                                             |
+| `/donate/failure`      | Payment Failure page with a **Retry Payment** button (`RetryPaymentButton` — reopens Checkout against the same order)                                                                                                 |
+| `/donate/pending`      | Payment Pending page; `PendingStatusPoller` polls status every 4s and redirects to success/failure once resolved — the client-side half of the fallback-reconciliation design                                         |
+| `/donate/receipt/[id]` | Token-scoped receipt view/download                                                                                                                                                                                    |
+| `/donate/history`      | Donation History page — OTP request/verify inline, then lists the logged-in donor's own donations with receipt links                                                                                                  |
+
+- `hooks/use-razorpay-script.ts` loads `checkout.razorpay.com/v1/checkout.js` once per page; `types/razorpay.ts` types the small subset of the Checkout API actually used (no official Razorpay TS types exist).
+- **Security detail**: the Checkout `handler` callback verifies the payment **client-side, immediately**, before ever navigating away — the raw `razorpay_order_id`/`razorpay_payment_id`/`razorpay_signature` triple never travels through a URL (browser history, referrer headers, server logs); only the donation id and the already-designed-to-be-shareable status token move on to the next page.
+- `lib/public-api.ts`: added `initiateDonation`, `verifyDonationPayment`, `retryDonationPayment`, `getDonationStatus`, `getDonationReceipt`, `requestDonorOtp`, `verifyDonorOtp`, `donorLogout`, `getMyDonations`; `publicApiClient` now sets `withCredentials: true` (needed for the donor-session cookie — every other call on this client remains unauthenticated and unaffected).
+
+---
+
+## 23. Phase 7 Build Verification Results
+
+| Check                                |                                                                                                        Frontend (`apps/web`)                                                                                                        |                                                                                                                    Backend (`apps/api`)                                                                                                                    |
+| ------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| `npm run lint` (from repo root)      |                                                                                                    ✅ Pass, 0 errors, 0 warnings                                                                                                    |                                                                                                               ✅ Pass, 0 errors, 0 warnings                                                                                                                |
+| `npm run typecheck` (from repo root) |                                                                                                          ✅ Pass, 0 errors                                                                                                          |                                                                                                                     ✅ Pass, 0 errors                                                                                                                      |
+| `npm run format` (repo-wide)         |                                                                                                ✅ Pass (auto-formatted, then clean)                                                                                                 |                                                                                                                                                                                                                                                            |
+| `npm run build` (from repo root)     |                                                                                   ✅ Pass — all 6 new `/donate/*` routes (en+te) build correctly                                                                                    |                                                                                                               ✅ Pass (`tsc` + `tsc-alias`)                                                                                                                |
+| Runtime smoke test (browser + curl)  | ✅ `/donate`, `/donate/success`, `/donate/failure`, `/donate/pending`, `/donate/history` all render/redirect correctly with the same known "DB unreachable" degradation as every other public page — no new client or server errors | ✅ `POST /webhooks/razorpay` with a bad signature correctly returns `401`; `POST /donations/initiate` fails gracefully (structured `500`, not a crash) against the unreachable DB, matching the existing error-handler's dev-only verbose-message behavior |
+
+All checks were run **from the repository root**, exactly as instructed, and iterated until fully clean.
+
+---
+
+## 24. Phase 7 Known Limitation (Environment)
+
+Same root cause as every prior phase: **no live PostgreSQL instance, and no live Razorpay merchant keys, are available in this build environment.**
+
+- Every payment-related endpoint has been verified for correct _wiring_ (webhook signature rejection confirmed via `curl`; initiate/verify fail gracefully rather than crashing) but the actual **money-moving path — creating a real Razorpay order, completing a real Checkout payment, receiving a real webhook — has not been exercised end-to-end**, and cannot be until real `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` are provided (pending merchant KYC, per `documentation/16-Assumptions-and-Dependencies.md` D-01, unchanged since Phase 3).
+- **Action required before UAT**: once Razorpay test-mode keys are available, configure them in `apps/api/.env`, point the webhook URL (Razorpay dashboard → Webhooks) at `POST /api/v1/webhooks/razorpay`, and walk the full donor journey once in test mode: initiate → Checkout → success/failure/pending → receipt email → admin transaction view → donor-history OTP login.
+- Cloudinary credentials are also still not configured in this environment, so receipt PDF upload is wired correctly but untested against the real Cloudinary API (same limitation noted in every prior phase for gallery/document uploads).
+
+---
+
+## 25. Phase 7 Approval Gate
+
+Per the phased, approval-gated process this project follows: **this phase is complete and the codebase builds cleanly with zero TypeScript errors, zero ESLint errors, and zero build errors on both apps** (verified via `npm run lint`, `npm run typecheck`, and `npm run build` from the repository root). Only Razorpay was implemented (no other gateway, no subscriptions, no SMS, no refund flow beyond signature/duplicate handling); every donation-completion path (online, manual, bank-transfer) now issues a real PDF receipt. Stopping here for client approval before proceeding to the next phase.

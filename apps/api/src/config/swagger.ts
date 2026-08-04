@@ -1107,6 +1107,223 @@ const phase6Paths: OpenAPIV3.PathsObject = {
   },
 };
 
+const phase7Paths: OpenAPIV3.PathsObject = {
+  '/donations/initiate': {
+    post: {
+      tags: ['Payments'],
+      summary: 'Create a pending donation + Razorpay order (public, guest checkout)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['donorName', 'donorEmail', 'categoryId', 'amount', 'idempotencyKey'],
+              properties: {
+                donorName: { type: 'string' },
+                donorEmail: { type: 'string', format: 'email' },
+                donorPhone: { type: 'string' },
+                panNumber: { type: 'string', description: 'Optional, for a future 80G receipt' },
+                categoryId: { type: 'string', format: 'uuid' },
+                appealId: { type: 'string', format: 'uuid' },
+                amount: { type: 'number', minimum: 1 },
+                idempotencyKey: { type: 'string', description: 'One per checkout attempt' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '201': {
+          description: 'Razorpay checkout session',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      donationId: { type: 'string', format: 'uuid' },
+                      razorpayOrderId: { type: 'string' },
+                      amount: { type: 'number' },
+                      currency: { type: 'string' },
+                      keyId: { type: 'string' },
+                      statusToken: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        '400': errorResponse,
+      },
+    },
+  },
+  '/donations/verify': {
+    post: {
+      tags: ['Payments'],
+      summary: 'Verify Razorpay Checkout signature and complete the donation (public)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['donationId', 'razorpayOrderId', 'razorpayPaymentId', 'razorpaySignature'],
+              properties: {
+                donationId: { type: 'string', format: 'uuid' },
+                razorpayOrderId: { type: 'string' },
+                razorpayPaymentId: { type: 'string' },
+                razorpaySignature: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': { description: 'Payment verified and donation completed' },
+        '400': errorResponse,
+        '409': {
+          ...errorResponse,
+          description: 'Payment already recorded against another donation',
+        },
+      },
+    },
+  },
+  '/donations/{id}/retry': {
+    post: {
+      tags: ['Payments'],
+      summary: 'Reopen a failed/pending donation for another payment attempt (public)',
+      security: [],
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+      ],
+      responses: {
+        '200': { description: 'Checkout session to reopen' },
+        '404': errorResponse,
+        '409': errorResponse,
+      },
+    },
+  },
+  '/donations/{id}/status': {
+    get: {
+      tags: ['Payments'],
+      summary: "Poll a donation's payment status (public, token-scoped)",
+      security: [],
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        { name: 'token', in: 'query', required: true, schema: { type: 'string' } },
+      ],
+      responses: { '200': { description: 'Status' }, '401': errorResponse, '404': errorResponse },
+    },
+  },
+  '/donations/{id}/receipt': {
+    get: {
+      tags: ['Payments'],
+      summary: 'Download a donation receipt (token, donor session, or admin)',
+      security: [],
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        { name: 'token', in: 'query', required: false, schema: { type: 'string' } },
+      ],
+      responses: {
+        '200': { description: 'Receipt PDF URL' },
+        '401': errorResponse,
+        '404': errorResponse,
+      },
+    },
+  },
+  '/webhooks/razorpay': {
+    post: {
+      tags: ['Webhooks'],
+      summary:
+        'Razorpay payment webhook receiver (HMAC signature-verified, not user-authenticated)',
+      security: [],
+      parameters: [
+        {
+          name: 'X-Razorpay-Signature',
+          in: 'header',
+          required: true,
+          schema: { type: 'string' },
+        },
+      ],
+      responses: {
+        '200': { description: 'Acknowledged' },
+        '400': errorResponse,
+        '401': errorResponse,
+      },
+    },
+  },
+  '/donor-auth/request-otp': {
+    post: {
+      tags: ['Donor Auth'],
+      summary: 'Request a one-time login code for donation history (public, anti-enumeration)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['email'],
+              properties: { email: { type: 'string', format: 'email' } },
+            },
+          },
+        },
+      },
+      responses: { '200': { description: 'Code sent if the email has a donation history' } },
+    },
+  },
+  '/donor-auth/verify-otp': {
+    post: {
+      tags: ['Donor Auth'],
+      summary: 'Verify the one-time code and start a donor session (public)',
+      security: [],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['email', 'otp'],
+              properties: {
+                email: { type: 'string', format: 'email' },
+                otp: { type: 'string', minLength: 6, maxLength: 6 },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': { description: 'Donor session cookie set' },
+        '400': errorResponse,
+        '429': errorResponse,
+      },
+    },
+  },
+  '/donor-auth/logout': {
+    post: {
+      tags: ['Donor Auth'],
+      summary: 'Clear the donor session cookie',
+      security: [],
+      responses: { '200': { description: 'Logged out' } },
+    },
+  },
+  '/donors/me/donations': {
+    get: {
+      tags: ['Donor Auth'],
+      summary: "The logged-in donor's own donation history (FR-DON-07)",
+      security: [],
+      description: 'Authenticated via the `sysa_donor_token` cookie set by /donor-auth/verify-otp.',
+      responses: { '200': { description: 'Paginated donation history' }, '401': errorResponse },
+    },
+  },
+};
+
 export const openApiDocument: OpenAPIV3.Document = {
   openapi: '3.0.3',
   info: {
@@ -1172,6 +1389,16 @@ export const openApiDocument: OpenAPIV3.Document = {
         'Public read-only endpoints for Hero Banners, Testimonials, Activities, Committee, Social Links, and Navigation (Phase 6)',
     },
     { name: 'Contact', description: 'Public contact form + newsletter signup (Phase 6)' },
+    {
+      name: 'Payments',
+      description:
+        'Razorpay order creation, signature verification, retry, status, receipt (Phase 7)',
+    },
+    { name: 'Webhooks', description: 'Inbound Razorpay payment webhook (Phase 7)' },
+    {
+      name: 'Donor Auth',
+      description: 'Lightweight OTP login for viewing donation history (Phase 7, FR-DON-07)',
+    },
   ],
   components: {
     securitySchemes: { cookieAuth, bearerAuth },
@@ -1182,6 +1409,7 @@ export const openApiDocument: OpenAPIV3.Document = {
   paths: {
     ...phase5Paths,
     ...phase6Paths,
+    ...phase7Paths,
     '/health': {
       get: {
         tags: ['Health'],

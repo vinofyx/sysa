@@ -82,8 +82,65 @@ export function findById(id: string) {
   return prisma.donation.findUnique({ where: { id }, include });
 }
 
+export function findByRazorpayOrderId(razorpayOrderId: string) {
+  return prisma.donation.findUnique({ where: { razorpayOrderId }, include });
+}
+
+export function findByIdempotencyKey(idempotencyKey: string) {
+  return prisma.donation.findUnique({ where: { idempotencyKey }, include });
+}
+
+export function findByPaymentGatewayRef(paymentGatewayRef: string) {
+  return prisma.donation.findUnique({ where: { paymentGatewayRef } });
+}
+
 export function create(data: Prisma.DonationCreateInput) {
   return prisma.donation.create({ data, include });
+}
+
+/** Marks a pending online donation as completed once Razorpay confirms
+ * capture — used by both the synchronous verify endpoint and the webhook
+ * handler (whichever arrives first "wins"; the second is a no-op via the
+ * `status === 'completed'` guard in payment-verification.service.ts). */
+export function markCompletedFromPayment(
+  id: string,
+  data: {
+    paymentMethod: string;
+    paymentGatewayRef: string;
+    razorpaySignature?: string;
+  },
+) {
+  return prisma.donation.update({
+    where: { id },
+    data: {
+      status: 'completed',
+      completedAt: new Date(),
+      paymentMethod:
+        data.paymentMethod as Prisma.NullableEnumPaymentMethodFieldUpdateOperationsInput['set'],
+      paymentGatewayRef: data.paymentGatewayRef,
+      razorpaySignature: data.razorpaySignature,
+    },
+    include,
+  });
+}
+
+export function markFailed(id: string, failureReason: string) {
+  return prisma.donation.update({
+    where: { id },
+    data: { status: 'failed', failureReason },
+    include,
+  });
+}
+
+/** Used by "Retry Payment" — reopens a failed attempt against the same
+ * Razorpay order (which stays payable until captured) rather than creating a
+ * new donation row. */
+export function resetToPending(id: string) {
+  return prisma.donation.update({
+    where: { id },
+    data: { status: 'pending', failureReason: null },
+    include,
+  });
 }
 
 export function updateStatus(

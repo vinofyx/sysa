@@ -20,8 +20,12 @@ import { contactRouter } from '@routes/v1/contact.routes';
 
 import { donationCategoriesRouter } from '@routes/v1/donation-categories.routes';
 import { appealsRouter } from '@routes/v1/appeals.routes';
+import { donationCheckoutRouter } from '@routes/v1/donation-checkout.routes';
 import { donationsRouter } from '@routes/v1/donations.routes';
 import { bankTransfersRouter } from '@routes/v1/bank-transfers.routes';
+import { webhooksRouter } from '@routes/v1/webhooks.routes';
+import { donorAuthRouter } from '@routes/v1/donor-auth.routes';
+import { donorsRouter } from '@routes/v1/donors.routes';
 
 import { volunteersRouter } from '@routes/v1/volunteers.routes';
 import { volunteerAssignmentsRouter } from '@routes/v1/volunteer-assignments.routes';
@@ -66,8 +70,18 @@ v1Router.use('/contact', contactRouter);
 // Donation module
 v1Router.use('/donation-categories', donationCategoriesRouter);
 v1Router.use('/appeals', appealsRouter);
+// donationCheckoutRouter registers exact-path public routes (initiate/verify/
+// :id/retry/:id/status/:id/receipt) — mounted first so those short-circuit
+// before reaching donationsRouter's blanket `authenticate`, same pattern as
+// publicContentRouter in Phase 6.
+v1Router.use('/donations', donationCheckoutRouter);
 v1Router.use('/donations', donationsRouter);
 v1Router.use('/bank-transfers', bankTransfersRouter);
+
+// Payments (Phase 7)
+v1Router.use('/webhooks', webhooksRouter);
+v1Router.use('/donor-auth', donorAuthRouter);
+v1Router.use('/donors', donorsRouter);
 
 // Volunteer module
 v1Router.use('/volunteers', volunteersRouter);

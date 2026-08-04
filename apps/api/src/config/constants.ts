@@ -19,6 +19,9 @@ export const PASSWORD_POLICY_DESCRIPTION = `At least ${PASSWORD_MIN_LENGTH} char
 /** Auth cookie names — httpOnly, see src/lib/cookies.ts. */
 export const ACCESS_TOKEN_COOKIE = 'sysa_access_token';
 export const REFRESH_TOKEN_COOKIE = 'sysa_refresh_token';
+/** Donor session cookie (Phase 7 donation-history login) — separate from the
+ * admin cookies above so a donor session can never be confused with one. */
+export const DONOR_TOKEN_COOKIE = 'sysa_donor_token';
 
 /** Session/token size (bytes of randomness before hex/base64 encoding). */
 export const OPAQUE_TOKEN_BYTES = 32;

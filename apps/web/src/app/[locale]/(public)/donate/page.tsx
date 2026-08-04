@@ -7,6 +7,7 @@ import { PageHero } from '@/components/public/page-hero';
 import { ProgressBar } from '@/components/public/progress-bar';
 import { TrustBadge } from '@/components/public/trust-badge';
 import { BankTransferClaimForm } from '@/components/public/bank-transfer-claim-form';
+import { DonationCheckoutForm } from '@/components/public/donation-checkout-form';
 import { RichContent } from '@/components/public/rich-content';
 import { EmptyState } from '@/components/admin/empty-state';
 import {
@@ -134,6 +135,12 @@ export default async function DonatePage() {
           </section>
         )}
 
+        {categories.length > 0 && (
+          <section className="mx-auto mb-14 max-w-xl">
+            <DonationCheckoutForm categories={categories} appeals={appeals} />
+          </section>
+        )}
+
         <section className="mb-14 grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div>
             <h2 className="font-pub-heading text-pub-primary-900 mb-4 text-xl font-semibold">
@@ -220,7 +227,15 @@ export default async function DonatePage() {
             <AccordionItem value="online">
               <AccordionTrigger>Can I donate online with a card?</AccordionTrigger>
               <AccordionContent>
-                <RichContent html="<p>Online card/UPI checkout is not yet available on this site — please use the bank transfer / UPI details above and submit the confirmation form so we can verify and issue your receipt.</p>" />
+                <RichContent html="<p>Yes — use the “Donate Online” form above to pay securely by UPI, card, or net banking via Razorpay. If you'd rather transfer directly, the bank/UPI details and confirmation form below are also available.</p>" />
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="history">
+              <AccordionTrigger>Can I view my past donations?</AccordionTrigger>
+              <AccordionContent>
+                <RichContent
+                  html={`<p>Yes — visit the <a href="/donate/history">Donation History</a> page and log in with the email you donated with to receive a one-time code.</p>`}
+                />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

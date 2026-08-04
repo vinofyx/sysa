@@ -217,3 +217,45 @@ export interface GalleryAlbum {
   displayOrder: number;
   items: GalleryItem[];
 }
+
+export interface CheckoutSession {
+  donationId: string;
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  statusToken: string;
+}
+
+export type DonationPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
+export interface DonationStatusResult {
+  id: string;
+  status: DonationPaymentStatus;
+  amount: number;
+  currency: string;
+  category: string;
+  failureReason: string | null;
+  receiptAvailable: boolean;
+  razorpayOrderId: string | null;
+}
+
+export interface DonationReceipt {
+  receiptNumber: string;
+  pdfUrl: string;
+}
+
+export interface MyDonation {
+  id: string;
+  amount: string;
+  currency: string;
+  status: DonationPaymentStatus;
+  paymentMethod: string | null;
+  frequency: 'one_time' | 'monthly';
+  createdAt: string;
+  completedAt: string | null;
+  category: { nameEn: string };
+  appeal: { titleEn: string } | null;
+  receiptAvailable: boolean;
+  receiptToken: string | null;
+}

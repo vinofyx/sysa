@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Plus, Download, BarChart3 } from 'lucide-react';
+import { Plus, Download, BarChart3, FileDown } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
 import { PageHeader } from '@/components/admin/page-header';
@@ -34,6 +34,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { apiClient, type ApiErrorBody } from '@/lib/api-client';
 import { createResourceHooks, apiErrorMessage } from '@/hooks/use-resource';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -50,11 +57,16 @@ interface Donation {
   status: DonationStatus;
   source: 'online' | 'manual';
   frequency: 'one_time' | 'monthly';
-  paymentMethod: PaymentMethod;
+  paymentMethod: PaymentMethod | null;
+  razorpayOrderId: string | null;
+  paymentGatewayRef: string | null;
+  failureReason: string | null;
   createdAt: string;
+  completedAt: string | null;
   donor: { name: string; email: string };
   category: { nameEn: string };
   appeal: { titleEn: string } | null;
+  receipt: { receiptNumber: string; pdfUrl: string | null } | null;
 }
 
 interface DonationCategory {
@@ -126,7 +138,9 @@ export default function DonationsPage() {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState<string>('all');
+  const [source, setSource] = React.useState<string>('all');
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [detailsDonation, setDetailsDonation] = React.useState<Donation | null>(null);
 
   const canCreateManual = useHasPermission('donations:create_manual');
   const canExport = useHasPermission('donations:export');
@@ -138,6 +152,7 @@ export default function DonationsPage() {
     pageSize: 15,
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
     ...(status !== 'all' ? { status } : {}),
+    ...(source !== 'all' ? { source } : {}),
   };
   const { data, isLoading } = resource.useList(query);
   const { data: categoryData } = categoryResource.useList({ page: 1, pageSize: 100 });
@@ -184,7 +199,10 @@ export default function DonationsPage() {
   const exportMutation = useMutation<void, AxiosError<ApiErrorBody>, void>({
     mutationFn: async () => {
       const response = await apiClient.get('/donations/export', {
-        params: status !== 'all' ? { status } : {},
+        params: {
+          ...(status !== 'all' ? { status } : {}),
+          ...(source !== 'all' ? { source } : {}),
+        },
         responseType: 'blob',
       });
       const url = URL.createObjectURL(new Blob([response.data]));
@@ -235,7 +253,9 @@ export default function DonationsPage() {
       header: 'Method / Source',
       render: (row) => (
         <div>
-          <p className="capitalize">{row.paymentMethod.replace('_', ' ')}</p>
+          <p className="capitalize">
+            {row.paymentMethod ? row.paymentMethod.replace('_', ' ') : 'Awaiting payment'}
+          </p>
           <p className="text-muted-foreground text-xs capitalize">{row.source}</p>
         </div>
       ),
@@ -296,12 +316,23 @@ export default function DonationsPage() {
             <SelectItem value="refunded">Refunded</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={source} onValueChange={(value) => setSource(value ?? 'all')}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All sources</SelectItem>
+            <SelectItem value="online">Online (Razorpay)</SelectItem>
+            <SelectItem value="manual">Manual</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <DataTable
         columns={columns}
         data={data?.data ?? []}
         getRowId={(row) => row.id}
+        onRowClick={(row) => setDetailsDonation(row)}
         isLoading={isLoading}
         emptyTitle="No donations found"
         emptyDescription="Try adjusting your filters, or record a manual donation."
@@ -461,6 +492,67 @@ export default function DonationsPage() {
           />
         </Form>
       </FormDialog>
+
+      <Dialog open={!!detailsDonation} onOpenChange={(open) => !open && setDetailsDonation(null)}>
+        <DialogContent>
+          {detailsDonation && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Payment details</DialogTitle>
+                <DialogDescription>
+                  {detailsDonation.donor.name} · {currency(detailsDonation.amount)}
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                <dt className="text-muted-foreground">Status</dt>
+                <dd>
+                  <StatusBadge status={detailsDonation.status} />
+                </dd>
+                <dt className="text-muted-foreground">Source</dt>
+                <dd className="capitalize">{detailsDonation.source}</dd>
+                <dt className="text-muted-foreground">Payment method</dt>
+                <dd className="capitalize">
+                  {detailsDonation.paymentMethod
+                    ? detailsDonation.paymentMethod.replace('_', ' ')
+                    : 'Awaiting payment'}
+                </dd>
+                <dt className="text-muted-foreground">Razorpay order ID</dt>
+                <dd className="font-mono text-xs break-all">
+                  {detailsDonation.razorpayOrderId ?? '—'}
+                </dd>
+                <dt className="text-muted-foreground">Razorpay payment ID</dt>
+                <dd className="font-mono text-xs break-all">
+                  {detailsDonation.paymentGatewayRef ?? '—'}
+                </dd>
+                {detailsDonation.failureReason && (
+                  <>
+                    <dt className="text-muted-foreground">Failure reason</dt>
+                    <dd className="text-destructive">{detailsDonation.failureReason}</dd>
+                  </>
+                )}
+                <dt className="text-muted-foreground">Created</dt>
+                <dd>{new Date(detailsDonation.createdAt).toLocaleString('en-IN')}</dd>
+                {detailsDonation.completedAt && (
+                  <>
+                    <dt className="text-muted-foreground">Completed</dt>
+                    <dd>{new Date(detailsDonation.completedAt).toLocaleString('en-IN')}</dd>
+                  </>
+                )}
+              </dl>
+              {detailsDonation.receipt?.pdfUrl && (
+                <Button
+                  variant="outline"
+                  render={
+                    <a href={detailsDonation.receipt.pdfUrl} target="_blank" rel="noreferrer" />
+                  }
+                >
+                  <FileDown /> Download receipt ({detailsDonation.receipt.receiptNumber})
+                </Button>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

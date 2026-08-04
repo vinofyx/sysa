@@ -5,9 +5,9 @@ import { ApiError } from '@utils/api-error';
 
 import * as donationRepo from '@repositories/donation.repository';
 import * as donorRepo from '@repositories/donor.repository';
-import * as receiptRepo from '@repositories/receipt.repository';
 import * as appealRepo from '@repositories/appeal.repository';
 import type { DonationFilters } from '@repositories/donation.repository';
+import { issueReceipt } from '@services/receipt.service';
 
 export interface CreateManualDonationInput {
   donorName: string;
@@ -68,7 +68,7 @@ export async function createManualDonation(
     internalNote: input.internalNote,
   });
 
-  await receiptRepo.createForDonation(donation.id);
+  await issueReceipt(donation.id);
 
   if (input.appealId) {
     await appealRepo.recalculateRaisedAmount(input.appealId);
@@ -99,10 +99,7 @@ export async function updateDonationStatus(
   // A completed donation always has a receipt; a status change INTO completed
   // (e.g. a delayed webhook reconciliation) must generate one if missing.
   if (status === 'completed') {
-    const existingReceipt = await receiptRepo.findByDonationId(id);
-    if (!existingReceipt) {
-      await receiptRepo.createForDonation(id);
-    }
+    await issueReceipt(id);
   }
 
   if (before.appealId) {
@@ -135,6 +132,9 @@ export async function exportDonationsCsv(params: Omit<DonationFilters, 'skip' | 
       status: d.status,
       source: d.source,
       frequency: d.frequency,
+      razorpayOrderId: d.razorpayOrderId ?? '',
+      paymentGatewayRef: d.paymentGatewayRef ?? '',
+      failureReason: d.failureReason ?? '',
       createdAt: d.createdAt,
       completedAt: d.completedAt,
     })),
@@ -149,6 +149,9 @@ export async function exportDonationsCsv(params: Omit<DonationFilters, 'skip' | 
       'status',
       'source',
       'frequency',
+      'razorpayOrderId',
+      'paymentGatewayRef',
+      'failureReason',
       'createdAt',
       'completedAt',
     ],

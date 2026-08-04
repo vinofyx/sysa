@@ -40,10 +40,23 @@ export type AuditAction =
   | 'BULK_UPDATED'
   | 'EXPORTED'
   | 'UPLOADED'
-  | 'SETTINGS_UPDATED';
+  | 'SETTINGS_UPDATED'
+  // Payments (Phase 7) — no admin actor behind most of these; see the
+  // `adminUserId?` widening below and the doc-comment on the `AuditLog` model.
+  | 'PAYMENT_INITIATED'
+  | 'PAYMENT_VERIFIED'
+  | 'PAYMENT_FAILED'
+  | 'PAYMENT_SIGNATURE_INVALID'
+  | 'WEBHOOK_RECEIVED'
+  | 'WEBHOOK_SIGNATURE_INVALID'
+  | 'RECEIPT_GENERATED'
+  | 'DONOR_OTP_REQUESTED'
+  | 'DONOR_OTP_VERIFIED';
 
 interface WriteAuditLogInput {
-  adminUserId: string;
+  /** Omitted for system-initiated events (e.g. a Razorpay webhook) that have
+   * no admin actor — see the `AuditLog.adminUserId` doc-comment in schema.prisma. */
+  adminUserId?: string;
   action: AuditAction;
   entityType: string;
   entityId?: string;

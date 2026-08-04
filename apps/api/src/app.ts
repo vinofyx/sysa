@@ -43,7 +43,19 @@ export function createApp(): Application {
   );
 
   app.use(compression());
-  app.use(express.json({ limit: '1mb' }));
+  // `verify` captures the raw request bytes onto `req.rawBody` alongside the
+  // normal JSON parse — the Razorpay webhook handler needs the exact raw
+  // bytes to compute its HMAC signature (re-serializing req.body would not
+  // byte-for-byte match what Razorpay signed). Every other route is
+  // unaffected and keeps using the parsed `req.body` as before.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req, _res, buf) => {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
   app.use(requestLogger);
