@@ -90,6 +90,7 @@ export interface CommitteeMember {
   photoUrl: string | null;
   bioEn: string | null;
   bioTe: string | null;
+  mobile: string | null;
   displayOrder: number;
 }
 

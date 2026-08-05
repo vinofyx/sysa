@@ -4,8 +4,10 @@ import { getLocale, getTranslations } from 'next-intl/server';
 
 import { Link } from '@/i18n/navigation';
 import { PageHero } from '@/components/public/page-hero';
+import { RichContent } from '@/components/public/rich-content';
 import { TrustBadge } from '@/components/public/trust-badge';
-import { getPublicDocuments, getSiteSettings } from '@/lib/public-api';
+import { getPageContent, getPublicDocuments, getSiteSettings } from '@/lib/public-api';
+import { parseAboutBlocks } from '@/lib/about-content';
 import { buildMetadata, defaultSeoFields } from '@/lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,13 +34,20 @@ const LINKS = [
 ] as const;
 
 export default async function AboutPage() {
+  const locale = await getLocale();
   const t = await getTranslations('Nav');
   const settings = await getSiteSettings();
-  const documents = await getPublicDocuments().catch(() => []);
+  const [documents, content] = await Promise.all([
+    getPublicDocuments().catch(() => []),
+    getPageContent('about'),
+  ]);
 
   const has12A = documents.some((doc) => doc.category === 'certificate_12ab');
   const has80G = documents.some((doc) => doc.category === 'certificate_80g');
   const hasRegistration = documents.some((doc) => doc.category === 'registration_certificate');
+
+  const blocks = parseAboutBlocks(content);
+  const aboutHtml = locale === 'te' && blocks.aboutTe ? blocks.aboutTe : blocks.aboutEn;
 
   return (
     <div>
@@ -54,6 +63,12 @@ export default async function AboutPage() {
           {(has12A || has80G) && <TrustBadge variant="tax-exempt" />}
           <TrustBadge variant="secure-payment" />
         </div>
+
+        {aboutHtml && (
+          <div className="mb-10 max-w-3xl">
+            <RichContent html={aboutHtml} />
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {LINKS.map(({ key, href, icon: Icon }) => (

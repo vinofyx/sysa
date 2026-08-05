@@ -35,6 +35,7 @@ interface CommitteeMember {
   designation: string;
   photoUrl: string | null;
   bioEn: string | null;
+  mobile: string | null;
   displayOrder: number;
   active: boolean;
 }
@@ -44,6 +45,7 @@ const memberSchema = z.object({
   designation: z.string().min(1, 'Required').max(100),
   photoUrl: z.string().optional().or(z.literal('')),
   bioEn: z.string().max(3000).optional().or(z.literal('')),
+  mobile: z.string().max(20).optional().or(z.literal('')),
   displayOrder: z.coerce.number().int(),
   active: z.boolean(),
 });
@@ -55,6 +57,7 @@ const EMPTY_VALUES: MemberFormValues = {
   designation: '',
   photoUrl: '',
   bioEn: '',
+  mobile: '',
   displayOrder: 0,
   active: true,
 };
@@ -94,6 +97,7 @@ export default function CommitteePage() {
       designation: row.designation,
       photoUrl: row.photoUrl ?? '',
       bioEn: row.bioEn ?? '',
+      mobile: row.mobile ?? '',
       displayOrder: row.displayOrder,
       active: row.active,
     });
@@ -105,6 +109,7 @@ export default function CommitteePage() {
       ...values,
       photoUrl: values.photoUrl || undefined,
       bioEn: values.bioEn || undefined,
+      mobile: values.mobile || undefined,
     };
     const mutation = editing
       ? updateMutation.mutateAsync({ id: editing.id, input: payload })
@@ -145,6 +150,11 @@ export default function CommitteePage() {
           </div>
         </div>
       ),
+    },
+    {
+      key: 'mobile',
+      header: 'Mobile',
+      render: (row) => row.mobile || <span className="text-muted-foreground">—</span>,
     },
     {
       key: 'active',
@@ -264,6 +274,19 @@ export default function CommitteePage() {
                 <FormLabel>Bio (optional)</FormLabel>
                 <FormControl>
                   <Textarea {...field} rows={3} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="mobile"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mobile (optional)</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. 9014826354" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

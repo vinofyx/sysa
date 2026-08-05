@@ -15,6 +15,7 @@ import { useHasPermission } from '@/hooks/use-permission';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 interface AboutBlocks {
+  aboutEn: string;
   historyEn: string;
   visionEn: string;
   missionEn: string;
@@ -23,6 +24,11 @@ interface AboutBlocks {
 }
 
 const SECTIONS: { key: keyof AboutBlocks; label: string; helper: string }[] = [
+  {
+    key: 'aboutEn',
+    label: 'About Us',
+    helper: "The Ashram's main About Us narrative, shown on the About landing page.",
+  },
   { key: 'historyEn', label: 'History', helper: "The Ashram's founding story and history." },
   { key: 'visionEn', label: 'Vision', helper: 'The long-term vision statement.' },
   { key: 'missionEn', label: 'Mission', helper: "The Ashram's mission statement." },
@@ -37,6 +43,7 @@ const SECTIONS: { key: keyof AboutBlocks; label: string; helper: string }[] = [
 function parseBlocks(blocksEn: Record<string, unknown>): AboutBlocks {
   const get = (key: string) => (typeof blocksEn[key] === 'string' ? (blocksEn[key] as string) : '');
   return {
+    aboutEn: get('aboutEn'),
     historyEn: get('historyEn'),
     visionEn: get('visionEn'),
     missionEn: get('missionEn'),
@@ -53,6 +60,7 @@ function AboutEditor() {
   const updateMutation = useUpdatePageContent('about');
 
   const [blocks, setBlocks] = React.useState<AboutBlocks>({
+    aboutEn: '',
     historyEn: '',
     visionEn: '',
     missionEn: '',

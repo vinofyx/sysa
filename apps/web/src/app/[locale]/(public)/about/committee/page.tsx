@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { Users } from 'lucide-react';
+import { Phone, Users } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { PageHero } from '@/components/public/page-hero';
@@ -55,6 +55,15 @@ export default async function CommitteePage() {
                   {member.name}
                 </p>
                 <p className="text-pub-neutral-500 text-xs">{member.designation}</p>
+                {member.mobile && (
+                  <a
+                    href={`tel:${member.mobile}`}
+                    className="text-pub-neutral-500 hover:text-pub-primary-700 mt-1 flex items-center gap-1 text-xs"
+                  >
+                    <Phone className="size-3" />
+                    {member.mobile}
+                  </a>
+                )}
               </div>
             ))}
           </div>

@@ -417,6 +417,11 @@ model CommitteeMember {
   photoUrl     String?   @map("photo_url")
   bioEn        String?   @map("bio_en")
   bioTe        String?   @map("bio_te")
+  /// Verified against WEBSITE_CONTENT_AUDIT.md §2 (Webpage.docx) — resolves the
+  /// earlier docs/DOCUMENT_ANALYSIS.md conflict between two prior source
+  /// documents by matching the committee-list numbers, now confirmed by a
+  /// third, client-designated primary source.
+  mobile       String?   @map("mobile")
   active       Boolean   @default(true)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
