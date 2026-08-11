@@ -60,16 +60,25 @@ function DropdownMenuLabel({
 }: MenuPrimitive.GroupLabel.Props & {
   inset?: boolean;
 }) {
+  // `Menu.GroupLabel` reads `MenuGroupContext` (it registers itself as the
+  // group's accessible label via `useMenuGroupRootContext()`) and throws
+  // "MenuGroupContext is missing" if rendered without a `Menu.Group`
+  // ancestor. Callers use `DropdownMenuLabel` as a standalone header (e.g.
+  // account name/email at the top of a menu), not to label a set of
+  // `DropdownMenuGroup`-wrapped items, so the group wrapper lives here
+  // rather than requiring every call site to remember it.
   return (
-    <MenuPrimitive.GroupLabel
-      data-slot="dropdown-menu-label"
-      data-inset={inset}
-      className={cn(
-        'text-muted-foreground px-1.5 py-1 text-xs font-medium data-inset:pl-7',
-        className,
-      )}
-      {...props}
-    />
+    <MenuPrimitive.Group>
+      <MenuPrimitive.GroupLabel
+        data-slot="dropdown-menu-label"
+        data-inset={inset}
+        className={cn(
+          'text-muted-foreground px-1.5 py-1 text-xs font-medium data-inset:pl-7',
+          className,
+        )}
+        {...props}
+      />
+    </MenuPrimitive.Group>
   );
 }
 

@@ -22,6 +22,9 @@
     "menu": "Menu"
   },
   "Common": {
+    "search": "Search",
+    "registeredNgo": "Registered NGO",
+    "securePayment": "Secure Payment",
     "donateNow": "Donate Now",
     "learnMore": "Learn Our Story",
     "readMore": "Read More",

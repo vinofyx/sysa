@@ -23,11 +23,28 @@ function buildContentSecurityPolicy(): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
   const apiOrigin = new URL(apiUrl).origin;
 
+  // `next dev`'s webpack runtime wraps every module in `eval(...)` for fast
+  // rebuilds/source-mapping (its default dev `devtool`) — without
+  // 'unsafe-eval', that eval call is itself blocked by this exact CSP,
+  // which throws inside main-app.js before React ever hydrates, silently
+  // breaking every client component on the page (forms, menus, animations)
+  // with no visible error beyond a CSP console warning. `next build`'s
+  // production bundles use plain function wrapping, not eval, so this is
+  // scoped to development only and does not weaken the deployed policy.
+  // Checkout's own script pulls in additional first-party scripts at runtime
+  // (e.g. the risk-detection bundle served from cdn.razorpay.com) — a bare
+  // `checkout.razorpay.com` allowance blocks those and silently breaks the
+  // payment modal, so every Razorpay subdomain needs to be allowed here too.
+  const scriptSrc =
+    process.env.NODE_ENV === 'production'
+      ? "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://*.razorpay.com"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://*.razorpay.com";
+
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://*.razorpay.com",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://*.razorpay.com https://images.unsplash.com",
     "font-src 'self' data:",
     `connect-src 'self' ${apiOrigin} https://api.razorpay.com https://lumberjack.razorpay.com`,
     "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
@@ -53,6 +70,13 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
+      },
+      {
+        // Curated stock photography used for premium hero/section imagery
+        // until the Ashram supplies real photos via the Gallery/Activities
+        // CMS — see components/public/stock-images.ts.
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
       },
     ],
   },

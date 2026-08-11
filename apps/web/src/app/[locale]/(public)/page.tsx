@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
+import { HeartHandshake, MessageCircleHeart } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { Link } from '@/i18n/navigation';
-import { Button } from '@/components/ui/button';
 import { JsonLd } from '@/components/public/json-ld';
 import { HeroBannerSection } from '@/components/public/hero-banner';
 import { SectionHeading } from '@/components/public/section-heading';
@@ -14,6 +14,8 @@ import { TestimonialCarousel } from '@/components/public/testimonial-carousel';
 import { ProgressBar } from '@/components/public/progress-bar';
 import { GalleryGrid } from '@/components/public/gallery-lightbox';
 import { NewsletterForm } from '@/components/public/newsletter-form';
+import { PremiumButton } from '@/components/public/premium-button';
+import { Reveal } from '@/components/public/motion';
 import {
   getActivities,
   getAppeals,
@@ -94,66 +96,86 @@ export default async function HomePage() {
     <div>
       <JsonLd data={ngoJsonLd(settings, env.NEXT_PUBLIC_SITE_URL)} />
 
-      <HeroBannerSection banners={banners} />
+      <HeroBannerSection banners={banners} settings={settings} />
 
       {home.welcomeMessageEn && (
-        <section className="mx-auto max-w-3xl px-4 py-14 text-center sm:px-6">
-          <div
-            className="text-pub-neutral-900 prose-p:mb-3 text-base leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: sanitizeRichText(home.welcomeMessageEn) }}
-          />
+        <section className="pub-gradient-ivory px-4 py-20 sm:px-6 sm:py-28">
+          <Reveal className="mx-auto max-w-3xl text-center">
+            <div
+              className="font-pub-body text-pub-neutral-700 prose-p:mb-4 text-lg leading-loose"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(home.welcomeMessageEn) }}
+            />
+          </Reveal>
         </section>
       )}
 
       {home.impactStats.length > 0 && (
-        <section className="bg-pub-neutral-50 px-4 py-14 sm:px-6">
-          <SectionHeading title={t('impactStatsHeading')} />
-          <div className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-4">
-            {home.impactStats.map((stat, index) => (
-              <StatCard key={index} value={stat.valueEn} label={stat.labelEn} />
-            ))}
+        <section className="pub-gradient-emerald relative overflow-hidden px-4 py-20 sm:px-6 sm:py-28">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+          <div className="relative mx-auto max-w-[1400px]">
+            <SectionHeading
+              eyebrow="By the numbers"
+              title={t('impactStatsHeading')}
+              className="[&_h2]:text-white [&_p]:text-white/70"
+            />
+            <div className="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-4 lg:gap-8">
+              {home.impactStats.map((stat, index) => (
+                <StatCard key={index} value={stat.valueEn} label={stat.labelEn} />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
       {featuredActivities.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <SectionHeading title={t('activitiesHeading')} subtitle={t('activitiesSubheading')} />
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredActivities.map((activity) => (
-              <ActivityCard key={activity.id} activity={activity} locale={locale} />
+        <section className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+          <SectionHeading
+            eyebrow="Our service"
+            title={t('activitiesHeading')}
+            subtitle={t('activitiesSubheading')}
+          />
+          <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredActivities.map((activity, index) => (
+              <ActivityCard key={activity.id} activity={activity} locale={locale} index={index} />
             ))}
           </div>
-          <div className="mt-8 text-center">
-            <Button
-              variant="outline"
-              render={<Link href="/activities" />}
-              className="border-pub-primary-700 text-pub-primary-700"
-            >
+          <Reveal className="mt-12 text-center">
+            <PremiumButton render={<Link href="/activities" />} tone="emerald">
               {tCommon('viewAll')}
-            </Button>
-          </div>
+            </PremiumButton>
+          </Reveal>
         </section>
       )}
 
       {featuredAppeal && (
-        <section className="bg-pub-primary-900 px-4 py-14 text-white sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-pub-gold-500 mb-2 text-xs font-semibold tracking-widest uppercase">
+        <section className="pub-gradient-emerald relative overflow-hidden px-4 py-20 sm:px-6 sm:py-28">
+          <div
+            aria-hidden
+            className="pub-gradient-gold absolute top-1/2 left-1/2 size-96 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-10 blur-3xl"
+          />
+          <Reveal variant="scale" className="relative mx-auto max-w-2xl text-center">
+            <p className="text-pub-gold-300 mb-3 flex items-center justify-center gap-2.5 text-xs font-semibold tracking-[0.22em] uppercase">
+              <span className="pub-gradient-gold h-px w-6" />
               {t('appealHeading')}
             </p>
-            <h2 className="font-pub-heading text-2xl font-semibold sm:text-3xl">
+            <h2 className="font-pub-heading text-2xl font-semibold text-white sm:text-4xl">
               {locale === 'te' && featuredAppeal.titleTe
                 ? featuredAppeal.titleTe
                 : featuredAppeal.titleEn}
             </h2>
-            <div className="mt-6">
+            <div className="pub-glass-dark mt-8 rounded-[var(--radius-pub-card)] p-6 sm:p-8">
               <ProgressBar
                 value={Number(featuredAppeal.raisedAmountCache)}
                 max={Number(featuredAppeal.targetAmount)}
-                className="bg-white/20"
               />
-              <div className="mt-2 flex justify-between text-sm text-white/80">
+              <div className="mt-3 flex justify-between text-sm text-white/80">
                 <span>
                   {tDonate('raised')}: {currency(featuredAppeal.raisedAmountCache)}
                 </span>
@@ -162,115 +184,104 @@ export default async function HomePage() {
                 </span>
               </div>
             </div>
-            <Button
-              render={<Link href="/donate" />}
-              size="lg"
-              className="bg-pub-gold-500 hover:bg-pub-gold-700 text-pub-primary-900 mt-6"
-            >
+            <PremiumButton render={<Link href="/donate" />} size="lg" className="mt-8">
               {tCommon('donateNow')}
-            </Button>
-          </div>
+            </PremiumButton>
+          </Reveal>
         </section>
       )}
 
       {upcomingEvents.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <SectionHeading title={t('eventsHeading')} />
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {upcomingEvents.map((event) => (
-              <EventCard key={event.id} event={event} locale={locale} />
+        <section className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+          <SectionHeading eyebrow="Save the date" title={t('eventsHeading')} />
+          <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {upcomingEvents.map((event, index) => (
+              <EventCard key={event.id} event={event} locale={locale} index={index} />
             ))}
           </div>
-          <div className="mt-8 text-center">
-            <Button
-              variant="outline"
-              render={<Link href="/events" />}
-              className="border-pub-primary-700 text-pub-primary-700"
-            >
+          <Reveal className="mt-12 text-center">
+            <PremiumButton render={<Link href="/events" />} tone="emerald">
               {tCommon('viewAll')}
-            </Button>
-          </div>
+            </PremiumButton>
+          </Reveal>
         </section>
       )}
 
       {latestPosts.length > 0 && (
-        <section className="bg-pub-neutral-50 px-4 py-14 sm:px-6">
-          <div className="mx-auto max-w-7xl lg:px-8">
-            <SectionHeading title={t('newsHeading')} />
-            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {latestPosts.map((post) => (
-                <NewsCard key={post.id} post={post} locale={locale} />
+        <section className="pub-gradient-ivory px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1400px] lg:px-8">
+            <SectionHeading eyebrow="Stay informed" title={t('newsHeading')} />
+            <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {latestPosts.map((post, index) => (
+                <NewsCard key={post.id} post={post} locale={locale} index={index} />
               ))}
             </div>
-            <div className="mt-8 text-center">
-              <Button
-                variant="outline"
-                render={<Link href="/news" />}
-                className="border-pub-primary-700 text-pub-primary-700"
-              >
+            <Reveal className="mt-12 text-center">
+              <PremiumButton render={<Link href="/news" />} tone="emerald">
                 {tCommon('viewAll')}
-              </Button>
-            </div>
+              </PremiumButton>
+            </Reveal>
           </div>
         </section>
       )}
 
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <SectionHeading title={t('testimonialsHeading')} />
-        <div className="mt-8">
+      <section className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <SectionHeading eyebrow="Testimonials" title={t('testimonialsHeading')} />
+        <div className="mt-14">
           <TestimonialCarousel testimonials={testimonials} />
         </div>
       </section>
 
       {galleryPreviewItems.length > 0 && (
-        <section className="bg-pub-neutral-50 px-4 py-14 sm:px-6">
-          <div className="mx-auto max-w-7xl lg:px-8">
-            <SectionHeading title={t('galleryHeading')} />
-            <div className="mt-8">
+        <section className="pub-gradient-ivory px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-[1400px] lg:px-8">
+            <SectionHeading eyebrow="Moments" title={t('galleryHeading')} />
+            <div className="mt-14">
               <GalleryGrid items={galleryPreviewItems} locale={locale} />
             </div>
-            <div className="mt-8 text-center">
-              <Button
-                variant="outline"
-                render={<Link href="/gallery" />}
-                className="border-pub-primary-700 text-pub-primary-700"
-              >
+            <Reveal className="mt-12 text-center">
+              <PremiumButton render={<Link href="/gallery" />} tone="emerald">
                 {tCommon('viewAll')}
-              </Button>
-            </div>
+              </PremiumButton>
+            </Reveal>
           </div>
         </section>
       )}
 
-      <section className="grid grid-cols-1 gap-px sm:grid-cols-2">
-        <div className="bg-pub-primary-700 flex flex-col items-center justify-center gap-3 px-6 py-14 text-center text-white">
-          <h2 className="font-pub-heading text-xl font-semibold">{t('volunteerCtaHeading')}</h2>
-          <p className="max-w-sm text-sm text-white/85">{t('volunteerCtaBody')}</p>
-          <Button
-            render={<Link href="/volunteer" />}
-            className="bg-pub-gold-500 hover:bg-pub-gold-700 text-pub-primary-900 mt-2"
-          >
+      <section className="grid grid-cols-1 sm:grid-cols-2">
+        <Reveal
+          variant="slide-right"
+          className="pub-gradient-emerald relative flex flex-col items-center justify-center gap-4 overflow-hidden px-6 py-20 text-center text-white sm:py-24"
+        >
+          <HeartHandshake className="text-pub-gold-300 size-10" strokeWidth={1.5} />
+          <h2 className="font-pub-heading text-2xl font-semibold sm:text-3xl">
+            {t('volunteerCtaHeading')}
+          </h2>
+          <p className="max-w-sm text-sm leading-relaxed text-white/80">{t('volunteerCtaBody')}</p>
+          <PremiumButton render={<Link href="/volunteer" />} className="mt-2">
             {tCommon('register')}
-          </Button>
-        </div>
-        <div className="bg-pub-gold-700 flex flex-col items-center justify-center gap-3 px-6 py-14 text-center text-white">
-          <h2 className="font-pub-heading text-xl font-semibold">{t('contactCtaHeading')}</h2>
-          <p className="max-w-sm text-sm text-white/85">{t('contactCtaBody')}</p>
-          <Button
-            render={<Link href="/contact" />}
-            variant="outline"
-            className="mt-2 border-white bg-transparent text-white hover:bg-white/10"
-          >
+          </PremiumButton>
+        </Reveal>
+        <Reveal
+          variant="slide-left"
+          className="text-pub-primary-950 relative flex flex-col items-center justify-center gap-4 overflow-hidden bg-[linear-gradient(160deg,var(--color-pub-gold-100)_0%,var(--color-pub-neutral-bg)_70%)] px-6 py-20 text-center sm:py-24"
+        >
+          <MessageCircleHeart className="text-pub-gold-700 size-10" strokeWidth={1.5} />
+          <h2 className="font-pub-heading text-2xl font-semibold">{t('contactCtaHeading')}</h2>
+          <p className="text-pub-neutral-700 max-w-sm text-sm leading-relaxed">
+            {t('contactCtaBody')}
+          </p>
+          <PremiumButton render={<Link href="/contact" />} tone="emerald" className="mt-2">
             {tCommon('learnMore')}
-          </Button>
-        </div>
+          </PremiumButton>
+        </Reveal>
       </section>
 
-      <section className="px-4 py-14 text-center sm:px-6">
+      <section className="pub-gradient-ivory px-4 py-20 text-center sm:px-6 sm:py-28">
         <SectionHeading title={t('newsletterHeading')} subtitle={t('newsletterBody')} />
-        <div className="mt-6 flex justify-center">
+        <Reveal className="mt-8 flex justify-center">
           <NewsletterForm />
-        </div>
+        </Reveal>
       </section>
     </div>
   );

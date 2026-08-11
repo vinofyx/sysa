@@ -96,6 +96,6 @@ export async function processRazorpayWebhook(
   await webhookEventRepo.create({
     eventId,
     eventType: body.event,
-    payload: JSON.parse(rawBody.toString('utf8')),
+    payload: rawBody.toString('utf8'),
   });
 }

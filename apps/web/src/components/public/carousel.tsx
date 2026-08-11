@@ -11,6 +11,11 @@ interface CarouselProps {
   autoAdvanceMs?: number;
   className?: string;
   slideClassName?: string;
+  /** `light` (default) is tuned for slides over a dark/image background
+   * (Hero Banner) — white dots, glass arrows. `dark` is tuned for slides on
+   * the page's normal ivory background (Testimonials) — emerald-tinted
+   * dots/arrows so they stay visible against a light surface. */
+  dotVariant?: 'light' | 'dark';
 }
 
 /** Generic auto-advancing carousel — pauses on hover/focus and respects
@@ -21,6 +26,7 @@ export function Carousel({
   autoAdvanceMs = 6000,
   className,
   slideClassName,
+  dotVariant = 'light',
 }: CarouselProps) {
   const [index, setIndex] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -60,7 +66,10 @@ export function Carousel({
             type="button"
             onClick={() => setIndex((i) => (i - 1 + count) % count)}
             aria-label="Previous slide"
-            className="bg-pub-neutral-white/80 hover:bg-pub-neutral-white absolute top-1/2 left-3 flex size-9 -translate-y-1/2 items-center justify-center rounded-full shadow"
+            className={cn(
+              'shadow-pub-md hover:bg-pub-gold-500 hover:text-pub-primary-950 absolute top-1/2 left-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full transition-all hover:scale-110 sm:left-5',
+              dotVariant === 'light' ? 'pub-glass' : 'text-pub-primary-800 bg-white',
+            )}
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -68,11 +77,14 @@ export function Carousel({
             type="button"
             onClick={() => setIndex((i) => (i + 1) % count)}
             aria-label="Next slide"
-            className="bg-pub-neutral-white/80 hover:bg-pub-neutral-white absolute top-1/2 right-3 flex size-9 -translate-y-1/2 items-center justify-center rounded-full shadow"
+            className={cn(
+              'shadow-pub-md hover:bg-pub-gold-500 hover:text-pub-primary-950 absolute top-1/2 right-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full transition-all hover:scale-110 sm:right-5',
+              dotVariant === 'light' ? 'pub-glass' : 'text-pub-primary-800 bg-white',
+            )}
           >
             <ChevronRight className="size-4" />
           </button>
-          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
             {children.map((_, i) => (
               <button
                 key={i}
@@ -80,8 +92,12 @@ export function Carousel({
                 onClick={() => setIndex(i)}
                 aria-label={`Go to slide ${i + 1}`}
                 className={cn(
-                  'size-2 rounded-full transition-colors',
-                  i === index ? 'bg-pub-gold-500' : 'bg-pub-neutral-white/60',
+                  'h-2 rounded-full transition-all duration-300',
+                  i === index
+                    ? 'pub-gradient-gold w-7'
+                    : dotVariant === 'light'
+                      ? 'w-2 bg-white/60 hover:bg-white/90'
+                      : 'bg-pub-primary-100 hover:bg-pub-primary-500/40 w-2',
                 )}
               />
             ))}

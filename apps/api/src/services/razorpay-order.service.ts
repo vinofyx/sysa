@@ -13,12 +13,20 @@ interface CreateOrderInput {
  * currency unit (paise for INR). */
 export async function createOrder(input: CreateOrderInput) {
   const client = getRazorpayClient();
-  return client.orders.create({
-    amount: input.amountPaise,
-    currency: input.currency,
-    receipt: input.receipt,
-    notes: input.notes,
-  });
+  try {
+    return await client.orders.create({
+      amount: input.amountPaise,
+      currency: input.currency,
+      receipt: input.receipt,
+      notes: input.notes,
+    });
+  } catch {
+    // The Razorpay SDK's own error normalization assumes every rejection
+    // carries an HTTP response and throws a confusing raw TypeError when a
+    // request fails at the network level (timeout, DNS, connection reset)
+    // instead — never let that leak past this boundary.
+    throw ApiError.internal('Unable to reach the payment gateway. Please try again.');
+  }
 }
 
 export async function fetchPayment(paymentId: string) {

@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { PageHero } from '@/components/public/page-hero';
 import { RichContent } from '@/components/public/rich-content';
 import { TrustBadge } from '@/components/public/trust-badge';
+import { Reveal } from '@/components/public/motion';
 import { getPageContent, getPublicDocuments, getSiteSettings } from '@/lib/public-api';
 import { parseAboutBlocks } from '@/lib/about-content';
 import { buildMetadata, defaultSeoFields } from '@/lib/seo';
@@ -57,31 +58,35 @@ export default async function AboutPage() {
         breadcrumb={[{ label: t('home'), href: '/' }, { label: t('about') }]}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="mb-10 flex flex-wrap gap-2">
+      <div className="mx-auto max-w-[1400px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <Reveal className="mb-10 flex flex-wrap gap-2.5">
           {hasRegistration && <TrustBadge variant="registered-ngo" />}
           {(has12A || has80G) && <TrustBadge variant="tax-exempt" />}
           <TrustBadge variant="secure-payment" />
-        </div>
+        </Reveal>
 
         {aboutHtml && (
-          <div className="mb-10 max-w-3xl">
+          <Reveal className="mb-16 max-w-3xl">
             <RichContent html={aboutHtml} />
-          </div>
+          </Reveal>
         )}
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {LINKS.map(({ key, href, icon: Icon }) => (
-            <Link
-              key={key}
-              href={href}
-              className="border-pub-neutral-200 hover:border-pub-primary-700 hover:shadow-pub-sm flex flex-col items-center gap-2 rounded-xl border bg-white p-6 text-center transition-all"
-            >
-              <Icon className="text-pub-primary-700 size-7" />
-              <span className="font-pub-heading text-pub-primary-900 text-sm font-semibold">
-                {t(key)}
-              </span>
-            </Link>
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+          {LINKS.map(({ key, href, icon: Icon }, index) => (
+            <Reveal key={key} delay={index * 0.06}>
+              <Link
+                href={href}
+                className="border-pub-neutral-200/70 shadow-pub-sm hover:shadow-pub-lg group relative flex h-full flex-col items-center gap-3 overflow-hidden rounded-[var(--radius-pub-card)] border bg-white p-7 text-center transition-all duration-500 hover:-translate-y-1.5"
+              >
+                <span className="pub-gradient-gold absolute inset-x-0 top-0 h-1 origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100" />
+                <span className="bg-pub-primary-100 text-pub-primary-700 group-hover:pub-gradient-gold flex size-14 items-center justify-center rounded-full transition-colors duration-300 group-hover:text-white">
+                  <Icon className="size-6" />
+                </span>
+                <span className="font-pub-heading text-pub-primary-950 text-base font-semibold">
+                  {t(key)}
+                </span>
+              </Link>
+            </Reveal>
           ))}
         </div>
       </div>

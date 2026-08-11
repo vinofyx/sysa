@@ -11,6 +11,7 @@ import {
   updateNewsPostSchema,
 } from '@validation/news-post.schema';
 import * as newsPostService from '@services/news-post.service';
+import { toNewsPostDto } from '@services/news-post.service';
 import { prisma } from '@lib/prisma';
 
 export const newsRouter = Router();
@@ -36,7 +37,7 @@ newsRouter.get('/public', validate({ query: publicNewsQuerySchema }), async (req
       },
       orderBy: { publishedAt: 'desc' },
     });
-    res.status(200).json({ posts });
+    res.status(200).json({ posts: posts.map(toNewsPostDto) });
   } catch (error) {
     next(error);
   }

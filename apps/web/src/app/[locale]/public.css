@@ -1,5 +1,6 @@
 /**
- * Public-site-only design tokens (design/06-Design-System.md). Deliberately
+ * Public-site-only design tokens (design/06-Design-System.md, refreshed to a
+ * premium spiritual/NGO visual language per client redesign brief). Deliberately
  * namespaced (`--color-pub-*`, `--font-pub-*`) rather than overriding the
  * shared shadcn tokens in `src/app/globals.css` — the admin CMS is a
  * "visually distinct family" per the design system, and redefining
@@ -7,40 +8,152 @@
  * Public components use `bg-pub-primary-700`, `font-pub-heading`, etc.
  */
 @theme inline {
-  --color-pub-primary-900: #0f3d25;
-  --color-pub-primary-700: #1b6b3f;
-  --color-pub-primary-500: #2e9b5c;
-  --color-pub-primary-100: #e3f5ea;
+  /* Primary — deep emerald green */
+  --color-pub-primary-950: #08301d;
+  --color-pub-primary-900: #0f5132;
+  --color-pub-primary-800: #12613c;
+  --color-pub-primary-700: #157248;
+  --color-pub-primary-600: #1a8a57;
+  --color-pub-primary-500: #22a36a;
+  --color-pub-primary-100: #e3f3ea;
+  --color-pub-primary-50: #f2f9f5;
 
-  --color-pub-gold-700: #b8860b;
-  --color-pub-gold-500: #d4a017;
-  --color-pub-gold-100: #fbf3dc;
+  /* Secondary — antique gold */
+  --color-pub-gold-800: #8f6a1f;
+  --color-pub-gold-700: #a67c2e;
+  --color-pub-gold-500: #c89b3c;
+  --color-pub-gold-300: #ddb862;
+  --color-pub-gold-100: #f9eed1;
 
+  /* Accent — warm terracotta, used sparingly for highlights/badges */
+  --color-pub-accent-700: #b9601a;
+  --color-pub-accent-500: #e67e22;
+  --color-pub-accent-100: #fce6d1;
+
+  /* Neutrals — warm ivory family, not cold gray */
   --color-pub-neutral-white: #ffffff;
-  --color-pub-neutral-50: #f7f8f6;
-  --color-pub-neutral-200: #e2e5e1;
-  --color-pub-neutral-500: #6b7269;
-  --color-pub-neutral-900: #1a1d1a;
+  --color-pub-neutral-bg: #fffdf8;
+  --color-pub-neutral-50: #faf7ef;
+  --color-pub-neutral-100: #f3efe4;
+  --color-pub-neutral-200: #e9e3d4;
+  --color-pub-neutral-500: #746e60;
+  --color-pub-neutral-700: #45413a;
+  --color-pub-neutral-900: #1a1a1a;
 
-  --color-pub-success: #1b6b3f;
-  --color-pub-warning: #b8860b;
-  --color-pub-error: #c23b3b;
+  --color-pub-success: #157248;
+  --color-pub-warning: #a67c2e;
+  --color-pub-error: #b3432f;
   --color-pub-info: #2e6b9e;
 
-  --font-pub-heading: var(--font-poppins), var(--font-noto-telugu), sans-serif;
+  --font-pub-heading: var(--font-playfair), var(--font-noto-telugu), serif;
   --font-pub-body: var(--font-inter), var(--font-noto-telugu), sans-serif;
 
-  --shadow-pub-sm: 0 1px 2px rgba(15, 61, 37, 0.06);
-  --shadow-pub-md: 0 4px 12px rgba(15, 61, 37, 0.1);
-  --shadow-pub-lg: 0 12px 32px rgba(15, 61, 37, 0.14);
+  /* Soft, warm-toned premium shadows (never pure black) */
+  --shadow-pub-sm: 0 1px 3px rgba(15, 81, 50, 0.07);
+  --shadow-pub-md: 0 8px 24px -4px rgba(15, 81, 50, 0.12);
+  --shadow-pub-lg: 0 20px 48px -12px rgba(15, 81, 50, 0.18);
+  --shadow-pub-xl: 0 32px 64px -16px rgba(15, 81, 50, 0.24);
+  --shadow-pub-gold: 0 10px 30px -8px rgba(200, 155, 60, 0.45);
+
+  --radius-pub-card: 1.25rem; /* 20px */
+  --radius-pub-lg: 1.75rem;
+  --radius-pub-pill: 999px;
 }
 
 .font-public {
   font-family: var(--font-pub-body);
   color: var(--color-pub-neutral-900);
-  background-color: var(--color-pub-neutral-white);
+  background-color: var(--color-pub-neutral-bg);
 }
 
 .font-public :lang(te) {
   line-height: 1.65;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reusable premium visual utilities — public site only                */
+/* ------------------------------------------------------------------ */
+
+.pub-glass {
+  background: color-mix(in oklab, var(--color-pub-neutral-white) 70%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--color-pub-neutral-white) 40%, transparent);
+}
+
+.pub-glass-dark {
+  background: color-mix(in oklab, var(--color-pub-primary-950) 55%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--color-pub-neutral-white) 12%, transparent);
+}
+
+.pub-gradient-gold {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-pub-gold-300) 0%,
+    var(--color-pub-gold-500) 45%,
+    var(--color-pub-gold-700) 100%
+  );
+}
+
+.pub-gradient-emerald {
+  background-image: linear-gradient(
+    160deg,
+    var(--color-pub-primary-800) 0%,
+    var(--color-pub-primary-900) 55%,
+    var(--color-pub-primary-950) 100%
+  );
+}
+
+.pub-gradient-ivory {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, var(--color-pub-primary-50) 0%, transparent 60%),
+    linear-gradient(180deg, var(--color-pub-neutral-bg) 0%, var(--color-pub-neutral-50) 100%);
+}
+
+@keyframes kenburns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.12) translate(-1%, -1%);
+  }
+}
+
+.pub-text-gradient-gold {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-pub-gold-700) 0%,
+    var(--color-pub-gold-500) 50%,
+    var(--color-pub-gold-300) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.pub-divider-gold {
+  display: block;
+  width: 4.5rem;
+  height: 3px;
+  border-radius: var(--radius-pub-pill);
+  background-image: linear-gradient(90deg, var(--color-pub-gold-700), var(--color-pub-gold-300));
+}
+
+/* Subtle repeating temple-motif texture, used as a low-opacity background
+   layer behind section wrappers — pure CSS, no image asset needed. */
+.pub-texture {
+  background-image: radial-gradient(circle at 1px 1px, rgba(15, 81, 50, 0.08) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .font-public *,
+  .font-public *::before,
+  .font-public *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

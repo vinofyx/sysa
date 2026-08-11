@@ -29,7 +29,7 @@ export default async function GalleryPage() {
         title={t('gallery')}
         breadcrumb={[{ label: t('home'), href: '/' }, { label: t('gallery') }]}
       />
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1400px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <GalleryBrowser albums={albums} locale={locale} />
       </div>
     </div>

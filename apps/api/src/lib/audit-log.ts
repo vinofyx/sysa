@@ -81,8 +81,13 @@ export async function writeAuditLog(input: WriteAuditLogInput): Promise<void> {
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
-        beforeState: input.beforeState === undefined ? undefined : (input.beforeState as object),
-        afterState: input.afterState === undefined ? undefined : (input.afterState as object),
+        // `before_state`/`after_state` are `String @db.LongText` (MySQL has no
+        // native scalar-array type but does support JSON — this column just
+        // predates that; see MYSQL_MIGRATION_REPORT.md), so the caller's
+        // arbitrary object is serialized here rather than passed through raw.
+        beforeState:
+          input.beforeState === undefined ? undefined : JSON.stringify(input.beforeState),
+        afterState: input.afterState === undefined ? undefined : JSON.stringify(input.afterState),
       },
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
+import { Menu, ShieldCheck, XIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { Breadcrumb } from '@/components/shared/breadcrumb';
@@ -9,7 +9,7 @@ import { SidebarNav } from '@/components/admin/sidebar-nav';
 import { ProfileMenu } from '@/components/admin/profile-menu';
 import { ThemeSwitcher } from '@/components/admin/theme-switcher';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { adminNavGroups } from '@/lib/admin-nav';
 
 function currentPageLabel(pathname: string): string {
@@ -26,7 +26,7 @@ export function AdminHeader() {
   const pageLabel = currentPageLabel(pathname);
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 flex h-16 items-center gap-3 border-b px-4 backdrop-blur">
+    <header className="admin-topbar admin-glass border-admin-border shadow-admin-md sticky top-0 z-10 flex h-16 items-center gap-3 border-b px-4 lg:h-20 lg:px-6">
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetTrigger
           render={
@@ -35,15 +35,50 @@ export function AdminHeader() {
             </Button>
           }
         />
-        <SheetContent side="left" className="w-64 p-0">
-          <SheetHeader className="border-b px-4 py-4">
-            <SheetTitle className="text-sm">Sai Yadadri Seva Ashram</SheetTitle>
-          </SheetHeader>
-          <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
+        <SheetContent
+          side="left"
+          showCloseButton={false}
+          className="admin-gradient-sidebar border-admin-border text-admin-text w-72 border-r p-0"
+        >
+          <div className="border-admin-border relative flex h-20 shrink-0 items-center border-b px-5">
+            <span className="admin-gradient-emerald shadow-admin-glow-emerald flex size-11 shrink-0 items-center justify-center rounded-full ring-1 ring-white/10">
+              <ShieldCheck className="text-admin-gold-300 size-5" strokeWidth={2} />
+            </span>
+            <div className="ml-3 flex min-w-0 flex-col">
+              <SheetTitle className="font-admin-heading text-admin-text truncate text-base leading-tight font-semibold tracking-tight">
+                Sai Yadadri Seva Ashram
+              </SheetTitle>
+              <span className="text-admin-gold-500 text-[11px] font-semibold tracking-[0.15em] uppercase">
+                Administration Portal
+              </span>
+            </div>
+            <SheetClose
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-admin-muted hover:text-admin-text absolute top-3 right-3 hover:bg-white/5"
+                  aria-label="Close menu"
+                />
+              }
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close menu</span>
+            </SheetClose>
+          </div>
+          <div className="admin-scroll flex-1 overflow-y-auto">
+            <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
+          </div>
         </SheetContent>
       </Sheet>
 
-      <Breadcrumb items={[{ label: 'Dashboard', href: '/admin' }, { label: pageLabel }]} />
+      <Breadcrumb
+        items={
+          pathname === '/admin'
+            ? [{ label: 'Dashboard' }]
+            : [{ label: 'Dashboard', href: '/admin' }, { label: pageLabel }]
+        }
+      />
 
       <div className="ml-auto flex items-center gap-2">
         <ThemeSwitcher />

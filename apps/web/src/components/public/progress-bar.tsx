@@ -14,12 +14,14 @@ export function ProgressBar({
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
-      className={`bg-pub-neutral-200 h-2 w-full overflow-hidden rounded-full ${className ?? ''}`}
+      className={`h-3 w-full overflow-hidden rounded-full bg-white/15 shadow-inner ${className ?? ''}`}
     >
       <div
-        className="bg-pub-primary-700 h-full rounded-full transition-all"
+        className="pub-gradient-gold relative h-full rounded-full shadow-[0_0_12px_rgba(200,155,60,0.6)] transition-[width] duration-700 ease-out"
         style={{ width: `${pct}%` }}
-      />
+      >
+        <span className="absolute inset-0 animate-pulse bg-white/20" />
+      </div>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         return (
-          <Fragment key={item.label}>
+          <Fragment key={`${index}-${item.label}`}>
             {index > 0 && <ChevronRight className="mx-1.5 size-3.5 shrink-0" aria-hidden="true" />}
             {item.href && !isLast ? (
               <Link href={item.href} className="hover:text-foreground transition-colors">

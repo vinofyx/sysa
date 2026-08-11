@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { Landmark, QrCode } from 'lucide-react';
+import { Gift, Landmark, QrCode, Target } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { PageHero } from '@/components/public/page-hero';
+import { SectionHeading } from '@/components/public/section-heading';
 import { ProgressBar } from '@/components/public/progress-bar';
 import { TrustBadge } from '@/components/public/trust-badge';
+import { Reveal } from '@/components/public/motion';
 import { BankTransferClaimForm } from '@/components/public/bank-transfer-claim-form';
 import { DonationCheckoutForm } from '@/components/public/donation-checkout-form';
 import { RichContent } from '@/components/public/rich-content';
@@ -58,40 +60,46 @@ export default async function DonatePage() {
         breadcrumb={[{ label: t('home'), href: '/' }, { label: t('donate') }]}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="mb-10 flex flex-wrap gap-2">
+      <div className="mx-auto max-w-[1400px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <Reveal className="mb-14 flex flex-wrap gap-2.5">
           <TrustBadge variant="registered-ngo" />
           <TrustBadge variant="secure-payment" />
-        </div>
+        </Reveal>
 
-        <section className="mb-14">
-          <h2 className="font-pub-heading text-pub-primary-900 mb-4 text-xl font-semibold">
-            {tDonate('categoriesHeading')}
-          </h2>
+        <section className="mb-20">
+          <SectionHeading
+            align="left"
+            eyebrow="Give with purpose"
+            title={tDonate('categoriesHeading')}
+            className="mb-12"
+          />
           {categories.length === 0 ? (
             <EmptyState icon={Landmark} title={tDonate('categoriesComingSoonTitle')} />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {categories.map((category) => {
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {categories.map((category, index) => {
                 const name = locale === 'te' && category.nameTe ? category.nameTe : category.nameEn;
                 const description =
                   locale === 'te' && category.descriptionTe
                     ? category.descriptionTe
                     : category.descriptionEn;
                 return (
-                  <div
-                    key={category.id}
-                    className="border-pub-neutral-200 rounded-xl border bg-white p-5"
-                  >
-                    <p className="font-pub-heading text-pub-primary-900 text-sm font-semibold">
-                      {name}
-                    </p>
-                    {description && (
-                      <p className="text-pub-neutral-500 mt-1.5 text-sm">
-                        {description.replace(/<[^>]+>/g, '')}
+                  <Reveal key={category.id} delay={index * 0.06} className="h-full">
+                    <div className="border-pub-neutral-200/70 shadow-pub-md hover:shadow-pub-lg relative flex h-full flex-col overflow-hidden rounded-[var(--radius-pub-card)] border bg-white p-6 transition-all duration-500 hover:-translate-y-1.5">
+                      <span className="pub-gradient-gold absolute inset-x-0 top-0 h-1" />
+                      <span className="bg-pub-primary-100 text-pub-primary-700 mb-4 flex size-11 items-center justify-center rounded-full">
+                        <Gift className="size-5" />
+                      </span>
+                      <p className="font-pub-heading text-pub-primary-950 text-lg font-semibold">
+                        {name}
                       </p>
-                    )}
-                  </div>
+                      {description && (
+                        <p className="text-pub-neutral-500 mt-2 flex-1 text-sm leading-relaxed">
+                          {description.replace(/<[^>]+>/g, '')}
+                        </p>
+                      )}
+                    </div>
+                  </Reveal>
                 );
               })}
             </div>
@@ -99,36 +107,37 @@ export default async function DonatePage() {
         </section>
 
         {appeals.length > 0 && (
-          <section className="mb-14">
-            <h2 className="font-pub-heading text-pub-primary-900 mb-4 text-xl font-semibold">
-              {tDonate('appealsHeading')}
-            </h2>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {appeals.map((appeal) => {
+          <section className="mb-20">
+            <SectionHeading
+              align="left"
+              eyebrow="Active appeals"
+              title={tDonate('appealsHeading')}
+              className="mb-12"
+            />
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+              {appeals.map((appeal, index) => {
                 const title = locale === 'te' && appeal.titleTe ? appeal.titleTe : appeal.titleEn;
                 return (
-                  <div
-                    key={appeal.id}
-                    className="border-pub-neutral-200 rounded-xl border bg-white p-5"
-                  >
-                    <p className="font-pub-heading text-pub-primary-900 text-sm font-semibold">
-                      {title}
-                    </p>
-                    <div className="mt-3">
-                      <ProgressBar
-                        value={Number(appeal.raisedAmountCache)}
-                        max={Number(appeal.targetAmount)}
-                      />
-                      <div className="text-pub-neutral-500 mt-1.5 flex justify-between text-xs">
-                        <span>
-                          {tDonate('raised')}: {currency(appeal.raisedAmountCache)}
-                        </span>
-                        <span>
-                          {tDonate('target')}: {currency(appeal.targetAmount)}
-                        </span>
+                  <Reveal key={appeal.id} delay={index * 0.08}>
+                    <div className="pub-gradient-emerald relative overflow-hidden rounded-[var(--radius-pub-card)] p-7 text-white shadow-lg">
+                      <Target className="text-pub-gold-300/40 absolute -top-3 -right-3 size-24" />
+                      <p className="font-pub-heading relative text-lg font-semibold">{title}</p>
+                      <div className="relative mt-5">
+                        <ProgressBar
+                          value={Number(appeal.raisedAmountCache)}
+                          max={Number(appeal.targetAmount)}
+                        />
+                        <div className="mt-2 flex justify-between text-xs text-white/75">
+                          <span>
+                            {tDonate('raised')}: {currency(appeal.raisedAmountCache)}
+                          </span>
+                          <span>
+                            {tDonate('target')}: {currency(appeal.targetAmount)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </Reveal>
                 );
               })}
             </div>
@@ -136,18 +145,20 @@ export default async function DonatePage() {
         )}
 
         {categories.length > 0 && (
-          <section className="mx-auto mb-14 max-w-xl">
-            <DonationCheckoutForm categories={categories} appeals={appeals} />
-          </section>
+          <Reveal variant="scale" className="mx-auto mb-20 max-w-xl">
+            <div className="shadow-pub-xl rounded-[var(--radius-pub-card)] bg-white p-1">
+              <DonationCheckoutForm categories={categories} appeals={appeals} />
+            </div>
+          </Reveal>
         )}
 
-        <section className="mb-14 grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <div>
-            <h2 className="font-pub-heading text-pub-primary-900 mb-4 text-xl font-semibold">
+        <section className="mb-20 grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <Reveal>
+            <h2 className="font-pub-heading text-pub-primary-950 mb-5 text-xl font-semibold">
               {tDonate('bankDetailsHeading')}
             </h2>
             {hasBankDetails ? (
-              <div className="border-pub-neutral-200 flex flex-col gap-2 rounded-xl border bg-white p-5 text-sm">
+              <div className="border-pub-neutral-200/70 shadow-pub-md flex flex-col gap-2.5 rounded-[var(--radius-pub-card)] border bg-white p-6 text-sm">
                 {settings.bankAccountName && (
                   <p>
                     <span className="text-pub-neutral-500">{tDonate('accountName')}: </span>
@@ -202,12 +213,14 @@ export default async function DonatePage() {
                 description={tDonate('bankComingSoonDescription')}
               />
             )}
-          </div>
-          <BankTransferClaimForm categories={categories} />
+          </Reveal>
+          <Reveal variant="slide-left">
+            <BankTransferClaimForm categories={categories} />
+          </Reveal>
         </section>
 
-        <section>
-          <h2 className="font-pub-heading text-pub-primary-900 mb-4 text-xl font-semibold">
+        <Reveal as="section">
+          <h2 className="font-pub-heading text-pub-primary-950 mb-5 text-xl font-semibold">
             {tDonate('faqHeading')}
           </h2>
           <Accordion>
@@ -236,7 +249,7 @@ export default async function DonatePage() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        </section>
+        </Reveal>
       </div>
     </div>
   );

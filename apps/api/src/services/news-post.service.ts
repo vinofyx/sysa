@@ -18,6 +18,15 @@ interface NewsPostInput {
   metaDescriptionEn?: string;
 }
 
+/** `tags` is stored as JSON text (`String @db.LongText` — MySQL has no native
+ * scalar-array column type, see schema.prisma) — parsed back to `string[]`
+ * here so every caller keeps the same `string[]` contract as before. */
+export function toNewsPostDto<T extends { tags: string }>(
+  row: T,
+): Omit<T, 'tags'> & { tags: string[] } {
+  return { ...row, tags: JSON.parse(row.tags) as string[] };
+}
+
 export async function listNewsPosts(
   filters: { status?: string; category?: string; search?: string },
   page: number,
@@ -25,24 +34,25 @@ export async function listNewsPosts(
 ) {
   const { skip, take } = toSkipTake({ page, pageSize });
   const [rows, total] = await newsPostRepo.findMany({ ...filters, skip, take });
-  return paginate(rows, total, { page, pageSize });
+  return paginate(rows.map(toNewsPostDto), total, { page, pageSize });
 }
 
 export async function getNewsPost(id: string) {
   const post = await newsPostRepo.findById(id);
   if (!post) throw ApiError.notFound('News post not found');
-  return post;
+  return toNewsPostDto(post);
 }
 
 export async function getPublishedNewsPostBySlug(slug: string) {
   const post = await newsPostRepo.findBySlug(slug);
   if (!post) throw ApiError.notFound('News post not found');
-  return post;
+  return toNewsPostDto(post);
 }
 
 export async function createNewsPost(input: NewsPostInput, authorAdminId: string) {
   const post = await newsPostRepo.create({
     ...input,
+    tags: JSON.stringify(input.tags ?? []),
     publishedAt: input.status === 'published' ? new Date() : undefined,
     author: { connect: { id: authorAdminId } },
   });
@@ -55,7 +65,7 @@ export async function createNewsPost(input: NewsPostInput, authorAdminId: string
     afterState: input,
   });
 
-  return post;
+  return toNewsPostDto(post);
 }
 
 export async function updateNewsPost(
@@ -68,6 +78,7 @@ export async function updateNewsPost(
 
   const updated = await newsPostRepo.update(id, {
     ...input,
+    tags: input.tags !== undefined ? JSON.stringify(input.tags) : undefined,
     ...(becomingPublished ? { publishedAt: new Date() } : {}),
   });
 
@@ -80,7 +91,7 @@ export async function updateNewsPost(
     afterState: input,
   });
 
-  return updated;
+  return toNewsPostDto(updated);
 }
 
 export async function deleteNewsPost(id: string, deletedByAdminId: string) {

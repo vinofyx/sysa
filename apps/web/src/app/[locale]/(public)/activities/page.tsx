@@ -32,13 +32,13 @@ export default async function ActivitiesPage() {
         title={t('activities')}
         breadcrumb={[{ label: t('home'), href: '/' }, { label: t('activities') }]}
       />
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1400px] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
         {activities.length === 0 ? (
           <EmptyState icon={HeartHandshake} title={tCommon('comingSoon')} />
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {activities.map((activity) => (
-              <ActivityCard key={activity.id} activity={activity} locale={locale} />
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {activities.map((activity, index) => (
+              <ActivityCard key={activity.id} activity={activity} locale={locale} index={index} />
             ))}
           </div>
         )}

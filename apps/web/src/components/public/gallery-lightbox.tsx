@@ -27,13 +27,13 @@ export function GalleryGrid({ items, locale }: { items: GalleryItem[]; locale: s
 
   return (
     <>
-      <div className="columns-2 gap-3 sm:columns-3 lg:columns-4 [&>*]:mb-3">
+      <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 [&>*]:mb-4">
         {items.map((item, index) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setActiveIndex(index)}
-            className="border-pub-neutral-200 bg-pub-primary-100 group relative block w-full overflow-hidden rounded-lg border"
+            className="border-pub-neutral-200/70 bg-pub-primary-100 shadow-pub-sm hover:shadow-pub-lg group relative block w-full overflow-hidden rounded-[var(--radius-pub-card)] border transition-all duration-500 hover:-translate-y-1"
           >
             {item.mediaType === 'image' ? (
               <Image
@@ -42,13 +42,20 @@ export function GalleryGrid({ items, locale }: { items: GalleryItem[]; locale: s
                 width={400}
                 height={400}
                 loading="lazy"
-                className="w-full object-cover transition-transform group-hover:scale-105"
+                className="w-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
             ) : (
-              <div className="flex aspect-video w-full items-center justify-center">
-                <PlayCircle className="text-pub-primary-700 size-10" />
+              <div className="pub-gradient-emerald flex aspect-video w-full items-center justify-center">
+                <PlayCircle className="text-pub-gold-300 size-10" />
               </div>
             )}
+            <div className="from-pub-primary-950/70 absolute inset-0 flex items-end bg-gradient-to-t via-transparent to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              {altText(item) && (
+                <p className="line-clamp-2 text-left text-xs font-medium text-white">
+                  {altText(item)}
+                </p>
+              )}
+            </div>
           </button>
         ))}
       </div>
@@ -64,16 +71,16 @@ export function GalleryGrid({ items, locale }: { items: GalleryItem[]; locale: s
                 type="button"
                 onClick={() => setActiveIndex(null)}
                 aria-label="Close"
-                className="absolute -top-10 right-0 text-white"
+                className="pub-glass-dark hover:bg-pub-gold-500 hover:text-pub-primary-950 absolute -top-12 right-0 flex size-9 items-center justify-center rounded-full text-white transition-all"
               >
-                <X className="size-6" />
+                <X className="size-5" />
               </button>
               {activeIndex !== null && activeIndex > 0 && (
                 <button
                   type="button"
                   onClick={() => setActiveIndex((i) => (i !== null ? i - 1 : i))}
                   aria-label="Previous"
-                  className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white"
+                  className="pub-glass-dark hover:bg-pub-gold-500 hover:text-pub-primary-950 absolute top-1/2 left-2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white transition-all"
                 >
                   <ChevronLeft className="size-5" />
                 </button>
@@ -83,7 +90,7 @@ export function GalleryGrid({ items, locale }: { items: GalleryItem[]; locale: s
                   type="button"
                   onClick={() => setActiveIndex((i) => (i !== null ? i + 1 : i))}
                   aria-label="Next"
-                  className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white"
+                  className="pub-glass-dark hover:bg-pub-gold-500 hover:text-pub-primary-950 absolute top-1/2 right-2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white transition-all"
                 >
                   <ChevronRight className="size-5" />
                 </button>

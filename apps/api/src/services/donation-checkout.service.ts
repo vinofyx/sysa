@@ -5,6 +5,8 @@ import { ApiError } from '@utils/api-error';
 
 import * as donationRepo from '@repositories/donation.repository';
 import * as donorRepo from '@repositories/donor.repository';
+import * as donationCategoryRepo from '@repositories/donation-category.repository';
+import * as appealRepo from '@repositories/appeal.repository';
 import { createOrder } from '@services/razorpay-order.service';
 
 export interface InitiateDonationInput {
@@ -61,6 +63,16 @@ export async function initiateDonation(input: InitiateDonationInput): Promise<Ch
       throw ApiError.conflict('This donation attempt is no longer valid. Please start again.');
     }
     return toCheckoutSession(existing.id, existing.razorpayOrderId, Number(existing.amount));
+  }
+
+  // Validate referenced entities exist BEFORE touching the Razorpay API —
+  // otherwise a bogus but well-formed categoryId/appealId creates a real,
+  // orphaned Razorpay order and only then fails on the DB insert.
+  const category = await donationCategoryRepo.findById(input.categoryId);
+  if (!category) throw ApiError.badRequest('Selected donation category was not found.');
+  if (input.appealId) {
+    const appeal = await appealRepo.findById(input.appealId);
+    if (!appeal) throw ApiError.badRequest('Selected appeal was not found.');
   }
 
   const donor = await donorRepo.findOrCreate({
