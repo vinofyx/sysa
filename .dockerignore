@@ -1,0 +1,43 @@
+# ==============================================================================
+# Prevents secrets and unnecessary files from entering the Docker build
+# context / image layers. Without this, `COPY apps/api ./apps/api` and
+# `COPY apps/web ./apps/web` in the Dockerfiles would bake real .env secrets
+# (DB password, JWT secrets, Cloudinary/Razorpay/SMTP credentials) directly
+# into the image — .gitignore does not apply to `docker build`.
+# ==============================================================================
+
+# Secrets — never let these into a build context
+.env
+.env.*
+!.env.example
+
+# Dependencies (installed fresh inside the image)
+node_modules
+**/node_modules
+
+# Build outputs (rebuilt inside the image)
+.next
+**/.next
+dist
+**/dist
+
+# VCS / editor / OS
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Logs, coverage, uploads (runtime data, not build inputs)
+logs
+**/logs
+*.log
+coverage
+apps/api/uploads
+
+# Docs and unrelated tooling not needed at build time
+documentation
+design
+docs
+*.md
