@@ -1,0 +1,41 @@
+# ==============================================================================
+# TEMPORARY first-run config — HTTP only, no ssl_certificate directives.
+#
+# nginx refuses to start at all if default.conf's ssl_certificate paths don't
+# exist yet, which is true before the very first certbot run. Use THIS file
+# in place of default.conf only for that first run, then switch back.
+# See infrastructure/README-SSL.md for the exact sequence.
+# ==============================================================================
+
+upstream sysa_web {
+    server web:3000;
+}
+
+upstream sysa_api {
+    server api:4000;
+}
+
+server {
+    listen 80;
+    server_name sysa.in www.sysa.in;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Serve the real app over plain HTTP during this bootstrap window too,
+    # rather than a dead redirect to an HTTPS that doesn't exist yet.
+    location /api/ {
+        proxy_pass http://sysa_api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://sysa_web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
