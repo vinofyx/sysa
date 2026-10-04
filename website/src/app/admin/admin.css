@@ -1,0 +1,330 @@
+/**
+ * Admin-chrome-only design tokens — imported only by `app/admin/layout.tsx`.
+ *
+ * This file needs its own `@import "tailwindcss"` below, exactly like
+ * `app/public.css` (see that file's own top comment for the full
+ * writeup): it's loaded as a separate Next.js global stylesheet, not
+ * `@import`-chained from `src/app/globals.css`, so without this line
+ * Tailwind's PostCSS plugin never treats it as a build entry — no
+ * `text-admin-*`/`bg-admin-*`/`border-admin-*` utility ever gets generated
+ * in any bundle.
+ *
+ * Mirrors `app/public.css`'s pattern of a namespaced, scoped token
+ * system that never touches the shared shadcn tokens in `app/globals.css`
+ * (still used as-is by the login screen and every public-site form control).
+ *
+ * Two layers:
+ *  1. `--color-admin-*` — the sidebar/mobile-drawer/topbar chrome palette.
+ *     Every token that differs between light and dark is declared TWICE:
+ *     once as a plain `--admin-*` custom property (no `color-` prefix) in
+ *     the `:root`/`.dark` blocks below, THEN referenced *indirectly* via
+ *     `var(--admin-*)` inside `@theme inline` — mirroring public.css's own
+ *     `--color-pub-neutral-900: var(--pub-neutral-900)` pattern. This two-
+ *     level indirection is required, not stylistic: `@theme inline` resolves
+ *     each entry as literally as it statically can, so a direct literal
+ *     (`--color-admin-text: #1f2924`) gets baked into every utility's
+ *     compiled CSS at build time — a later `.dark { --color-admin-text: ... }`
+ *     override would then have no effect, since nothing in the compiled
+ *     output still reads the variable at paint time. Routing through an
+ *     intermediate var (which Tailwind can't resolve at build time, since
+ *     its value depends on which class is present at runtime) forces the
+ *     utility to keep referencing it live. Tokens that are brand-invariant
+ *     (emerald-900/700, gold-700/300, accent-500 — used only inside
+ *     saturated gradient badges/glows where page theme doesn't affect
+ *     legibility) have nothing to override, so they stay direct literals.
+ *  2. `.admin-content` below — re-declares the *shared* shadcn token names
+ *     (`--background`, `--primary`, `--card`, etc.) scoped to the admin
+ *     content area only, with real light AND dark values, so every existing
+ *     admin page/table/form/dialog (already built on `bg-background`,
+ *     `bg-card`, `bg-primary`, `text-muted-foreground`, etc.) picks up a
+ *     brand-matched premium palette purely via CSS cascade — no admin page
+ *     or shared `components/ui/*` primitive needs to change. This one reads
+ *     correctly today because `globals.css` (the file that actually
+ *     generates `bg-background`/`text-primary`/etc.) already uses the same
+ *     indirection for its own tokens.
+ */
+@import 'tailwindcss';
+
+/**
+ * admin.css is its own separate Tailwind entry point (see above), so it
+ * doesn't inherit globals.css's `@custom-variant dark` — any `dark:`-
+ * prefixed utility compiled as part of this bundle would silently fall back
+ * to Tailwind's default `@media (prefers-color-scheme: dark)` gate instead
+ * of the `.dark` class next-themes toggles. Mirrors globals.css/public.css's
+ * own declaration so `dark:` behaves identically everywhere in the app.
+ */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --admin-bg: #faf8f4;
+  --admin-sidebar: #f6f7f2;
+  --admin-card: #ffffff;
+  --admin-emerald-500: #176b45;
+  --admin-gold-500: #8a6a1e;
+  --admin-text: #1f2924;
+  --admin-muted: #5e6862;
+  --admin-border: #dde2da;
+  --admin-topbar-muted: rgba(23, 107, 69, 0.08);
+
+  /* Nav-item roles that read GOLD against the always-dark sidebar but need
+     to read GREEN against a light one — gold stays reserved for small
+     decorative accents (the active-item indicator bar, focus rings) in
+     Light Theme rather than doubling as body text, per the brand direction.
+     `.dark` maps all three back to the gold/white values every other
+     `--admin-text`-driven element in dark mode already uses. */
+  --admin-label: #176b45;
+  --admin-active-icon: #176b45;
+  --admin-active-text: #14532d;
+  --admin-active-bg: color-mix(in oklab, #e7f2eb 90%, transparent);
+
+  --admin-shadow-md: 0 8px 24px -6px rgba(31, 41, 36, 0.1);
+  --admin-shadow-lg: 0 20px 45px -18px rgba(31, 41, 36, 0.16);
+  --admin-shadow-glow-gold: 0 0 0 1px rgba(138, 106, 30, 0.25), 0 0 16px rgba(138, 106, 30, 0.25);
+  --admin-shadow-glow-emerald: 0 0 16px rgba(23, 107, 69, 0.25);
+  --admin-drop-shadow-glow-icon: 0 0 4px rgba(138, 106, 30, 0.35);
+}
+
+/* Restores the original "premium dark luxury" chrome palette for every
+ * token above — dark mode stays pixel-identical to before this redesign. */
+.dark {
+  --admin-bg: #0b1215;
+  --admin-sidebar: #111827;
+  --admin-card: #18212d;
+  --admin-emerald-500: #22a36a;
+  --admin-gold-500: #c89b3c;
+  --admin-text: #f8fafc;
+  --admin-muted: #94a3b8;
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-topbar-muted: rgba(255, 255, 255, 0.06);
+  --admin-label: #c89b3c;
+  --admin-active-icon: #c89b3c;
+  --admin-active-text: #f8fafc;
+  --admin-active-bg: color-mix(in oklab, var(--admin-sidebar) 72%, transparent);
+  --admin-shadow-md: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+  --admin-shadow-lg: 0 24px 60px -16px rgba(0, 0, 0, 0.6);
+  --admin-shadow-glow-gold: 0 0 0 1px rgba(200, 155, 60, 0.25), 0 0 22px rgba(200, 155, 60, 0.35);
+  --admin-shadow-glow-emerald: 0 0 22px rgba(34, 163, 106, 0.35);
+  --admin-drop-shadow-glow-icon: 0 0 6px rgba(200, 155, 60, 0.55);
+}
+
+@theme inline {
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-sidebar: var(--admin-sidebar);
+  --color-admin-card: var(--admin-card);
+
+  --color-admin-emerald-900: #0f5132;
+  --color-admin-emerald-700: #157248;
+  --color-admin-emerald-500: var(--admin-emerald-500);
+
+  --color-admin-gold-700: #a67c2e;
+  --color-admin-gold-500: var(--admin-gold-500);
+  --color-admin-gold-300: #ddb862;
+
+  --color-admin-accent-500: #e67e22;
+
+  --color-admin-text: var(--admin-text);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-border: var(--admin-border);
+  --color-admin-topbar-muted: var(--admin-topbar-muted);
+
+  --color-admin-label: var(--admin-label);
+  --color-admin-active-icon: var(--admin-active-icon);
+  --color-admin-active-text: var(--admin-active-text);
+  --color-admin-active-bg: var(--admin-active-bg);
+
+  --font-admin-heading: var(--font-admin-playfair), var(--font-geist-sans), serif;
+
+  --shadow-admin-md: var(--admin-shadow-md);
+  --shadow-admin-lg: var(--admin-shadow-lg);
+  --shadow-admin-glow-gold: var(--admin-shadow-glow-gold);
+  --shadow-admin-glow-emerald: var(--admin-shadow-glow-emerald);
+  --drop-shadow-admin-glow-icon: var(--admin-drop-shadow-glow-icon);
+
+  /* New semantic status tokens (only success/warning/info were missing —
+     `--destructive` already exists) — generated as global Tailwind
+     utilities (`bg-success`, `text-warning-foreground`, ...) but only
+     resolve to real color *within* `.admin-content`, where the values
+     below are actually defined; nothing outside admin references them. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+}
+
+/* Brand-matched light/dark palette for admin content — every admin page
+ * lives inside this (see `admin/layout.tsx`'s `<main className="admin-content">`).
+ * Same forest-green/warm-gold family as the sidebar and the public site's
+ * own `--color-pub-primary`/`--color-pub-gold-*`, so the whole product
+ * feels like one brand, not two skins bolted together. */
+.admin-content {
+  --background: #faf8f4;
+  --foreground: #1e2b24;
+  --card: #ffffff;
+  --card-foreground: #1e2b24;
+  --popover: #ffffff;
+  --popover-foreground: #1e2b24;
+  --primary: #1b6b3f;
+  --primary-foreground: #ffffff;
+  --secondary: #eef3ec;
+  --secondary-foreground: #1b6b3f;
+  --muted: #f3f0e9;
+  --muted-foreground: #6b6558;
+  --accent: #fbf3e2;
+  --accent-foreground: #8a6a1e;
+  --destructive: #dc2626;
+  --border: #e6e1d6;
+  --input: #e6e1d6;
+  --ring: #1b6b3f;
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --info: #2563eb;
+  --info-foreground: #ffffff;
+  --chart-1: #1b6b3f;
+  --chart-2: #c89b3c;
+  --chart-3: #2563eb;
+  --chart-4: #b45309;
+  --chart-5: #6b6558;
+}
+
+.dark .admin-content {
+  --background: #0b1215;
+  --foreground: #f5f3ea;
+  --card: #18212d;
+  --card-foreground: #f5f3ea;
+  --popover: #18212d;
+  --popover-foreground: #f5f3ea;
+  --primary: #2fae72;
+  --primary-foreground: #06170f;
+  --secondary: #16211c;
+  --secondary-foreground: #f5f3ea;
+  --muted: #16211c;
+  --muted-foreground: #94a3b8;
+  --accent: #241d0f;
+  --accent-foreground: #ddb862;
+  --destructive: #f87171;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #2fae72;
+  --success: #34d399;
+  --success-foreground: #06170f;
+  --warning: #fbbf24;
+  --warning-foreground: #1a1203;
+  --info: #60a5fa;
+  --info-foreground: #071b33;
+  --chart-1: #2fae72;
+  --chart-2: #ddb862;
+  --chart-3: #60a5fa;
+  --chart-4: #fbbf24;
+  --chart-5: #94a3b8;
+}
+
+/* Canvas behind the floating sidebar only — `main` (below) reasserts its
+   own `bg-background` so every existing admin page keeps rendering exactly
+   as before regardless of this outer tone. Matches `.admin-content`'s own
+   page background in both themes so the floating sidebar's margin reads as
+   one continuous canvas rather than a seam. */
+.admin-shell {
+  background-color: var(--color-admin-bg);
+}
+
+.admin-gradient-sidebar {
+  background-image: linear-gradient(180deg, #ffffff 0%, #f7f8f3 55%, #f2f4ee 100%);
+}
+.dark .admin-gradient-sidebar {
+  background-image: linear-gradient(180deg, #131c28 0%, #0f1720 55%, #0b1215 100%);
+}
+
+.admin-gradient-emerald {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-admin-emerald-700) 0%,
+    var(--color-admin-emerald-900) 100%
+  );
+}
+
+.admin-glass {
+  background: color-mix(in oklab, var(--color-admin-sidebar) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* The active nav-item pill (sidebar-nav.tsx) — a distinct pale-green tint in
+   Light Theme per the brand spec, vs. `.admin-glass`'s plain "sidebar tone,
+   more transparent" formula (which stays dark-mode-only, pixel-identical to
+   before, via `--color-admin-active-bg`'s `.dark` override above). */
+.admin-nav-active {
+  background: var(--color-admin-active-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Belt-and-suspenders hand-written rules for the handful of nav-chrome
+   color roles most prone to Tailwind JIT edge cases (a class name only ever
+   used inside a `cn()`/ternary rather than a static literal can be missed by
+   content scanning) — harmless if Tailwind also generates the same-named
+   utility, since both resolve to the identical value. */
+.text-admin-label {
+  color: var(--color-admin-label);
+}
+.text-admin-active-icon {
+  color: var(--color-admin-active-icon);
+}
+.text-admin-active-text {
+  color: var(--color-admin-active-text);
+}
+.group:hover .admin-nav-icon {
+  color: var(--color-admin-emerald-500);
+}
+
+/* Re-defines the shared shadcn tokens *within this subtree only* so
+   unmodified components (Breadcrumb, Button, Avatar, DropdownMenu triggers)
+   automatically render legibly against the topbar without editing those
+   component files — the cascade does the reskinning. */
+.admin-topbar {
+  --background: var(--color-admin-sidebar);
+  --foreground: var(--color-admin-text);
+  --muted: var(--color-admin-topbar-muted);
+  --muted-foreground: var(--color-admin-muted);
+  --border: var(--color-admin-border);
+  --ring: var(--color-admin-gold-500);
+  --accent: rgba(34, 163, 106, 0.18);
+  --accent-foreground: var(--color-admin-text);
+}
+
+/* Thin gold scrollbar for the sidebar/drawer's scroll region. */
+.admin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-admin-gold-700) transparent;
+}
+.admin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-admin-gold-700);
+  border-radius: 999px;
+}
+
+@keyframes admin-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+.admin-glow {
+  animation: admin-glow-pulse 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-glow {
+    animation: none;
+  }
+}

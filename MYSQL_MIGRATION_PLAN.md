@@ -6,7 +6,7 @@
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Status** | **Analysis only. No code has been modified.** Awaiting approval to implement.                                                                                                                          |
 | **Date**   | 2026-08-04                                                                                                                                                                                             |
-| **Method** | Full source review of `apps/api/prisma/schema.prisma`, all 6 migrations, every repository file, Docker/CI/env configuration, and every documentation file referencing PostgreSQL                       |
+| **Method** | Full source review of `api/prisma/schema.prisma`, all 6 migrations, every repository file, Docker/CI/env configuration, and every documentation file referencing PostgreSQL                            |
 | **Target** | MySQL 8.0+ (assumed — MySQL 8 is the only version with mature native JSON support, window functions, and CTEs; MySQL 5.7 is not recommended and is not what this plan targets unless stated otherwise) |
 
 ---
@@ -33,7 +33,7 @@ This is a **moderate-risk, well-contained** migration. The schema was built enti
 
 ### 1.1 `datasource` block
 
-`apps/api/prisma/schema.prisma`:
+`api/prisma/schema.prisma`:
 
 ```prisma
 datasource db {
@@ -55,7 +55,7 @@ This single line change is what actually switches Prisma's query engine and SQL 
 
 ### 1.2 `migration_lock.toml`
 
-`apps/api/prisma/migrations/migration_lock.toml` currently contains:
+`api/prisma/migrations/migration_lock.toml` currently contains:
 
 ```toml
 provider = "postgresql"
@@ -65,7 +65,7 @@ Prisma uses this file to **refuse to apply migrations** if the schema's provider
 
 ### 1.3 `@prisma/client` / `prisma` packages
 
-No version change needed — Prisma (`^5.22.0`, confirmed in `apps/api/package.json`) has supported the `mysql` provider since Prisma 2.x. `npx prisma generate` will regenerate the client against the new provider's type mappings (this is also when several of the type differences in §2 get surfaced as generate-time or type-check-time errors, which is useful — many mistakes will be caught by `npm run typecheck` before ever touching a database).
+No version change needed — Prisma (`^5.22.0`, confirmed in `api/package.json`) has supported the `mysql` provider since Prisma 2.x. `npx prisma generate` will regenerate the client against the new provider's type mappings (this is also when several of the type differences in §2 get surfaced as generate-time or type-check-time errors, which is useful — many mistakes will be caught by `npm run typecheck` before ever touching a database).
 
 ### 1.4 Prisma schema field-level annotations requiring change
 
@@ -97,7 +97,7 @@ Three redesign options, in order of recommendation:
 | **B. Comma-separated string**    | `tags String @default("")`, e.g. `"annadanam,goshala"`                                        | Simplest migration, but loses any structure — filtering by tag requires `LIKE '%,tag,%'` string matching, fragile and slow. Not recommended for anything beyond a quick stopgap.                                                                                                                                                                                                   |
 | **C. Normalized join table**     | New `Tag` model + `NewsPostTag` join table                                                    | Most "correct" relational design, enables real indexed tag queries and a future tag-management UI — but the largest change: new model, new migration, new repository methods, and a data-migration script to explode existing comma/array values into rows.                                                                                                                        |
 
-**Recommendation**: **Option A (JSON column)**. The current usage (`apps/api/src/validation/news-post.schema.ts`'s `tags: z.array(z.string().max(50)).max(20).default([])`, and the repository/service layer treating it as a plain `string[]`) already treats tags as an opaque array with no relational querying against individual tags anywhere in the codebase — no route filters news by a single tag value at the database level (`listNewsPostsQuerySchema` filters by `category`, a separate plain string field, not by tag). A JSON column preserves the exact current external behavior (array in, array out) with the smallest application-code surface area to touch: `news-post.repository.ts`'s `create`/`update`/`findMany` mapping, and none of the validation, service, or route layers need to change at all since they only see a `string[]` before/after the repository boundary.
+**Recommendation**: **Option A (JSON column)**. The current usage (`api/src/validation/news-post.schema.ts`'s `tags: z.array(z.string().max(50)).max(20).default([])`, and the repository/service layer treating it as a plain `string[]`) already treats tags as an opaque array with no relational querying against individual tags anywhere in the codebase — no route filters news by a single tag value at the database level (`listNewsPostsQuerySchema` filters by `category`, a separate plain string field, not by tag). A JSON column preserves the exact current external behavior (array in, array out) with the smallest application-code surface area to touch: `news-post.repository.ts`'s `create`/`update`/`findMany` mapping, and none of the validation, service, or route layers need to change at all since they only see a `string[]` before/after the repository boundary.
 
 ### 2.2 Column type mapping differences (informational — Prisma handles these automatically on `generate`, listed for completeness/review)
 
@@ -115,7 +115,7 @@ PostgreSQL migrations (current): each enum becomes a standalone `CREATE TYPE "En
 
 MySQL migrations (after switch): Prisma inlines the enum directly into the column definition, e.g. `` `payment_method` ENUM('upi','card','netbanking','wallet','bank_transfer_manual','cash','cheque') NOT NULL ``. No separate type object exists in MySQL.
 
-**Practical impact**: none at the Prisma Client / TypeScript level — `PaymentMethod` remains a generated TS union type either way, and every route/service/repository that references these enums (e.g. `paymentMethodSchema` in `apps/api/src/validation/donation.schema.ts`) needs **zero changes**. The only consumer of the raw DDL difference is the migration SQL itself, entirely regenerated per §3.
+**Practical impact**: none at the Prisma Client / TypeScript level — `PaymentMethod` remains a generated TS union type either way, and every route/service/repository that references these enums (e.g. `paymentMethodSchema` in `api/src/validation/donation.schema.ts`) needs **zero changes**. The only consumer of the raw DDL difference is the migration SQL itself, entirely regenerated per §3.
 
 ### 2.4 Collation and case-sensitivity — a real behavioral change, not just syntax
 
@@ -141,7 +141,7 @@ Prisma's migration history is provider-specific by design — `migration_lock.to
 ### 3.2 Recommended approach: fresh baseline migration
 
 1. Switch `provider` in `schema.prisma` to `mysql` (§1.1) and make the `tags` field change (§2.1).
-2. **Delete** the entire `apps/api/prisma/migrations/` directory (all 6 folders + `migration_lock.toml`).
+2. **Delete** the entire `api/prisma/migrations/` directory (all 6 folders + `migration_lock.toml`).
 3. Run `npx prisma migrate dev --name init_mysql` against a real, empty MySQL 8 database. This generates **one new, MySQL-native migration** representing the entire current schema state — equivalent in effect to all 6 Postgres migrations combined, but expressed in correct MySQL DDL.
 4. Review the generated SQL by hand (same diligence this project has applied to every hand-written Postgres migration to date) before committing it.
 5. This becomes the new starting point for all future schema changes — the project's Postgres migration history is retired, not deleted from git history (it remains visible via `git log`), just no longer the active migration chain.
@@ -167,7 +167,7 @@ Keep the PostgreSQL `docker-compose.yml` service definition and `.env` values av
 
 ### 4.1 The one raw query that must be rewritten
 
-`apps/api/src/repositories/donation.repository.ts`, inside `getAnalytics()`:
+`api/src/repositories/donation.repository.ts`, inside `getAnalytics()`:
 
 ```ts
 prisma.$queryRaw<{ month: string; total: number }[]>`
@@ -211,7 +211,7 @@ The `Prisma.sql`/`Prisma.empty` templating helpers themselves are **provider-agn
 
 ### 4.2 `SELECT 1` health check
 
-`apps/api/src/routes/v1/health.routes.ts`: `await prisma.$queryRaw\`SELECT 1\`;` — valid, unchanged SQL in both dialects. No action needed.
+`api/src/routes/v1/health.routes.ts`: `await prisma.$queryRaw\`SELECT 1\`;` — valid, unchanged SQL in both dialects. No action needed.
 
 ### 4.3 Identifier casing convention
 
@@ -281,7 +281,7 @@ No manual `@db.VarChar(36)` annotation is strictly required (Prisma's default `V
 
 ### 8.3 Zod UUID validation — unaffected
 
-`idParamSchema` (`z.string().uuid()`), `bulkIdsSchema`, and every route param/body schema that validates a UUID format do so against the **string value itself** (canonical 8-4-4-4-12 hex format), completely independent of which database eventually stores that string. **Zero changes needed anywhere in `apps/api/src/validation/`.**
+`idParamSchema` (`z.string().uuid()`), `bulkIdsSchema`, and every route param/body schema that validates a UUID format do so against the **string value itself** (canonical 8-4-4-4-12 hex format), completely independent of which database eventually stores that string. **Zero changes needed anywhere in `api/src/validation/`.**
 
 ---
 
@@ -334,7 +334,7 @@ Prisma's interactive transactions (`prisma.$transaction(async (tx) => { ... })`)
 | Default port           | `5432`                                                                      | `3306`                                                                                                                                                                                        |
 | `?schema=` query param | Used (Postgres schemas are a real namespacing concept)                      | **Not applicable** — MySQL has no equivalent "schema within a database" concept the way Postgres does (a MySQL "schema" is just a synonym for "database"); drop this query parameter entirely |
 
-Files containing this connection string that need updating: `apps/api/.env.example`, `apps/api/.env` (local/untracked, must be updated by whoever runs the migration locally — not committed, not touched by this plan directly), `.env.example` (root), `docker-compose.yml`, `.github/workflows/ci.yml`.
+Files containing this connection string that need updating: `api/.env.example`, `api/.env` (local/untracked, must be updated by whoever runs the migration locally — not committed, not touched by this plan directly), `.env.example` (root), `docker-compose.yml`, `.github/workflows/ci.yml`.
 
 ### 11.2 `POSTGRES_*` → MySQL-equivalent variable names
 
@@ -454,7 +454,7 @@ DATABASE_URL: mysql://${MYSQL_USER:-sysa_user}:${MYSQL_PASSWORD:-sysa_password}@
 
 The `api` service's `depends_on: postgres: condition: service_healthy` block must be renamed to `depends_on: mysql: condition: service_healthy` accordingly.
 
-### 12.3 `apps/api/Dockerfile`
+### 12.3 `api/Dockerfile`
 
 Grep-confirmed: contains **no** PostgreSQL-specific instructions (no `apt-get install postgresql-client`, no `pg_isready` calls, no Postgres client library installation) — it's a standard Node.js multi-stage build that relies entirely on `@prisma/client`'s bundled query engine binaries, which Prisma automatically fetches the correct (MySQL-compatible) engine for based on `schema.prisma`'s provider at `prisma generate` time. **No Dockerfile changes needed.**
 
@@ -472,7 +472,7 @@ PM2 process definitions reference `dist/server.js` and env-var passthrough only,
 
 ### 13.1 `DEPLOYMENT_GUIDE.md` — needs a full pass
 
-Written during the immediately-preceding Production Readiness phase, this document currently states PostgreSQL as a hard prerequisite in multiple places and needs updates to: the architecture diagram (§1, "apps/api → PostgreSQL 16"), the prerequisites table (§2, "PostgreSQL 16 ... Provided by `docker-compose.yml`'s `postgres` service"), the `DATABASE_URL` example (§3.1), and any Postgres-specific operational notes. This is a documentation update, not a code change, but is explicitly in scope for "files that must be modified" (§15).
+Written during the immediately-preceding Production Readiness phase, this document currently states PostgreSQL as a hard prerequisite in multiple places and needs updates to: the architecture diagram (§1, "api → PostgreSQL 16"), the prerequisites table (§2, "PostgreSQL 16 ... Provided by `docker-compose.yml`'s `postgres` service"), the `DATABASE_URL` example (§3.1), and any Postgres-specific operational notes. This is a documentation update, not a code change, but is explicitly in scope for "files that must be modified" (§15).
 
 ### 13.2 `GO_LIVE_CHECKLIST.md` §2 ("Database")
 
@@ -496,14 +496,14 @@ This is the consolidated, priority-ordered list of everything that will actually
 
 Prisma explicitly documents `mode: 'insensitive'` as supported **only** for PostgreSQL and MongoDB. Calling it against a MySQL datasource does not silently do nothing — Prisma throws a validation error at query time (`Invalid ... mode is not supported for the current provider`). This will break every one of the following search features immediately upon switching the provider, unless fixed first:
 
-| File                                                 | Lines | Feature affected                        |
-| ---------------------------------------------------- | :---: | --------------------------------------- |
-| `apps/api/src/repositories/admin-user.repository.ts` | 27–28 | Admin user list search (name/email)     |
-| `apps/api/src/repositories/donation.repository.ts`   | 45–46 | Donation list search (donor name/email) |
-| `apps/api/src/repositories/donor.repository.ts`      | 33–34 | Donor list search (name/email)          |
-| `apps/api/src/repositories/event.repository.ts`      |  21   | Event admin list search (title)         |
-| `apps/api/src/repositories/news-post.repository.ts`  |  18   | News admin list search (title)          |
-| `apps/api/src/repositories/volunteer.repository.ts`  | 29–30 | Volunteer list search (name/email)      |
+| File                                            | Lines | Feature affected                        |
+| ----------------------------------------------- | :---: | --------------------------------------- |
+| `api/src/repositories/admin-user.repository.ts` | 27–28 | Admin user list search (name/email)     |
+| `api/src/repositories/donation.repository.ts`   | 45–46 | Donation list search (donor name/email) |
+| `api/src/repositories/donor.repository.ts`      | 33–34 | Donor list search (name/email)          |
+| `api/src/repositories/event.repository.ts`      |  21   | Event admin list search (title)         |
+| `api/src/repositories/news-post.repository.ts`  |  18   | News admin list search (title)          |
+| `api/src/repositories/volunteer.repository.ts`  | 29–30 | Volunteer list search (name/email)      |
 
 **The fix is a deletion, not a replacement**: MySQL's default collation (`utf8mb4_unicode_ci`/`utf8mb4_0900_ai_ci`, both `_ci` = case-insensitive, per §2.4) already makes `contains` filters case-insensitive without any additional query option. The correct MySQL-compatible version of e.g. `{ name: { contains: params.search, mode: 'insensitive' } }` is simply `{ name: { contains: params.search } }` — same case-insensitive behavior, achieved by the database's collation instead of an explicit query flag. **This is the single most important item in this entire plan** — every other finding is either mechanical config or has no functional runtime consequence; this one actively breaks 6 admin-panel search features the moment the provider switches, unless addressed in the same change.
 
@@ -544,23 +544,23 @@ Grouped by category, in the order they'd naturally be touched during implementat
 
 ### 15.1 Prisma schema & migrations
 
-- `apps/api/prisma/schema.prisma` — `provider = "mysql"` (§1.1), `EventNewsPost.tags` field redesign (§2.1)
-- `apps/api/prisma/migrations/` — entire directory deleted and regenerated as one fresh baseline migration (§3.2)
-- `apps/api/prisma/migrations/migration_lock.toml` — regenerated automatically as part of the above (not hand-edited)
+- `api/prisma/schema.prisma` — `provider = "mysql"` (§1.1), `EventNewsPost.tags` field redesign (§2.1)
+- `api/prisma/migrations/` — entire directory deleted and regenerated as one fresh baseline migration (§3.2)
+- `api/prisma/migrations/migration_lock.toml` — regenerated automatically as part of the above (not hand-edited)
 
 ### 15.2 Application code
 
-- `apps/api/src/repositories/admin-user.repository.ts` — remove `mode: 'insensitive'` (§14.1)
-- `apps/api/src/repositories/donation.repository.ts` — remove `mode: 'insensitive'` (§14.1) **and** rewrite the raw analytics query (§4.1)
-- `apps/api/src/repositories/donor.repository.ts` — remove `mode: 'insensitive'` (§14.1)
-- `apps/api/src/repositories/event.repository.ts` — remove `mode: 'insensitive'` (§14.1)
-- `apps/api/src/repositories/news-post.repository.ts` — remove `mode: 'insensitive'` (§14.1); review `tags` field mapping for the new JSON representation (§2.1) alongside `apps/api/src/services/news-post.service.ts` and `apps/api/src/validation/news-post.schema.ts` for any type-level fallout from the schema change (expected to be minimal to none, since the external TS type remains `string[]` — but must be verified once the change is made, per `npm run typecheck`)
-- `apps/api/src/repositories/volunteer.repository.ts` — remove `mode: 'insensitive'` (§14.1)
+- `api/src/repositories/admin-user.repository.ts` — remove `mode: 'insensitive'` (§14.1)
+- `api/src/repositories/donation.repository.ts` — remove `mode: 'insensitive'` (§14.1) **and** rewrite the raw analytics query (§4.1)
+- `api/src/repositories/donor.repository.ts` — remove `mode: 'insensitive'` (§14.1)
+- `api/src/repositories/event.repository.ts` — remove `mode: 'insensitive'` (§14.1)
+- `api/src/repositories/news-post.repository.ts` — remove `mode: 'insensitive'` (§14.1); review `tags` field mapping for the new JSON representation (§2.1) alongside `api/src/services/news-post.service.ts` and `api/src/validation/news-post.schema.ts` for any type-level fallout from the schema change (expected to be minimal to none, since the external TS type remains `string[]` — but must be verified once the change is made, per `npm run typecheck`)
+- `api/src/repositories/volunteer.repository.ts` — remove `mode: 'insensitive'` (§14.1)
 
 ### 15.3 Environment configuration
 
-- `apps/api/.env.example` — `DATABASE_URL` scheme/port/query-param (§11.1)
-- `apps/api/.env` — same, local/untracked file, not committed
+- `api/.env.example` — `DATABASE_URL` scheme/port/query-param (§11.1)
+- `api/.env` — same, local/untracked file, not committed
 - `.env.example` (root) — `POSTGRES_*` → `MYSQL_*` variables (§11.2), `DATABASE_URL` example if present there too
 
 ### 15.4 Docker & infrastructure
@@ -568,7 +568,7 @@ Grouped by category, in the order they'd naturally be touched during implementat
 - `docker-compose.yml` — `postgres` service → `mysql` service, `api` service's `DATABASE_URL`/`depends_on` (§12.1, §12.2)
 - `infrastructure/nginx/` — confirmed no changes needed (§12.4)
 - `infrastructure/pm2/ecosystem.config.js` — confirmed no changes needed (§12.5)
-- `apps/api/Dockerfile` — confirmed no changes needed (§12.3)
+- `api/Dockerfile` — confirmed no changes needed (§12.3)
 
 ### 15.5 CI/CD
 
@@ -594,12 +594,12 @@ Documentation files that explicitly name PostgreSQL and would need a follow-up p
 
 ### 15.7 Explicitly NOT requiring changes (confirmed by this review, listed to avoid unnecessary rework)
 
-- `apps/api/src/lib/prisma.ts` (the shared `PrismaClient` singleton) — no provider-specific code
-- Every Zod validation schema in `apps/api/src/validation/` — all validate plain TypeScript values, not database-specific formats (§8.3)
-- Every frontend file in `apps/web/` — the frontend has no database awareness whatsoever, it only talks to the API over HTTP
-- `apps/api/src/lib/jwt.ts`, `donor-jwt.ts`, `razorpay-signature.ts`, `tokens.ts` — no database dependency
-- `apps/api/src/integrations/` (Cloudinary, email, Razorpay clients) — no database dependency
-- `apps/api/prisma/seed.ts` — uses only the Prisma Client's standard create/upsert calls with no raw SQL or Postgres-specific syntax (confirmed via review); should run unchanged against the new schema once the `tags`-field-dependent seed data, if any, is checked (a quick grep confirms the seed script does not currently seed any `EventNewsPost` rows with tags, so no seed-data change is expected, but should be re-verified at implementation time)
+- `api/src/lib/prisma.ts` (the shared `PrismaClient` singleton) — no provider-specific code
+- Every Zod validation schema in `api/src/validation/` — all validate plain TypeScript values, not database-specific formats (§8.3)
+- Every frontend file in `website/` — the frontend has no database awareness whatsoever, it only talks to the API over HTTP
+- `api/src/lib/jwt.ts`, `donor-jwt.ts`, `razorpay-signature.ts`, `tokens.ts` — no database dependency
+- `api/src/integrations/` (Cloudinary, email, Razorpay clients) — no database dependency
+- `api/prisma/seed.ts` — uses only the Prisma Client's standard create/upsert calls with no raw SQL or Postgres-specific syntax (confirmed via review); should run unchanged against the new schema once the `tags`-field-dependent seed data, if any, is checked (a quick grep confirms the seed script does not currently seed any `EventNewsPost` rows with tags, so no seed-data change is expected, but should be re-verified at implementation time)
 
 ---
 

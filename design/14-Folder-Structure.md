@@ -9,7 +9,7 @@
 | **Date** | 2026-08-03 |
 | **Note** | Structural specification only — **no code is generated**. This defines the project layout the Frontend/Backend Architects will scaffold during the build phase, consistent with the stack chosen in [11-Technology-Stack.md](../documentation/11-Technology-Stack.md) (Next.js + Node.js/Express + PostgreSQL, monorepo-friendly). |
 
-> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not PostgreSQL. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md). The folder structure itself (`apps/api/prisma/`, monorepo layout) is unaffected — Prisma abstracts the provider difference below the schema/migrations layer.
+> **Update (2026-08-04):** by explicit client decision, the implemented platform's database is **MySQL 8.0+**, not PostgreSQL. See [MYSQL_MIGRATION_REPORT.md](../MYSQL_MIGRATION_REPORT.md). The folder structure itself (`api/prisma/`, monorepo layout) is unaffected — Prisma abstracts the provider difference below the schema/migrations layer.
 
 ---
 
@@ -28,9 +28,8 @@
 
 ```
 sai-yadadri-platform/
-├── apps/
-│   ├── web/                    # Next.js public site + admin dashboard
-│   └── api/                    # Node.js/Express backend API
+├── website/                    # Next.js public site + admin dashboard
+├── api/                        # Node.js/Express backend API
 ├── packages/
 │   ├── shared-types/           # Shared TypeScript types (Donation, Donor, Role, etc.)
 │   ├── ui/                     # Shared design-system component library
@@ -48,10 +47,10 @@ sai-yadadri-platform/
 └── README.md
 ```
 
-## 3. Frontend Structure (`apps/web/`)
+## 3. Frontend Structure (`website/`)
 
 ```
-apps/web/
+website/
 ├── app/                                  # Next.js App Router
 │   ├── [locale]/                         # en / te dynamic segment (per 02-Sitemap.md locale strategy)
 │   │   ├── (public)/                     # Route group — public site
@@ -106,7 +105,7 @@ apps/web/
 │   │   ├── settings/page.tsx
 │   │   └── layout.tsx                    # Admin shell (sidebar nav per 01-Information-Architecture.md §6)
 │   └── api/                              # Next.js route handlers ONLY if used as a BFF layer;
-│                                          # primary business API lives in apps/api (see §4)
+│                                          # primary business API lives in api (see §4)
 ├── components/
 │   ├── public/                           # Public-site component family (per 07-Component-Library.md)
 │   │   ├── layout/ (StickyHeader, Footer, MobileMenuDrawer, LanguageSwitcher, Breadcrumb)
@@ -120,7 +119,7 @@ apps/web/
 │   │   └── editors/ (RichTextEditor, ImageUploadZone)
 │   └── shared/                           # Cross-cutting (Button, Modal, Toast, Badge, EmptyState)
 ├── lib/
-│   ├── api-client/                       # Typed fetch wrappers calling apps/api
+│   ├── api-client/                       # Typed fetch wrappers calling api
 │   ├── i18n/                             # Locale dictionaries (en.json, te.json) + helpers
 │   ├── auth/                             # Client-side auth/session helpers
 │   └── analytics/                        # Analytics wrapper
@@ -135,10 +134,10 @@ apps/web/
 └── package.json
 ```
 
-## 4. Backend Structure (`apps/api/`)
+## 4. Backend Structure (`api/`)
 
 ```
-apps/api/
+api/
 ├── src/
 │   ├── routes/                           # Route handlers only (Presentation Layer, per 13-API-Architecture.md)
 │   │   ├── public/
@@ -236,10 +235,10 @@ packages/ui/
 ## 7. Environment & Secrets File Convention
 
 ```
-apps/api/.env.example        # Committed — documents required variables, no real values
-apps/api/.env.local          # Gitignored — local dev secrets
-apps/web/.env.example
-apps/web/.env.local
+api/.env.example        # Committed — documents required variables, no real values
+api/.env.local          # Gitignored — local dev secrets
+website/.env.example
+website/.env.local
 ```
 Actual production secrets (Razorpay keys, DB credentials, email API keys) live in the hosting platform's managed secret store, never in the repository — per SEC-PAY-03 in [12-Security-Requirements.md](../documentation/12-Security-Requirements.md).
 

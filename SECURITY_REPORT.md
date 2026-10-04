@@ -6,7 +6,7 @@
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Scope**  | Authentication, Authorization, Cookies, JWT, Environment Variables, File Uploads, Rate Limiting, Input Validation, SQL Injection, XSS, CSRF, Headers, Secrets |
 | **Date**   | 2026-08-04                                                                                                                                                    |
-| **Method** | Full source review of `apps/api/src` (backend, primary attack surface) and `apps/web/src` (frontend), plus live signature-rejection testing                   |
+| **Method** | Full source review of `api/src` (backend, primary attack surface) and `website/src` (frontend), plus live signature-rejection testing                         |
 
 ---
 
@@ -73,7 +73,7 @@ All three are never readable by client-side JavaScript. `sameSite=lax` is the de
 ## 5. Environment Variables & Secrets
 
 - `.gitignore` correctly excludes `.env`, `.env.local`, `.env.*.local`, with an explicit `!.env.example` allowlist exception — verified no real secret has ever been committed (all `.env`/`.env.example` files in the repo have blank secret values).
-- `apps/api/src/config/env.ts` is the single source of truth for required configuration, validated with Zod at boot — a missing/malformed required variable crashes the process immediately with a clear error, rather than failing confusingly at first use.
+- `api/src/config/env.ts` is the single source of truth for required configuration, validated with Zod at boot — a missing/malformed required variable crashes the process immediately with a clear error, rather than failing confusingly at first use.
 - `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET`, `CLOUDINARY_*`, `SMTP_*` are all optional at the schema level (the features that need them fail gracefully with a clear message when absent, rather than crashing the whole server) — appropriate since this environment genuinely doesn't have them yet.
 - No secret is ever logged: `request-logger.middleware.ts` logs only method/path/status/duration/IP, never headers or bodies.
 
@@ -227,11 +227,11 @@ Specifically called out since it's a payment-system correctness _and_ security c
 
 ## 14. Summary of Changes Made This Phase
 
-| #   | Change                                                               | File(s)                                                                              |
-| --- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| 1   | Added Content-Security-Policy header                                 | `apps/web/next.config.ts`                                                            |
-| 2   | Added `trust proxy` for correct rate-limiting behind a reverse proxy | `apps/api/src/app.ts`                                                                |
-| 3   | Added missing Zod validation on `/bulk/reorder`                      | `apps/api/src/lib/simple-crud-router.ts`, `apps/api/src/validation/common.schema.ts` |
+| #   | Change                                                               | File(s)                                                                    |
+| --- | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | Added Content-Security-Policy header                                 | `website/next.config.ts`                                                   |
+| 2   | Added `trust proxy` for correct rate-limiting behind a reverse proxy | `api/src/app.ts`                                                           |
+| 3   | Added missing Zod validation on `/bulk/reorder`                      | `api/src/lib/simple-crud-router.ts`, `api/src/validation/common.schema.ts` |
 
 ## 15. Accepted Risks (Documented, Not Fixed)
 

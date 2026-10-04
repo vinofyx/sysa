@@ -1,0 +1,109 @@
+# DEPRECATED FOR PRODUCTION — Render is not used and must not be required.
+#
+# This blueprint is retained only as a reference catalog of API environment
+# variables. Do not create a Render service from it. Do not point
+# api-upstream.php or NEXT_PUBLIC_API_URL at sysa.onrender.com.
+#
+# Production:
+#   Website — Hostinger static export (https://sysa.in)
+#   API     — Hostinger Node.js (Business / Cloud / VPS) or any other
+#             Node.js host. See DEPLOYMENT_GUIDE.md.
+#
+# Usage (reference only — not a production deploy path):
+# Render dashboard -> New -> Blueprint -> connect this repo. Env vars marked
+# `sync: false` are secrets you paste into the host dashboard yourself
+# (never committed here, never printed to logs).
+services:
+  - type: web
+    name: sysa-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BIND_HOST
+        value: '0.0.0.0'
+      # --- Database (existing MySQL — see MYSQL_MIGRATION_REPORT.md) ---
+      - key: DATABASE_URL
+        sync: false
+      # --- Auth secrets (existing admin JWT signing keys) ---
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      # --- Origins ---
+      - key: API_URL
+        sync: false # public API origin, e.g. https://sysa.in or https://api.sysa.in
+      - key: WEB_URL
+        value: https://sysa.in
+      - key: CORS_ORIGIN
+        value: https://sysa.in,https://www.sysa.in
+      # Required only when the API origin is a different site than sysa.in
+      # (for example https://api.sysa.in). Leave false/unset when the website
+      # calls https://sysa.in/api/v1 through the Hostinger PHP proxy.
+      - key: COOKIE_CROSS_SITE
+        value: 'true'
+      # --- Razorpay (existing account/keys — server-side only) ---
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # --- SMTP (existing email provider) ---
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      # --- WhatsApp Cloud API (optional; donations still complete if unset) ---
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE_NAME
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: en
+      # --- MSG91 (WhatsApp receipts + SMS). MSG91_AUTHKEY is the canonical
+      # secret — set it in the Render dashboard, never in this file. ---
+      - key: MSG91_AUTHKEY
+        sync: false
+      - key: MSG91_WHATSAPP_NUMBER
+        value: "+919490118877"
+      - key: MSG91_WABA_ID
+        value: "1511221500759195"
+      - key: MSG91_WHATSAPP_TEMPLATE_NAME
+        value: sysa_general_update
+      - key: MSG91_WHATSAPP_TEMPLATE_ID
+        value: "546722"
+      - key: MSG91_WHATSAPP_TEMPLATE_LANGUAGE
+        value: en
+      # Set from scripts/msg91-inspect-whatsapp-template.ts output only.
+      - key: MSG91_WHATSAPP_TEMPLATE_VARS
+        sync: false
+      # --- Cloudinary (existing media/document storage) ---
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # --- SMS (donation receipt delivery — optional; the API boots and
+      # donations/receipts still complete fine if these are left unset) ---
+      - key: SMS_PROVIDER_API_URL
+        sync: false
+      - key: SMS_PROVIDER_API_KEY
+        sync: false
+      - key: SMS_SENDER_ID
+        sync: false

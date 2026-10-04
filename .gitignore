@@ -13,7 +13,12 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
 !.env.example
+!.env.production.example
+
+# Hostinger PHP proxy upstream origin (per-environment Node.js host)
+**/api-upstream.php
 
 # Let's Encrypt certificates/private keys (generated on the VPS by certbot —
 # see infrastructure/README-SSL.md)

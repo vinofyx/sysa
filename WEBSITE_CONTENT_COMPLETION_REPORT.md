@@ -40,7 +40,7 @@ Everything else the document supplies content for has been synchronized. Everyth
 ### 3.1 Organization identity
 
 - **Tagline** — `SiteSettings.taglineEn` corrected from the incomplete `"Service to Human is Service to God"` to the document's exact text: `"Maanava Saevayae Madhava Saeva "- "Service to Humanity is Service to God"`.
-- **Logo** — the circular emblem embedded in the document was extracted and saved to `apps/web/public/logo.png`; `SiteSettings.logoUrl` now points to it. The site header (`site-header.tsx`, unmodified — it already had the conditional render, it simply had no image to show) now displays the logo once seeded.
+- **Logo** — the circular emblem embedded in the document was extracted and saved to `website/public/logo.png`; `SiteSettings.logoUrl` now points to it. The site header (`site-header.tsx`, unmodified — it already had the conditional render, it simply had no image to show) now displays the logo once seeded.
 
 ### 3.2 About page content (previously entirely empty — no `PageContent` row existed for `pageKey='about'` at all)
 
@@ -74,19 +74,19 @@ These appear automatically on the public `/donate` page (category list is fetche
 
 ## 4. Updated Pages
 
-| File                                                                                        | Change                                                                                                                                |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api/prisma/schema.prisma`                                                             | Added `CommitteeMember.mobile` field                                                                                                  |
-| `apps/api/prisma/seed.ts`                                                                   | Added mobile numbers (27 members), 4 new donation categories, About/Vision/Mission/Founder `PageContent` block, tagline fix, logo URL |
-| `apps/api/prisma/migrations/20260805130000_committee_member_mobile/migration.sql` **(new)** | `ALTER TABLE committee_member ADD COLUMN mobile VARCHAR(191) NULL`                                                                    |
-| `apps/api/src/validation/committee-member.schema.ts`                                        | Added `mobile` to create/update Zod schemas                                                                                           |
-| `apps/web/src/types/public.ts`                                                              | Added `mobile` to the public `CommitteeMember` type                                                                                   |
-| `apps/web/src/lib/about-content.ts`                                                         | Added `aboutEn`/`aboutTe` to the `AboutBlocks` contract                                                                               |
-| `apps/web/src/app/admin/content/about/page.tsx`                                             | Added "About Us" as the first editable tab                                                                                            |
-| `apps/web/src/app/admin/content/committee/page.tsx`                                         | Added mobile field to the form, table column, and payload                                                                             |
-| `apps/web/src/app/[locale]/(public)/about/page.tsx`                                         | Now fetches and renders the `aboutEn` narrative block above the section-links grid                                                    |
-| `apps/web/src/app/[locale]/(public)/about/committee/page.tsx`                               | Displays each member's mobile number as a tap-to-call link                                                                            |
-| `apps/web/public/logo.png` **(new)**                                                        | Logo image extracted from `Webpage.docx`                                                                                              |
+| File                                                                                   | Change                                                                                                                                |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/prisma/schema.prisma`                                                             | Added `CommitteeMember.mobile` field                                                                                                  |
+| `api/prisma/seed.ts`                                                                   | Added mobile numbers (27 members), 4 new donation categories, About/Vision/Mission/Founder `PageContent` block, tagline fix, logo URL |
+| `api/prisma/migrations/20260805130000_committee_member_mobile/migration.sql` **(new)** | `ALTER TABLE committee_member ADD COLUMN mobile VARCHAR(191) NULL`                                                                    |
+| `api/src/validation/committee-member.schema.ts`                                        | Added `mobile` to create/update Zod schemas                                                                                           |
+| `website/src/types/public.ts`                                                          | Added `mobile` to the public `CommitteeMember` type                                                                                   |
+| `website/src/lib/about-content.ts`                                                     | Added `aboutEn`/`aboutTe` to the `AboutBlocks` contract                                                                               |
+| `website/src/app/admin/content/about/page.tsx`                                         | Added "About Us" as the first editable tab                                                                                            |
+| `website/src/app/admin/content/committee/page.tsx`                                     | Added mobile field to the form, table column, and payload                                                                             |
+| `website/src/app/[locale]/(public)/about/page.tsx`                                     | Now fetches and renders the `aboutEn` narrative block above the section-links grid                                                    |
+| `website/src/app/[locale]/(public)/about/committee/page.tsx`                           | Displays each member's mobile number as a tap-to-call link                                                                            |
+| `website/public/logo.png` **(new)**                                                    | Logo image extracted from `Webpage.docx`                                                                                              |
 
 ## 5. Updated Database Records (applied on next `npm run prisma:seed`)
 

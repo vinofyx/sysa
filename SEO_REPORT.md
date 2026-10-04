@@ -12,7 +12,7 @@
 
 ## 1. Meta Tags / Open Graph / Twitter Cards Coverage
 
-Every public page's metadata is built through one shared function, `buildMetadata()` (`apps/web/src/lib/seo.ts`), which always sets: `title`, `description`, canonical `alternates` (see §3), `robots` (index/noindex), and both `openGraph` (title, description, url, siteName, locale, type, conditional image) and `twitter` (`summary_large_image` card when an image is available, `summary` otherwise) blocks. Using one shared builder means every page gets the full, correct set of tags by construction — there's no per-page copy-paste drift.
+Every public page's metadata is built through one shared function, `buildMetadata()` (`website/src/lib/seo.ts`), which always sets: `title`, `description`, canonical `alternates` (see §3), `robots` (index/noindex), and both `openGraph` (title, description, url, siteName, locale, type, conditional image) and `twitter` (`summary_large_image` card when an image is available, `summary` otherwise) blocks. Using one shared builder means every page gets the full, correct set of tags by construction — there's no per-page copy-paste drift.
 
 Checked all 30 public page files for `generateMetadata` presence:
 
@@ -100,7 +100,7 @@ Next.js recommends (and warns at build/dev time if absent) setting `metadataBase
 | #   | Change                                                                                    | File(s)                                                                                        |
 | --- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | 1   | Added `generateMetadata` to the Donation History page (via server/client component split) | `app/[locale]/(public)/donate/history/page.tsx`, `components/public/donation-history-view.tsx` |
-| 2   | Added `metadataBase` to the root layout                                                   | `apps/web/src/app/layout.tsx`                                                                  |
+| 2   | Added `metadataBase` to the root layout                                                   | `website/src/app/layout.tsx`                                                                   |
 
 ## 8. Recommendations for Future Phases (Not Blocking)
 

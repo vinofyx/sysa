@@ -35,16 +35,16 @@
 
 ### 2.1 Database (Prisma / PostgreSQL)
 
-- Extended `apps/api/prisma/schema.prisma` with production auth models: `Session` (refresh-token rotation + immediate revocation), `PasswordResetToken`, `EmailVerificationToken`, and new `AdminUser` fields (`emailVerified`, `failedLoginAttempts`, `lockedUntil`, `passwordChangedAt`, `lastLoginIp`).
+- Extended `api/prisma/schema.prisma` with production auth models: `Session` (refresh-token rotation + immediate revocation), `PasswordResetToken`, `EmailVerificationToken`, and new `AdminUser` fields (`emailVerified`, `failedLoginAttempts`, `lockedUntil`, `passwordChangedAt`, `lastLoginIp`).
 - Indexes and constraints added throughout (session lookups, token expiry, email lookups) — see the schema's inline doc-comments.
-- **Initial migration generated**: `apps/api/prisma/migrations/20260803101658_init/` (via `prisma migrate diff --from-empty`, since no live Postgres was available in this build environment — the same constraint noted in Phase 3). This migration is complete and correct (Prisma's own schema-diff engine generated it) but has never been _applied_ to a real database in this environment — see §5.
-- **Seed data** (`apps/api/prisma/seed.ts`) rewritten for the expanded, fully configurable RBAC model (§2.2) plus a bootstrap Super Admin account (email/password from `SEED_SUPER_ADMIN_EMAIL`/`SEED_SUPER_ADMIN_PASSWORD` env vars, dev-only fallback documented in `.env.example`).
+- **Initial migration generated**: `api/prisma/migrations/20260803101658_init/` (via `prisma migrate diff --from-empty`, since no live Postgres was available in this build environment — the same constraint noted in Phase 3). This migration is complete and correct (Prisma's own schema-diff engine generated it) but has never been _applied_ to a real database in this environment — see §5.
+- **Seed data** (`api/prisma/seed.ts`) rewritten for the expanded, fully configurable RBAC model (§2.2) plus a bootstrap Super Admin account (email/password from `SEED_SUPER_ADMIN_EMAIL`/`SEED_SUPER_ADMIN_PASSWORD` env vars, dev-only fallback documented in `.env.example`).
 
 ### 2.2 RBAC — Role Model Reconciliation
 
 Phase 4's instructions specified a different, more granular 10-role set (Super Admin, Admin, Content Manager, Donation Manager, Volunteer Manager, Event Manager, Gallery Manager, Report Manager, Finance Manager, Viewer) than the simpler 4-role matrix in the Phase 1 document [`documentation/10-Roles-and-Permissions.md`](documentation/10-Roles-and-Permissions.md) (Super Admin, Content Admin, Finance Admin, Volunteer Coordinator).
 
-**Per your instruction not to modify completed phases, that document is unchanged.** The actual seeded/implemented RBAC system uses the newer, more granular 10-role instruction as authoritative for code, since it was given explicitly and more recently. The permission catalogue was expanded from Phase 1's 21 codes to 29 (adding `events:view`, `gallery:view`, `committee:view`, `appeals:view`/`appeals:manage`, `users:view`, `roles:view`, `permissions:view`) so each of the 10 roles could be meaningfully distinct — see `apps/api/prisma/seed.ts` for the full role→permission mapping. **Permissions are entirely database-driven** (Role → RolePermission → Permission tables, plus full Role CRUD API), satisfying "permissions must be configurable" — an operator can create custom roles or edit any non-protected role's permission set without a code change.
+**Per your instruction not to modify completed phases, that document is unchanged.** The actual seeded/implemented RBAC system uses the newer, more granular 10-role instruction as authoritative for code, since it was given explicitly and more recently. The permission catalogue was expanded from Phase 1's 21 codes to 29 (adding `events:view`, `gallery:view`, `committee:view`, `appeals:view`/`appeals:manage`, `users:view`, `roles:view`, `permissions:view`) so each of the 10 roles could be meaningfully distinct — see `api/prisma/seed.ts` for the full role→permission mapping. **Permissions are entirely database-driven** (Role → RolePermission → Permission tables, plus full Role CRUD API), satisfying "permissions must be configurable" — an operator can create custom roles or edit any non-protected role's permission set without a code change.
 
 ### 2.3 Backend — Authentication (production-ready, no placeholder logic)
 
@@ -62,10 +62,10 @@ Phase 4's instructions specified a different, more granular 10-role set (Super A
 | Logout (current device)  | Revokes only the calling session                                                                                                                                                                |
 | Logout (all devices)     | Revokes every session for the user                                                                                                                                                              |
 | Account Lockout          | Configurable threshold/duration (`ACCOUNT_LOCK_MAX_ATTEMPTS`, `ACCOUNT_LOCK_DURATION_MINUTES`, defaults 5/15) — locks, emails a notice, and resets automatically on a successful password reset |
-| Password Policy          | 12+ chars, upper/lower/digit/special-character required, enforced via a shared Zod schema (`apps/api/src/validation/password.schema.ts`)                                                        |
+| Password Policy          | 12+ chars, upper/lower/digit/special-character required, enforced via a shared Zod schema (`api/src/validation/password.schema.ts`)                                                             |
 | Audit Logs               | Every sensitive auth/user/role event (`LOGIN_SUCCESS`, `LOGIN_FAILED`, `ACCOUNT_LOCKED`, `PASSWORD_CHANGED`, `USER_CREATED`, `ROLE_DELETED`, etc.) appended to the immutable `audit_log` table  |
 
-**New admin accounts**: reuse the email-verification + forgot-password flows as the activation mechanism (a Super Admin creates the account → the new user verifies their email → then uses "Forgot Password" to set their first real password) rather than building a third, parallel "invite" flow — see the doc-comment on `resendVerificationByEmail` in `apps/api/src/services/auth.service.ts` for the reasoning.
+**New admin accounts**: reuse the email-verification + forgot-password flows as the activation mechanism (a Super Admin creates the account → the new user verifies their email → then uses "Forgot Password" to set their first real password) rather than building a third, parallel "invite" flow — see the doc-comment on `resendVerificationByEmail` in `api/src/services/auth.service.ts` for the reasoning.
 
 ### 2.4 Backend — APIs
 
@@ -80,7 +80,7 @@ Phase 4's instructions specified a different, more granular 10-role set (Super A
 
 All routes: Zod-validated request bodies/params/queries (`src/middleware/validate.middleware.ts`), centralized error handling (unchanged from Phase 3, now also handles `ZodError` and the new `423 ACCOUNT_LOCKED` status), stricter rate limiting on auth endpoints (20 req/15 min vs. the general 300 req/15 min baseline), and full Winston request logging.
 
-**Swagger/OpenAPI documentation**: hand-authored OpenAPI 3.0 document (`apps/api/src/config/swagger.ts`) — chosen over JSDoc-comment extraction (`swagger-jsdoc`) to guarantee the spec matches the actual Zod schemas rather than risking annotation drift. Served at `/api/v1/docs` (Swagger UI) and `/api/v1/docs.json` (raw spec).
+**Swagger/OpenAPI documentation**: hand-authored OpenAPI 3.0 document (`api/src/config/swagger.ts`) — chosen over JSDoc-comment extraction (`swagger-jsdoc`) to guarantee the spec matches the actual Zod schemas rather than risking annotation drift. Served at `/api/v1/docs` (Swagger UI) and `/api/v1/docs.json` (raw spec).
 
 ### 2.5 Frontend — Layouts, Auth Pages, Admin Shell
 
@@ -104,7 +104,7 @@ All routes: Zod-validated request bodies/params/queries (`src/middleware/validat
 
 ## 3. Build Verification Results
 
-| Check                  |                                        Frontend (`apps/web`)                                         |                                                                                                                  Backend (`apps/api`)                                                                                                                   |
+| Check                  |                                         Frontend (`website`)                                         |                                                                                                                     Backend (`api`)                                                                                                                     |
 | ---------------------- | :--------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | `npm run typecheck`    |                                          ✅ Pass, 0 errors                                           |                                                                                                                    ✅ Pass, 0 errors                                                                                                                    |
 | `npm run lint`         |                                    ✅ Pass, 0 errors, 0 warnings                                     |                                                                                                              ✅ Pass, 0 errors, 0 warnings                                                                                                              |
@@ -121,7 +121,7 @@ All checks were run **from the repository root** (`npm run lint` / `npm run type
 1. **`ms` package's bundled types don't export a usable `StringValue` type the way I first referenced it** — fixed by wrapping the duration-parsing call in a small local helper (`toMilliseconds`) instead of inlining the cast at every call site.
 2. **Backend ESLint's typed-lint block choked on files outside `tsconfig.json`'s `rootDir`** (recurred for the new `@validation/*` alias path) — already-established `tsconfig.eslint.json` pattern from Phase 3 extended to cover it; no new issue class, just more files hitting the existing, already-solved edge case.
 3. **shadcn's `form` registry item doesn't exist for the installed `base-nova`/`@base-ui` style** — hand-wrote the standard react-hook-form + shadcn "Form" composition pattern (`components/ui/form.tsx`), substituting `React.cloneElement` for Radix's `Slot` primitive (Base UI has no generic Slot; composition is per-component via a `render` prop instead).
-4. **A real, reproducible build-reliability bug**: `npm run build` (`tsc && tsc-alias`) silently failed to emit _any_ output on two separate occasions after `dist/` was manually deleted, because a stale `tsconfig.tsbuildinfo` incremental-compilation cache convinced `tsc` its previous output was still current. Root-caused via direct reproduction (deleting only `dist` vs. deleting both `dist` and the buildinfo file). **Fixed properly, not worked around**: disabled `incremental` compilation in `apps/api/tsconfig.json` (this project's build is fast enough that incremental compilation isn't worth this entire class of stale-cache risk) and added an explicit `clean` step to the `build` script so `dist/` is always removed immediately before every compile.
+4. **A real, reproducible build-reliability bug**: `npm run build` (`tsc && tsc-alias`) silently failed to emit _any_ output on two separate occasions after `dist/` was manually deleted, because a stale `tsconfig.tsbuildinfo` incremental-compilation cache convinced `tsc` its previous output was still current. Root-caused via direct reproduction (deleting only `dist` vs. deleting both `dist` and the buildinfo file). **Fixed properly, not worked around**: disabled `incremental` compilation in `api/tsconfig.json` (this project's build is fast enough that incremental compilation isn't worth this entire class of stale-cache risk) and added an explicit `clean` step to the `build` script so `dist/` is always removed immediately before every compile.
 5. **Next.js build failed on `/login`** with a `useSearchParams() should be wrapped in a suspense boundary` prerender error — fixed by wrapping the form component (which reads `?redirect=`) in a `<Suspense>` boundary, per the Next.js-documented pattern.
 6. **shadcn's `Button` (Base UI's `render`-prop pattern, not Radix's `asChild`)** — every polymorphic button-as-link usage across the new pages had to use `render={<Link .../>}` instead of the more commonly-seen `asChild` pattern; caught immediately by the TypeScript compiler each time.
 
@@ -139,7 +139,7 @@ All checks were run **from the repository root** (`npm run lint` / `npm run type
 
 - The initial migration (§2.1) has been generated correctly but never actually _applied_ to a database.
 - Login/session/RBAC enforcement was verified as thoroughly as possible without a live DB (validation, error handling, cookie-setting, graceful DB-unavailable behavior all confirmed) but the actual "log in successfully and reach the dashboard" path has not been exercised end-to-end.
-- **Action required before UAT**: run `docker compose up -d postgres`, then `npm run prisma:migrate --workspace=apps/api` (applies the generated migration and records it properly) and `npm run prisma:seed --workspace=apps/api`, then walk through the login → dashboard → profile → logout flow once against a real database.
+- **Action required before UAT**: run `docker compose up -d postgres`, then `npm run prisma:migrate --workspace=api` (applies the generated migration and records it properly) and `npm run prisma:seed --workspace=api`, then walk through the login → dashboard → profile → logout flow once against a real database.
 
 ---
 
@@ -182,9 +182,9 @@ Per explicit client instruction, Phase 5 was re-scoped from the originally-plann
 
 ### 9.1 Database
 
-- `apps/api/prisma/schema.prisma` extended with every Phase 5 model: `Testimonial`, `HeroBanner`, `SocialMediaLink`, `NavigationMenuItem` (self-referencing, one level), `SiteSettings` (singleton), `Activity` (covers both "Activities" and "Services" — no separate Services concept exists in the source documents), `Donor`, `DonationCategory`, `Appeal`, `Donation` (+ `DonationFrequency`), `BankTransferRecord`, `Receipt`, `CommitteeMember`, `Volunteer`, `VolunteerApplication`, `VolunteerAssignment`, `EventCategory`, `Event`, `EventRegistration`, `GalleryAlbum`, `GalleryItem`, `DocumentRepo` (+ `pan_card` category), `PageContent`.
+- `api/prisma/schema.prisma` extended with every Phase 5 model: `Testimonial`, `HeroBanner`, `SocialMediaLink`, `NavigationMenuItem` (self-referencing, one level), `SiteSettings` (singleton), `Activity` (covers both "Activities" and "Services" — no separate Services concept exists in the source documents), `Donor`, `DonationCategory`, `Appeal`, `Donation` (+ `DonationFrequency`), `BankTransferRecord`, `Receipt`, `CommitteeMember`, `Volunteer`, `VolunteerApplication`, `VolunteerAssignment`, `EventCategory`, `Event`, `EventRegistration`, `GalleryAlbum`, `GalleryItem`, `DocumentRepo` (+ `pan_card` category), `PageContent`.
 - Migration generated via `prisma migrate diff` against the pre-Phase-5 schema snapshot (`20260803132314_phase5_business_modules/`) — no live Postgres in this environment, same constraint as every prior phase; **never applied to a real database** (see §12).
-- `apps/api/prisma/seed.ts` rewritten: ~50 permission codes, full role→permission mapping for all 10 roles, 27 real committee members, 7 real activities, and a verified-fields-only `SiteSettings` row — no fabricated data anywhere (unverified fields left blank per the project's established pattern).
+- `api/prisma/seed.ts` rewritten: ~50 permission codes, full role→permission mapping for all 10 roles, 27 real committee members, 7 real activities, and a verified-fields-only `SiteSettings` row — no fabricated data anywhere (unverified fields left blank per the project's established pattern).
 
 ### 9.2 Backend architecture decisions
 
@@ -252,7 +252,7 @@ New dependencies added: `dompurify` (rich-text sanitization, defense-in-depth pe
 
 ## 11. Phase 5 Build Verification Results
 
-| Check                                |                                                              Frontend (`apps/web`)                                                               |                                     Backend (`apps/api`)                                     |
+| Check                                |                                                               Frontend (`website`)                                                               |                                       Backend (`api`)                                        |
 | ------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------: |
 | `npm run lint` (from repo root)      |                                                          ✅ Pass, 0 errors, 0 warnings                                                           |                                ✅ Pass, 0 errors, 0 warnings                                 |
 | `npm run typecheck` (from repo root) |                                                                ✅ Pass, 0 errors                                                                 |                                      ✅ Pass, 0 errors                                       |
@@ -283,13 +283,13 @@ Per the phased, approval-gated process this project follows: **this phase is com
 
 Per your instruction, Phase 5's admin CMS and business-module APIs were used as the only source of truth; the public site consumes them directly. A handful of small, additive gaps had to be closed first — none of them touch existing endpoints' behavior:
 
-- **`apps/api/prisma/schema.prisma`**: added `NewsletterSubscriber`; added `category`/`tags` to `EventNewsPost` (the Phase 6 spec explicitly requires News categories/tags, which didn't exist); added `bankAccountName`, `bankAccountNumber`, `bankIfscCode`, `bankName`, `bankBranch`, `upiId`, `upiQrImageUrl` to `SiteSettings` (the Donation page's required "Bank Details / UPI QR" section had no backing fields — fabricating account numbers for a real NGO would be actively harmful, so real nullable fields were added instead, surfaced in a new admin Settings card, and the public page falls back to a "coming soon / contact us" state until an admin fills them in).
+- **`api/prisma/schema.prisma`**: added `NewsletterSubscriber`; added `category`/`tags` to `EventNewsPost` (the Phase 6 spec explicitly requires News categories/tags, which didn't exist); added `bankAccountName`, `bankAccountNumber`, `bankIfscCode`, `bankName`, `bankBranch`, `upiId`, `upiQrImageUrl` to `SiteSettings` (the Donation page's required "Bank Details / UPI QR" section had no backing fields — fabricating account numbers for a real NGO would be actively harmful, so real nullable fields were added instead, surfaced in a new admin Settings card, and the public page falls back to a "coming soon / contact us" state until an admin fills them in).
 - Three small hand-written migrations (no live DB in this environment, same constraint as every prior phase): `20260803212356_phase6_newsletter_subscriber`, `20260803214500_news_category_tags`, `20260803220000_site_settings_bank_details`.
-- **`apps/api/src/routes/v1/public-content.routes.ts`** (new): unauthenticated `GET /hero-banners/public`, `/testimonials/public`, `/activities/public`(+`/:slug`), `/committee/public`, `/social-links/public`, `/navigation/public` — the Phase 5 admin routers for these modules were authenticated-only.
-- **`apps/api/src/routes/v1/contact.routes.ts`** (new): `POST /contact` (contact form) and `POST /contact/newsletter` (upsert-by-email subscribe), both rate-limited.
+- **`api/src/routes/v1/public-content.routes.ts`** (new): unauthenticated `GET /hero-banners/public`, `/testimonials/public`, `/activities/public`(+`/:slug`), `/committee/public`, `/social-links/public`, `/navigation/public` — the Phase 5 admin routers for these modules were authenticated-only.
+- **`api/src/routes/v1/contact.routes.ts`** (new): `POST /contact` (contact form) and `POST /contact/newsletter` (upsert-by-email subscribe), both rate-limited.
 - **`POST /media/upload/resume`** added to `media.routes.ts` — public, rate-limited, Cloudinary `resourceType: 'raw'` — needed for the Volunteer application form's resume upload.
 - News category/tags, legal-page `PageContent` keys (`privacy-policy`/`terms-conditions`/`refund-policy`/`disclaimer`), and site-settings bank/UPI fields wired end-to-end through validation → repository → service → routes → Swagger, and retrofitted into the existing Phase 5 admin News editor and Settings page.
-- `apps/api/src/config/swagger.ts`: added `Public Content`/`Contact` tags and a `phase6Paths` object, mirroring the `phase5Paths` pattern.
+- `api/src/config/swagger.ts`: added `Public Content`/`Contact` tags and a `phase6Paths` object, mirroring the `phase5Paths` pattern.
 
 No existing Phase 4/5 endpoint's request/response shape changed — every addition is either a new route or a new optional field.
 
@@ -356,7 +356,7 @@ Homepage and every list/detail page fetch is a real `await` against the Phase 5/
 
 1. **RSC → Client error boundary crash on a real backend outage.** An uncaught `AxiosError` thrown inside a Server Component (e.g. `getSocialLinks()` in the public layout) crashed with a cascading, misleading secondary error ("Only plain objects can be passed to Client Components... AxiosHeaders objects are not supported... Functions cannot be passed directly...") that completely masked the actual problem (database unreachable). **Fixed** with a response interceptor on `publicApiClient` (`lib/public-api.ts`) that converts any error into a plain `Error` before it propagates. Verified in-browser: the error boundary now renders the correct, translated "Something Went Wrong / Try again / Go Home" message instead of crashing.
 2. **Copy-paste bugs in two form components** — `bank-transfer-claim-form.tsx` and `contact-form.tsx` both had nonsensical conditional JSX left over from copying a similar field (`{tCommon('all') && 'optional'}` as a label, and a broken submit-button-label ternary). Fixed to plain, correct text in both files.
-3. **Stale `.next` type cache** after moving `(public)` → `[locale]/(public)` caused a false-positive `tsc` failure referencing the old path; fixed by clearing `apps/web/.next` and re-running typecheck (clean afterward).
+3. **Stale `.next` type cache** after moving `(public)` → `[locale]/(public)` caused a false-positive `tsc` failure referencing the old path; fixed by clearing `website/.next` and re-running typecheck (clean afterward).
 
 ### 16.2 Known pre-existing issue (not introduced this phase, not fixed)
 
@@ -366,7 +366,7 @@ Browser console testing of the new `app/[locale]/error.tsx` surfaced a Base UI d
 
 ## 17. Phase 6 Build Verification Results
 
-| Check                                |                                                                                                            Frontend (`apps/web`)                                                                                                             |           Backend (`apps/api`)            |
+| Check                                |                                                                                                             Frontend (`website`)                                                                                                             |              Backend (`api`)              |
 | ------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------: |
 | `npm run lint` (from repo root)      |                                                                                                        ✅ Pass, 0 errors, 0 warnings                                                                                                         |       ✅ Pass, 0 errors, 0 warnings       |
 | `npm run typecheck` (from repo root) |                                                                                                              ✅ Pass, 0 errors                                                                                                               |             ✅ Pass, 0 errors             |
@@ -401,7 +401,7 @@ Per explicit client instruction, Phase 7 was re-scoped from the originally-plann
 
 ### 20.1 Database
 
-- `apps/api/prisma/schema.prisma` extended:
+- `api/prisma/schema.prisma` extended:
   - `Donation`: `paymentMethod` made **nullable** (an online donation is `pending` before the donor has chosen how to pay — Razorpay only reports the method once captured); `paymentGatewayRef` made **unique** (prevents the same gateway payment ever being attached to two donation rows — the core "Prevent Duplicate Payments" requirement); added `razorpayOrderId` (unique), `razorpaySignature`, `failureReason`, `idempotencyKey` (unique, powers safe client-side retry of `/donations/initiate`).
   - New `PaymentWebhookEvent` model — idempotency ledger for the Razorpay webhook (`eventId` = SHA-256 of the raw request body), so a redelivered webhook is recognized and skipped rather than reprocessed into a duplicate receipt/email.
   - New `DonorOtp` model — backs the lightweight, optional donor login used only to view donation history (FR-DON-07).
@@ -451,7 +451,7 @@ Per explicit client instruction, Phase 7 was re-scoped from the originally-plann
 - Signature verification (Checkout + webhook), both constant-time.
 - Duplicate-payment prevention at two layers: an explicit `findByPaymentGatewayRef` check before completing, backed by the DB's own unique constraint (a `P2002` race is caught and mapped to `409 Conflict`).
 - Audit logging: `PAYMENT_INITIATED`, `PAYMENT_VERIFIED`, `PAYMENT_FAILED`, `PAYMENT_SIGNATURE_INVALID`, `WEBHOOK_RECEIVED`, `WEBHOOK_SIGNATURE_INVALID`, `DONOR_OTP_REQUESTED`, `DONOR_OTP_VERIFIED` — all via the now-nullable-`adminUserId` `writeAuditLog()`.
-- No credentials hardcoded anywhere — `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` were already scaffolded in `.env.example` (root and `apps/api`) since Phase 3 and remain blank, consumed only via `env.ts`.
+- No credentials hardcoded anywhere — `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` were already scaffolded in `.env.example` (root and `api`) since Phase 3 and remain blank, consumed only via `env.ts`.
 
 ---
 
@@ -484,7 +484,7 @@ All new pages under `app/[locale]/(public)/donate/`, bilingual (en/te), consumin
 
 ## 23. Phase 7 Build Verification Results
 
-| Check                                |                                                                                                        Frontend (`apps/web`)                                                                                                        |                                                                                                                    Backend (`apps/api`)                                                                                                                    |
+| Check                                |                                                                                                        Frontend (`website`)                                                                                                         |                                                                                                                      Backend (`api`)                                                                                                                       |
 | ------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | `npm run lint` (from repo root)      |                                                                                                    ✅ Pass, 0 errors, 0 warnings                                                                                                    |                                                                                                               ✅ Pass, 0 errors, 0 warnings                                                                                                                |
 | `npm run typecheck` (from repo root) |                                                                                                          ✅ Pass, 0 errors                                                                                                          |                                                                                                                     ✅ Pass, 0 errors                                                                                                                      |
@@ -501,7 +501,7 @@ All checks were run **from the repository root**, exactly as instructed, and ite
 Same root cause as every prior phase: **no live PostgreSQL instance, and no live Razorpay merchant keys, are available in this build environment.**
 
 - Every payment-related endpoint has been verified for correct _wiring_ (webhook signature rejection confirmed via `curl`; initiate/verify fail gracefully rather than crashing) but the actual **money-moving path — creating a real Razorpay order, completing a real Checkout payment, receiving a real webhook — has not been exercised end-to-end**, and cannot be until real `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` are provided (pending merchant KYC, per `documentation/16-Assumptions-and-Dependencies.md` D-01, unchanged since Phase 3).
-- **Action required before UAT**: once Razorpay test-mode keys are available, configure them in `apps/api/.env`, point the webhook URL (Razorpay dashboard → Webhooks) at `POST /api/v1/webhooks/razorpay`, and walk the full donor journey once in test mode: initiate → Checkout → success/failure/pending → receipt email → admin transaction view → donor-history OTP login.
+- **Action required before UAT**: once Razorpay test-mode keys are available, configure them in `api/.env`, point the webhook URL (Razorpay dashboard → Webhooks) at `POST /api/v1/webhooks/razorpay`, and walk the full donor journey once in test mode: initiate → Checkout → success/failure/pending → receipt email → admin transaction view → donor-history OTP login.
 - Cloudinary credentials are also still not configured in this environment, so receipt PDF upload is wired correctly but untested against the real Cloudinary API (same limitation noted in every prior phase for gallery/document uploads).
 
 ---
@@ -518,7 +518,7 @@ Per explicit client instruction ("the application is feature complete... prepare
 
 ### 26.1 Method
 
-Full source review of `apps/api/src` and `apps/web/src` (route-by-route authorization/validation audit, Prisma schema index review, translation key-parity diffing, image-optimization audit, metadata coverage audit), plus live verification where possible in this environment: a `curl` test confirming the Razorpay webhook rejects an invalid signature (`401`), a `curl` test confirming `/donations/initiate` fails gracefully against the unreachable database, and a browser + raw-HTML check confirming the new Content-Security-Policy header doesn't break page rendering or hydration.
+Full source review of `api/src` and `website/src` (route-by-route authorization/validation audit, Prisma schema index review, translation key-parity diffing, image-optimization audit, metadata coverage audit), plus live verification where possible in this environment: a `curl` test confirming the Razorpay webhook rejects an invalid signature (`401`), a `curl` test confirming `/donations/initiate` fails gracefully against the unreachable database, and a browser + raw-HTML check confirming the new Content-Security-Policy header doesn't break page rendering or hydration.
 
 ### 26.2 Findings and fixes
 
@@ -548,7 +548,7 @@ Two systems were audited in full and found to have **zero** defects: RBAC (52 pe
 
 ### 26.4 Build Verification Results
 
-| Check                                |                                                                 Frontend (`apps/web`)                                                                  |                                                     Backend (`apps/api`)                                                     |
+| Check                                |                                                                  Frontend (`website`)                                                                  |                                                       Backend (`api`)                                                        |
 | ------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------: |
 | `npm run lint` (from repo root)      |                                                             ✅ Pass, 0 errors, 0 warnings                                                              |                                                ✅ Pass, 0 errors, 0 warnings                                                 |
 | `npm run typecheck` (from repo root) |                                                                   ✅ Pass, 0 errors                                                                    |                                                      ✅ Pass, 0 errors                                                       |
@@ -577,7 +577,7 @@ The client confirmed this is a **greenfield project with no production data anyw
 - **Migration history**: all 6 prior PostgreSQL-era migration directories deleted; one fresh baseline generated (`20260804120000_init_mysql`, 36 tables) via `prisma migrate diff --from-empty`, using `utf8mb4_0900_ai_ci` collation throughout for full Telugu/Unicode/emoji support and native case-insensitive matching.
 - **Email case-insensitivity**: every `mode: 'insensitive'` Prisma filter (6 occurrences across 6 repositories) was removed — MySQL's `_ci` collation now provides this natively at the database level instead of per-query, with identical observable behavior (verified: `Admin@sysa.org` / `admin@sysa.org` / `ADMIN@SYSA.ORG` collide as the same account).
 - **Raw SQL**: the donation analytics query's PostgreSQL-specific syntax (`to_char(date_trunc(...))`, `::float` cast, double-quoted identifiers) was rewritten using `DATE_FORMAT()` and MySQL identifier conventions.
-- **Docker/CI/env**: `docker-compose.yml`'s `postgres` service replaced with a `mysql:8.0` service (matching collation flags, `mysqladmin ping` healthcheck); `.github/workflows/ci.yml`'s CI database services updated to match; `DATABASE_URL` format changed to `mysql://USER:PASSWORD@HOST:3306/DATABASE` everywhere (root `.env.example`, `apps/api/.env.example`, `apps/api/.env`).
+- **Docker/CI/env**: `docker-compose.yml`'s `postgres` service replaced with a `mysql:8.0` service (matching collation flags, `mysqladmin ping` healthcheck); `.github/workflows/ci.yml`'s CI database services updated to match; `DATABASE_URL` format changed to `mysql://USER:PASSWORD@HOST:3306/DATABASE` everywhere (root `.env.example`, `api/.env.example`, `api/.env`).
 - **Documentation**: actively-maintained docs (`README.md`, `DEPLOYMENT_GUIDE.md`, `GO_LIVE_CHECKLIST.md`, `KNOWN_LIMITATIONS.md`) updated directly; dated Phase 1/2 planning and design artifacts (8 files) received a forward-pointing addendum note rather than being rewritten, preserving their original historical accuracy per this project's documentation-preservation policy.
 
 Full detail — every file touched, every PostgreSQL feature replaced, breaking changes, MySQL compatibility notes, and remaining risks — is in [MYSQL_MIGRATION_REPORT.md](MYSQL_MIGRATION_REPORT.md).

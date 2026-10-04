@@ -4,16 +4,28 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=apps/web"],
-      "port": 3000,
+      "runtimeArgs": ["run", "dev", "--workspace=website"],
+      "port": 3030,
       "autoPort": true
     },
     {
       "name": "api",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=apps/api"],
-      "port": 4000,
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/d", "/c", ".claude\\dev-api.bat"],
+      "port": 5050,
       "autoPort": true
+    },
+    {
+      "name": "static-export-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "5060", "website/out"],
+      "port": 5060
+    },
+    {
+      "name": "local-full-stack-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["website/scripts/local-proxy.mjs", "5060"],
+      "port": 5060
     }
   ]
 }
