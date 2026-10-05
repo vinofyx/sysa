@@ -26,22 +26,25 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
-        working-directory: apps/api
+        working-directory: api
         run: npx prisma generate
         env:
           DATABASE_URL: 'mysql://ci:ci@localhost:3306/ci'
 
       - name: Lint (web)
-        run: npm run lint --workspace=apps/web
+        run: npm run lint --workspace=website
 
       - name: Lint (api)
-        run: npm run lint --workspace=apps/api
+        run: npm run lint --workspace=api
 
       - name: Typecheck (web)
-        run: npm run typecheck --workspace=apps/web
+        run: npm run typecheck --workspace=website
 
       - name: Typecheck (api)
-        run: npm run typecheck --workspace=apps/api
+        run: npm run typecheck --workspace=api
+
+      - name: Test (api)
+        run: npm run test --workspace=api
 
       - name: Prettier format check
         run: npm run format:check
@@ -84,18 +87,18 @@ jobs:
         run: npm ci
 
       - name: Apply database migrations
-        working-directory: apps/api
+        working-directory: api
         run: npx prisma migrate deploy
 
       - name: Seed reference data
-        working-directory: apps/api
+        working-directory: api
         run: npx tsx prisma/seed.ts
 
       - name: Build API
-        run: npm run build --workspace=apps/api
+        run: npm run build --workspace=api
 
       - name: Smoke-test API health endpoint
-        working-directory: apps/api
+        working-directory: api
         run: |
           node dist/server.js &
           API_PID=$!
@@ -109,7 +112,7 @@ jobs:
           echo "Health check passed"
 
       - name: Build Web
-        run: npm run build --workspace=apps/web
+        run: npm run build --workspace=website
 
   security-audit:
     name: Dependency Audit

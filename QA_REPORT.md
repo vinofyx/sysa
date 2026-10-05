@@ -40,7 +40,7 @@
 
 Home · About (+ History, Vision, Mission, Founder, Committee, Treasurer) · Activities (list + detail) · Services (redirect to Activities) · Volunteer · Events (list + detail) · News (list + detail) · Gallery · Testimonials · Donate (+ Success, Failure, Pending, Receipt, History) · Contact · Privacy Policy · Terms & Conditions · Refund Policy · Disclaimer · Search · 404 · 500.
 
-All 30 verified present, all build to either static (`●`) or dynamic (`ƒ`) routes without error in `npm run build --workspace=apps/web`.
+All 30 verified present, all build to either static (`●`) or dynamic (`ƒ`) routes without error in `npm run build --workspace=website`.
 
 ### 2.2 Admin CMS (29 pages)
 
@@ -56,7 +56,7 @@ Login · Forgot Password · Reset Password · Verify Email.
 
 ## 3. API Inventory
 
-34 route files under `apps/api/src/routes/v1/`, covering: Health, Auth, Users, Roles, Permissions, Profile, Site Settings, Page Content, Hero Banners, Testimonials, Social Links, Navigation, Activities, Committee, Public Content, Contact, Donation Categories, Appeals, Donation Checkout, Donations (admin), Bank Transfers, Webhooks, Donor Auth, Donors, Volunteers, Volunteer Assignments, Event Categories, Events, Event Registrations, News, Gallery, Documents, Media.
+34 route files under `api/src/routes/v1/`, covering: Health, Auth, Users, Roles, Permissions, Profile, Site Settings, Page Content, Hero Banners, Testimonials, Social Links, Navigation, Activities, Committee, Public Content, Contact, Donation Categories, Appeals, Donation Checkout, Donations (admin), Bank Transfers, Webhooks, Donor Auth, Donors, Volunteers, Volunteer Assignments, Event Categories, Events, Event Registrations, News, Gallery, Documents, Media.
 
 Every route file was checked for: input validation coverage, authentication middleware placement, and permission-code correctness (full methodology and results in §5).
 
@@ -99,7 +99,7 @@ Ran a full cross-reference between every `requirePermission('code')` call in the
 
 ## 6. Translation Verification
 
-Ran an automated key-diff between `apps/web/messages/en.json` and `messages/te.json`:
+Ran an automated key-diff between `website/messages/en.json` and `messages/te.json`:
 
 ```
 Total en keys: 151   Total te keys: 151

@@ -12,7 +12,7 @@
 
 ## 1. Database Indexes
 
-Reviewed every model in `apps/api/prisma/schema.prisma`: **41 explicit `@@index` declarations**, plus implicit indexes from every `@unique`/`@id` constraint (Postgres/Prisma create these automatically).
+Reviewed every model in `api/prisma/schema.prisma`: **41 explicit `@@index` declarations**, plus implicit indexes from every `@unique`/`@id` constraint (Postgres/Prisma create these automatically).
 
 Coverage confirmed for every common access pattern actually used by the application:
 
@@ -76,7 +76,7 @@ Files touched: `hero-banner.tsx`, `activity-card.tsx`, `event-card.tsx`, `news-c
 
 ## 5. Bundle Size
 
-From `npm run build --workspace=apps/web` production output:
+From `npm run build --workspace=website` production output:
 
 | Metric                           | Value                                                                                           |
 | -------------------------------- | ----------------------------------------------------------------------------------------------- |

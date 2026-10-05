@@ -59,7 +59,7 @@ cd sysa
 npm install
 ```
 
-This installs dependencies for the root workspace and both `apps/web` and `apps/api` in one pass (npm workspaces), and sets up Git hooks (Husky) automatically via the `prepare` script.
+This installs dependencies for the root workspace and both `website` and `api` in one pass (npm workspaces), and sets up Git hooks (Husky) automatically via the `prepare` script.
 
 ### 2. Configure environment variables
 
@@ -67,8 +67,8 @@ Copy each example file and fill in real values:
 
 ```bash
 cp .env.example .env                       # Docker Compose orchestration variables
-cp apps/api/.env.example apps/api/.env      # Backend runtime variables
-cp apps/web/.env.example apps/web/.env.local # Frontend runtime variables
+cp api/.env.example api/.env      # Backend runtime variables
+cp website/.env.example website/.env.local # Frontend runtime variables
 ```
 
 At minimum, generate strong JWT secrets:
@@ -77,7 +77,7 @@ At minimum, generate strong JWT secrets:
 openssl rand -base64 48   # run twice — once for JWT_ACCESS_SECRET, once for JWT_REFRESH_SECRET
 ```
 
-Cloudinary, Razorpay, and SMTP credentials are optional for local foundation work — the app boots and logs a clear warning if they're unset (see `apps/api/src/integrations/`). They become required once the corresponding features are implemented.
+Cloudinary, Razorpay, and SMTP credentials are optional for local foundation work — the app boots and logs a clear warning if they're unset (see `api/src/integrations/`). They become required once the corresponding features are implemented.
 
 ### 3. Start MySQL
 
@@ -87,22 +87,22 @@ Cloudinary, Razorpay, and SMTP credentials are optional for local foundation wor
 docker compose up -d mysql
 ```
 
-**Option B — local MySQL install:** create a database matching your `apps/api/.env` `DATABASE_URL`, using `utf8mb4` / `utf8mb4_0900_ai_ci` (falls back to `utf8mb4_unicode_ci` on MySQL builds where `utf8mb4_0900_ai_ci` is unavailable) for correct English/Telugu/Unicode/emoji support.
+**Option B — local MySQL install:** create a database matching your `api/.env` `DATABASE_URL`, using `utf8mb4` / `utf8mb4_0900_ai_ci` (falls back to `utf8mb4_unicode_ci` on MySQL builds where `utf8mb4_0900_ai_ci` is unavailable) for correct English/Telugu/Unicode/emoji support.
 
 ### 4. Set up the database schema
 
 ```bash
-npm run prisma:generate --workspace=apps/api
-npm run prisma:migrate --workspace=apps/api    # applies apps/api/prisma/migrations/20260804120000_init_mysql/
-npm run prisma:seed --workspace=apps/api        # seeds RBAC roles/permissions + donation categories + a bootstrap Super Admin
+npm run prisma:generate --workspace=api
+npm run prisma:migrate --workspace=api    # applies api/prisma/migrations/20260804120000_init_mysql/
+npm run prisma:seed --workspace=api        # seeds RBAC roles/permissions + donation categories + a bootstrap Super Admin
 ```
 
 > **Note:** The committed migration was generated via `prisma migrate diff` (no live MySQL was available in the environment that authored it) and has not yet been applied against a real database — running `prisma:migrate` above will be the first time it is. If Prisma reports drift, resolve it locally and commit any follow-up migration it generates. This project migrated from PostgreSQL to MySQL — see [MYSQL_MIGRATION_REPORT.md](MYSQL_MIGRATION_REPORT.md) for the full rationale and change list.
 
 The seed script creates one bootstrap **Super Admin** account so you can log in immediately:
 
-- Email: value of `SEED_SUPER_ADMIN_EMAIL` in `apps/api/.env` (default `superadmin@sysaindia.org`)
-- Password: value of `SEED_SUPER_ADMIN_PASSWORD` in `apps/api/.env` — **set this explicitly**; the fallback dev-only password is printed as a warning by the seed script and must never be used outside local development.
+- Email: value of `SEED_SUPER_ADMIN_EMAIL` in `api/.env` (default `superadmin@sysaindia.org`)
+- Password: value of `SEED_SUPER_ADMIN_PASSWORD` in `api/.env` — **set this explicitly**; the fallback dev-only password is printed as a warning by the seed script and must never be used outside local development.
 
 ### 5. Run the dev servers
 
@@ -133,6 +133,21 @@ docker compose up -d --build
 
 This starts MySQL, the API, the Next.js frontend, and an Nginx reverse proxy (`http://localhost` by default). See [`design/15-Deployment-Architecture.md`](design/15-Deployment-Architecture.md) for the full topology.
 
+## Production hosting
+
+**Render is not required.** Production is:
+
+- **Website:** Hostinger Premium shared hosting — static Apache at `https://sysa.in` (`website/out` / `hostinger-site`).
+- **API:** the existing Node.js 20 app in `api/`, on a **separate** host (not Render). `npm start` runs `node dist/server.js`; `npm run start:prod` runs `npx prisma migrate deploy && node dist/server.js`. Bind `BIND_HOST=0.0.0.0` and `process.env.PORT`.
+- **Public API URL:** `https://sysa.in/api/v1`. Hostinger `api-proxy.php` forwards `/api/*` (method, query, Authorization, raw body) to the Node origin in `api-upstream.php`. Do not put `/api/v1` on that origin.
+- **Database:** Hostinger MySQL via `DATABASE_URL` on the Node host only. Enable **Remote MySQL** for the Node host IP. Run `npx prisma migrate deploy` against production — never `migrate reset`, never local `sysa_local_dev`.
+- **Secrets:** Razorpay secret, webhook secret, SMTP, WhatsApp, Cloudinary secret, JWT, and `DATABASE_URL` stay on the Node host. The website may only contain `NEXT_PUBLIC_API_URL=https://sysa.in` and the public Razorpay key returned by `initiate`.
+- **Razorpay:** Checkout is `initiate` → Checkout → `verify`. Webhook `https://sysa.in/api/v1/webhooks/razorpay` (`payment.captured`). Validate with **test-mode** keys, not live charges.
+
+Step-by-step checklist, env templates (`api/.env.production.example`), and proxy files: [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md).
+
+Local development still uses `http://localhost:4000` via `api/.env` / `website/.env.local`. Do not point local `NEXT_PUBLIC_API_URL` at production unless you intend to call production.
+
 ## Available Scripts (root)
 
 | Script                                             | Description                              |
@@ -142,9 +157,9 @@ This starts MySQL, the API, the Next.js frontend, and an Nginx reverse proxy (`h
 | `npm run lint` / `npm run lint:fix`                | Lint both apps                           |
 | `npm run typecheck`                                | Type-check both apps (no emit)           |
 | `npm run format` / `npm run format:check`          | Prettier across the whole repo           |
-| `npm run prisma:generate` / `:migrate` / `:studio` | Prisma commands, scoped to `apps/api`    |
+| `npm run prisma:generate` / `:migrate` / `:studio` | Prisma commands, scoped to `api`         |
 
-Per-app scripts are documented in `apps/web/package.json` and `apps/api/package.json`.
+Per-app scripts are documented in `website/package.json` and `api/package.json`.
 
 ## Code Quality Gates
 

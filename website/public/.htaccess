@@ -1,0 +1,46 @@
+# Hostinger Premium (Apache, shared hosting) — only applies to the static
+# export build (website/out/, built via `npm run build:static`). Ignored
+# entirely by the standalone/Docker/VPS deployment, which uses middleware.ts
+# and Next's own server for this instead.
+#
+# The site has no locale-prefixed routes at all — `next export` writes
+# index.html directly at the output root (out/index.html, out/about/index.html,
+# etc.), since the App Router has no [locale] segment (src/i18n/request.ts
+# fixes the locale to 'en'). No rewrite is needed to get a bare "/" working.
+
+RewriteEngine On
+
+# Apache/CGI often drops the Authorization header before PHP sees it.
+# Receipt retry and donor Bearer tokens need it forwarded to the Node API.
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+<IfModule mod_setenvif.c>
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
+# Forward /api/* to the Express API via api-proxy.php (origin is set in
+# api-upstream.php — never sysa.onrender.com). Must run before the
+# static-file / 404 rules — otherwise Apache would serve Next's HTML 404.
+# QSA keeps query tokens (?token=) for receipt/status/retry auth.
+RewriteRule ^api(/.*)?$ api-proxy.php [L,QSA,E=SYSA_API:/api$1]
+
+# Anything that already exists on disk as a real file or directory —
+# /admin, /login, /_next/*, /images/*, /videos/*, favicon.ico, robots.txt,
+# sitemap.xml, logo.png, every page's own index.html — is served as-is.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Without this, Apache serves its own generic error page for any unmatched
+# path instead of the site's own branded 404.html that `next export` already
+# generates at the output root.
+ErrorDocument 404 /404.html
+
+# Baseline security headers — mirrors next.config.ts's headers() block,
+# which `output: 'export'` does not support.
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

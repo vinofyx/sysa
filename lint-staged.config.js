@@ -4,13 +4,13 @@
 // that CWD mismatch, each workspace's own `lint:fix` script is invoked directly —
 // it already runs with the correct `--workspace` CWD via npm.
 module.exports = {
-  'apps/web/**/*.{ts,tsx,js,jsx}': (filenames) => [
+  'website/**/*.{ts,tsx,js,jsx}': (filenames) => [
     `prettier --write ${filenames.map((f) => `"${f}"`).join(' ')}`,
-    'npm run lint:fix --workspace=apps/web',
+    'npm run lint:fix --workspace=website',
   ],
-  'apps/api/**/*.{ts,js}': (filenames) => [
+  'api/**/*.{ts,js}': (filenames) => [
     `prettier --write ${filenames.map((f) => `"${f}"`).join(' ')}`,
-    'npm run lint:fix --workspace=apps/api',
+    'npm run lint:fix --workspace=api',
   ],
   '**/*.{json,md,css}': (filenames) => [
     `prettier --write --ignore-path .prettierignore ${filenames.map((f) => `"${f}"`).join(' ')}`,

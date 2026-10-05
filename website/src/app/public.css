@@ -1,0 +1,316 @@
+/**
+ * Public-site-only design tokens (design/06-Design-System.md, refreshed to a
+ * premium spiritual/NGO visual language per client redesign brief). Deliberately
+ * namespaced (`--color-pub-*`, `--font-pub-*`) rather than overriding the
+ * shared shadcn tokens in `src/app/globals.css` — the admin CMS is a
+ * "visually distinct family" per the design system, and redefining
+ * `--color-primary` etc. globally would silently reskin the admin panel too.
+ * Public components use `bg-pub-primary-700`, `font-pub-heading`, etc.
+ *
+ * This file needs its own `@import "tailwindcss"` — it's loaded as a
+ * separate Next.js global stylesheet (imported from `(public)/layout.tsx`,
+ * not chained via `@import` from `src/app/globals.css`), so without this,
+ * Tailwind's PostCSS plugin never treats it as a build entry: the `@theme`
+ * block below still compiles to real `:root`/`.dark` custom properties (that
+ * part is a local per-file transform), but no `bg-pub-*`/`text-pub-*`/
+ * `border-pub-*` utility ever gets generated anywhere, in either bundle —
+ * confirmed by grepping the compiled output. Every component's `pub-*`
+ * color classes were silently inert until this line was added.
+ */
+@import 'tailwindcss';
+
+/**
+ * public.css is its own separate Tailwind entry point (see the comment
+ * above), so it doesn't inherit globals.css's `@custom-variant dark` — every
+ * `dark:`-prefixed utility here was silently falling back to Tailwind's
+ * default `@media (prefers-color-scheme: dark)` gate instead of the `.dark`
+ * class next-themes toggles (theme-provider.tsx, `attribute="class"`).
+ * Confirmed empirically: a `dark:`-prefixed rule kept applying regardless of
+ * the toggle, purely based on the OS color-scheme preference. This mirrors
+ * globals.css's own declaration so `dark:` behaves identically in both.
+ */
+@custom-variant dark (&:is(.dark *));
+
+/**
+ * Tokens that differ between light/dark (neutrals, gold, shadows) are
+ * declared here as PLAIN custom properties, then referenced with `var()`
+ * from the `@theme inline` block below — mirroring globals.css's own
+ * `--color-background: var(--background)` pattern. This two-level
+ * indirection is required, not stylistic: `@theme inline` resolves each
+ * entry as literally as it statically can, so a direct literal
+ * (`--color-pub-neutral-900: #1a1a1a`) gets baked into every utility's
+ * compiled CSS at build time — a later `.dark { --color-pub-neutral-900: ... }`
+ * override would then have no effect, since nothing in the compiled output
+ * still reads the variable at paint time. Routing through an intermediate
+ * var (which Tailwind can't resolve at build time, since its value depends
+ * on which class is present at runtime) forces the utility to keep
+ * referencing it live — confirmed by inspecting the compiled CSS both ways.
+ */
+:root {
+  --pub-neutral-white: #ffffff;
+  --pub-neutral-bg: #fffdf8;
+  --pub-neutral-50: #faf7ef;
+  --pub-neutral-100: #f3efe4;
+  --pub-neutral-200: #e9e3d4;
+  --pub-neutral-500: #746e60;
+  --pub-neutral-700: #45413a;
+  --pub-neutral-900: #1a1a1a;
+
+  --pub-gold-800: #8a651c; /* darkened slightly from #8f6a1f — closes a 4.28:1 WCAG AA gap (needs 4.5:1) against the gold-100 chip background used for notice banners */
+  --pub-gold-700: #a67c2e;
+  --pub-gold-500: #c89b3c;
+  --pub-gold-300: #ddb862;
+  --pub-gold-100: #f9eed1;
+
+  /* Error/destructive chip surface — same 100/700/300 shape as gold above,
+     built from the existing --color-pub-error hue (#b3432f) so a status like
+     "cancelled" can use a themed chip instead of Tailwind's default red-*. */
+  --pub-error-700: #9c3823;
+  --pub-error-300: #e08872;
+  --pub-error-100: #fbe4df;
+
+  --pub-shadow-sm: 0 1px 3px rgba(15, 81, 50, 0.07);
+  --pub-shadow-md: 0 8px 24px -4px rgba(15, 81, 50, 0.12);
+  --pub-shadow-lg: 0 20px 48px -12px rgba(15, 81, 50, 0.18);
+  --pub-shadow-xl: 0 32px 64px -16px rgba(15, 81, 50, 0.24);
+}
+
+/**
+ * Dark-theme overrides for the public site (design/06-Design-System.md dark
+ * mode addendum). `next-themes` (components/providers/theme-provider.tsx)
+ * already toggles a `.dark` class on <html> globally.
+ *
+ * Deliberately NOT overridden here: the emerald `--color-pub-primary-*` ramp.
+ * It's already used as a self-contained dark panel (hero overlay, footer,
+ * impact section gradients) in both themes — remapping it would break those,
+ * not fix anything. Where `primary-700..950` is instead used as *text/icon
+ * color on a card surface* (which does need to flip in dark mode), that's
+ * handled with targeted `dark:` variant classes at the component, not here.
+ */
+.dark {
+  --pub-neutral-white: #0d261e; /* card surfaces */
+  --pub-neutral-bg: #071a14; /* page background */
+  --pub-neutral-50: #0d261e;
+  --pub-neutral-100: #123126;
+  --pub-neutral-200: rgba(213, 170, 74, 0.18); /* borders — gold-tinted, sparing use */
+  --pub-neutral-500: #a8b6ae; /* muted text */
+  --pub-neutral-700: #c9d2cc; /* secondary text */
+  --pub-neutral-900: #f5f1e8; /* primary text */
+
+  --pub-gold-100: rgba(213, 170, 74, 0.14);
+  --pub-gold-300: #e8c77a;
+  --pub-gold-500: #d5aa4a;
+  --pub-gold-700: #c99a3d;
+  --pub-gold-800: #b98a34;
+
+  --pub-error-100: rgba(211, 90, 60, 0.18);
+  --pub-error-300: #e5987f;
+  --pub-error-700: #d5735a;
+
+  --pub-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --pub-shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+  --pub-shadow-lg: 0 20px 48px -12px rgba(0, 0, 0, 0.5);
+  --pub-shadow-xl: 0 32px 64px -16px rgba(0, 0, 0, 0.55);
+}
+
+@theme inline {
+  /* Primary — deep emerald green. Constant across themes (see note above),
+     so these stay direct literals — nothing to reference, nothing lost by
+     `inline` resolving them at build time. */
+  --color-pub-primary-950: #08301d;
+  --color-pub-primary-900: #0f5132;
+  --color-pub-primary-800: #12613c;
+  --color-pub-primary-700: #157248;
+  --color-pub-primary-600: #1a8a57;
+  --color-pub-primary-500: #22a36a;
+  --color-pub-primary-100: #e3f3ea;
+  --color-pub-primary-50: #f2f9f5;
+
+  /* Secondary — antique gold (theme-varying, see :root/.dark above) */
+  --color-pub-gold-800: var(--pub-gold-800);
+  --color-pub-gold-700: var(--pub-gold-700);
+  --color-pub-gold-500: var(--pub-gold-500);
+  --color-pub-gold-300: var(--pub-gold-300);
+  --color-pub-gold-100: var(--pub-gold-100);
+
+  /* Accent — warm terracotta, used sparingly for highlights/badges */
+  --color-pub-accent-700: #b9601a;
+  --color-pub-accent-500: #e67e22;
+  --color-pub-accent-100: #fce6d1;
+
+  /* Error/destructive chip surface (theme-varying, see :root/.dark above) —
+     status badges like "cancelled" use this instead of Tailwind's default
+     red-*, matching the gold chip's 100/700/300 shape. */
+  --color-pub-error-700: var(--pub-error-700);
+  --color-pub-error-300: var(--pub-error-300);
+  --color-pub-error-100: var(--pub-error-100);
+
+  /* Neutrals — warm ivory family, not cold gray (theme-varying) */
+  --color-pub-neutral-white: var(--pub-neutral-white);
+  --color-pub-neutral-bg: var(--pub-neutral-bg);
+  --color-pub-neutral-50: var(--pub-neutral-50);
+  --color-pub-neutral-100: var(--pub-neutral-100);
+  --color-pub-neutral-200: var(--pub-neutral-200);
+  --color-pub-neutral-500: var(--pub-neutral-500);
+  --color-pub-neutral-700: var(--pub-neutral-700);
+  --color-pub-neutral-900: var(--pub-neutral-900);
+
+  --color-pub-success: #157248;
+  --color-pub-warning: var(--pub-gold-700);
+  --color-pub-error: #b3432f;
+  --color-pub-info: #2e6b9e;
+
+  --font-pub-heading: var(--font-playfair), var(--font-noto-telugu), serif;
+  --font-pub-body: var(--font-inter), var(--font-noto-telugu), sans-serif;
+
+  /* Soft, warm-toned premium shadows (never pure black), theme-varying */
+  --shadow-pub-sm: var(--pub-shadow-sm);
+  --shadow-pub-md: var(--pub-shadow-md);
+  --shadow-pub-lg: var(--pub-shadow-lg);
+  --shadow-pub-xl: var(--pub-shadow-xl);
+  --shadow-pub-gold: 0 10px 30px -8px rgba(200, 155, 60, 0.45);
+
+  --radius-pub-card: 1.125rem; /* 18px */
+  --radius-pub-lg: 1.75rem;
+  --radius-pub-pill: 999px;
+  --radius-pub-image: 1rem; /* 16px */
+  --radius-pub-input: 0.75rem; /* 12px */
+}
+
+.font-public {
+  font-family: var(--font-pub-body);
+  color: var(--color-pub-neutral-900);
+  background-color: var(--color-pub-neutral-bg);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.font-public :lang(te) {
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reusable premium visual utilities — public site only                */
+/* ------------------------------------------------------------------ */
+
+.pub-glass {
+  background: color-mix(in oklab, var(--color-pub-neutral-white) 70%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--color-pub-neutral-white) 40%, transparent);
+}
+
+.pub-glass-dark {
+  background: color-mix(in oklab, var(--color-pub-primary-950) 55%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--color-pub-neutral-white) 12%, transparent);
+}
+
+/**
+ * Homepage sticky-header surface — a near-opaque premium ivory/charcoal
+ * bar, not a see-through glass panel. Deliberately higher opacity than
+ * `.pub-glass` (96% vs 70%): the header sits directly over a full-bleed
+ * hero photo here, and a lighter tint read as a flat grey overlay with
+ * washed-out text rather than an intentional, readable surface.
+ *
+ * Uses the same `var()` token indirection as `.pub-glass` (not a Tailwind
+ * `dark:` utility) specifically so it reliably follows the `.dark` class
+ * next-themes toggles — public.css is its own separate Tailwind entry
+ * point without globals.css's `@custom-variant dark (&:is(.dark *));`
+ * override, so `dark:`-prefixed utilities here fall back to Tailwind's
+ * default `@media (prefers-color-scheme)` gate instead of the toggle.
+ */
+.pub-header-surface {
+  background: color-mix(in oklab, var(--color-pub-neutral-bg) 96%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-pub-primary-900) 8%, transparent);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.dark .pub-header-surface {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.pub-gradient-gold {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-pub-gold-300) 0%,
+    var(--color-pub-gold-500) 45%,
+    var(--color-pub-gold-700) 100%
+  );
+}
+
+.pub-gradient-emerald {
+  background-image: linear-gradient(
+    160deg,
+    var(--color-pub-primary-800) 0%,
+    var(--color-pub-primary-900) 55%,
+    var(--color-pub-primary-950) 100%
+  );
+}
+
+.pub-gradient-ivory {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, var(--color-pub-primary-50) 0%, transparent 60%),
+    linear-gradient(180deg, var(--color-pub-neutral-bg) 0%, var(--color-pub-neutral-50) 100%);
+}
+
+/* --primary-50 is a bright mint wash by design (correct for the light-theme
+   radial highlight above) — reused as-is it would sit as a jarring pale-green
+   blob on a near-black page, so dark mode gets its own low-opacity emerald
+   glow instead, sized/positioned identically to the light version. */
+.dark .pub-gradient-ivory {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(46, 139, 99, 0.16) 0%, transparent 60%),
+    linear-gradient(180deg, var(--color-pub-neutral-bg) 0%, var(--color-pub-neutral-100) 100%);
+}
+
+@keyframes kenburns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.12) translate(-1%, -1%);
+  }
+}
+
+.pub-text-gradient-gold {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-pub-gold-700) 0%,
+    var(--color-pub-gold-500) 50%,
+    var(--color-pub-gold-300) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.pub-divider-gold {
+  display: block;
+  width: 4.5rem;
+  height: 3px;
+  border-radius: var(--radius-pub-pill);
+  background-image: linear-gradient(90deg, var(--color-pub-gold-700), var(--color-pub-gold-300));
+}
+
+/* Subtle repeating temple-motif texture, used as a low-opacity background
+   layer behind section wrappers — pure CSS, no image asset needed. */
+.pub-texture {
+  background-image: radial-gradient(circle at 1px 1px, rgba(15, 81, 50, 0.08) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .font-public *,
+  .font-public *::before,
+  .font-public *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

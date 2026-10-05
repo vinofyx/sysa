@@ -13,7 +13,12 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
 !.env.example
+!.env.production.example
+
+# Hostinger PHP proxy upstream origin (per-environment Node.js host)
+**/api-upstream.php
 
 # Let's Encrypt certificates/private keys (generated on the VPS by certbot —
 # see infrastructure/README-SSL.md)
@@ -51,3 +56,8 @@ apps/api/uploads/
 
 # Turbo/Cache (reserved, in case adopted later)
 .turbo/
+
+# Local/generated Hostinger deployment artifacts
+SYSA-hostinger-production.zip
+hostinger-site/
+website/sysa_tmp_docx_extract/
