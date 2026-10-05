@@ -56,3 +56,8 @@ apps/api/uploads/
 
 # Turbo/Cache (reserved, in case adopted later)
 .turbo/
+
+# Local/generated Hostinger deployment artifacts
+SYSA-hostinger-production.zip
+hostinger-site/
+website/sysa_tmp_docx_extract/
