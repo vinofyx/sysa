@@ -226,6 +226,23 @@ function runBuild() {
 const LOOPBACK_URL_PATTERN =
   /NEXT_PUBLIC_API_URL\s*:\s*["']https?:\/\/(?:localhost|127\.0\.0\.1|\[?::1\]?)(?::\d+)?["']/;
 const RENDER_API_URL_PATTERN = /NEXT_PUBLIC_API_URL\s*:\s*["'][^"']*onrender\.com[^"']*["']/;
+const LOCALHOST_4000_PATTERN = /localhost:4000/;
+const LOCALHOST_8081_PATTERN = /localhost:8081/;
+
+async function copyHostingerAssets() {
+  const outDir = path.join(webRoot, 'out');
+  const publicDir = path.join(webRoot, 'public');
+  if (!existsSync(outDir)) return;
+
+  const files = ['.htaccess', 'api-proxy.php', 'api-upstream.example.php', 'api-upstream.php'];
+  for (const file of files) {
+    const src = path.join(publicDir, file);
+    if (existsSync(src)) {
+      const dest = path.join(outDir, file);
+      await cp(src, dest, { force: true });
+    }
+  }
+}
 
 async function checkForLoopbackApiUrl() {
   const chunksDir = path.join(webRoot, 'out', '_next', 'static', 'chunks');
@@ -241,7 +258,13 @@ async function checkForLoopbackApiUrl() {
     const contents = await readFile(filePath, 'utf-8');
     const relative = path.relative(webRoot, filePath);
     if (RENDER_API_URL_PATTERN.test(contents)) renderOffenders.push(relative);
-    if (LOOPBACK_URL_PATTERN.test(contents)) loopbackOffenders.push(relative);
+    if (
+      LOOPBACK_URL_PATTERN.test(contents) ||
+      LOCALHOST_4000_PATTERN.test(contents) ||
+      LOCALHOST_8081_PATTERN.test(contents)
+    ) {
+      loopbackOffenders.push(relative);
+    }
   }
 
   if (renderOffenders.length > 0) {
@@ -258,17 +281,11 @@ async function checkForLoopbackApiUrl() {
 
   const allowed = process.env.ALLOW_LOCALHOST_API === 'true';
   const summary =
-    'a dev-only loopback API URL is baked into the production JS bundles ' +
+    'a dev-only loopback API URL (such as localhost:4000) is baked into the production JS bundles ' +
     '(NEXT_PUBLIC_API_URL was not set to a real production value for this build).\n' +
-    '   Admin Login (/login, /forgot-password) will NOT work once uploaded to Hostinger — ' +
+    '   Admin Login (/login, /forgot-password) and Donation verification will NOT work once uploaded to Hostinger — ' +
     "every visitor's browser would try to reach their own machine, not a real server.\n" +
-    '   The rest of the site (public pages, floating socials, Volunteer/Contact forms) is unaffected.\n' +
     '   Fix: set NEXT_PUBLIC_API_URL to the real deployed backend API URL before running this build, e.g.\n' +
-    // NEXT_PUBLIC_API_URL is the bare API origin — api-client.ts appends
-    // `/api/v1` itself, and nginx's `location /api/` proxies straight through
-    // to the api service without stripping the prefix (infrastructure/nginx/
-    // conf.d/default.conf), so a value ending in `/api` here would double it
-    // up into `/api/api/v1/...` and break every request.
     '     NEXT_PUBLIC_API_URL=https://sysa.in npm run build:static\n' +
     '   Affected files:\n' +
     loopbackOffenders.map((f) => '     - ' + f).join('\n');
@@ -287,6 +304,7 @@ let exitCode = 0;
 try {
   await moveAside();
   await runBuild();
+  await copyHostingerAssets();
   await checkForLoopbackApiUrl();
   console.log('\nStatic export complete: website/out/');
 } catch (err) {

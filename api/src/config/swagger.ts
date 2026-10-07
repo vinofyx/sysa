@@ -1279,6 +1279,27 @@ const phase7Paths: OpenAPIV3.PathsObject = {
       },
     },
   },
+  '/payments/razorpay/webhook': {
+    post: {
+      tags: ['Webhooks'],
+      summary:
+        'Primary Razorpay payment webhook endpoint (HMAC signature-verified, https://sysa.in/api/v1/payments/razorpay/webhook)',
+      security: [],
+      parameters: [
+        {
+          name: 'X-Razorpay-Signature',
+          in: 'header',
+          required: true,
+          schema: { type: 'string' },
+        },
+      ],
+      responses: {
+        '200': { description: 'Acknowledged' },
+        '400': errorResponse,
+        '401': errorResponse,
+      },
+    },
+  },
   '/donor-auth/request-otp': {
     post: {
       tags: ['Donor Auth'],

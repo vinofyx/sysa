@@ -573,15 +573,59 @@ export async function issueReceipt(
     }
 
     const current = (await receiptRepo.findByDonationIdWithDonation(donationId)) ?? pdf.receipt;
-    const emailStatus = await deliverEmail(current, pdf.pdfBuffer, forcePending);
+
+    let emailStatus: DeliveryStatus | null = null;
+    try {
+      emailStatus = await deliverEmail(current, pdf.pdfBuffer, forcePending);
+    } catch (error) {
+      logger.error('Email delivery threw an error', {
+        donationId,
+        receiptId: current.id,
+        error: error instanceof Error ? error.message : error,
+      });
+      emailStatus = 'failed';
+    }
+
     const afterEmail = (await receiptRepo.findByDonationIdWithDonation(donationId)) ?? current;
-    const orgEmailStatus = await deliverOrgEmail(afterEmail, pdf.pdfBuffer, forcePending);
+    let orgEmailStatus: DeliveryStatus | null = null;
+    try {
+      orgEmailStatus = await deliverOrgEmail(afterEmail, pdf.pdfBuffer, forcePending);
+    } catch (error) {
+      logger.error('Organisation email delivery threw an error', {
+        donationId,
+        receiptId: afterEmail.id,
+        error: error instanceof Error ? error.message : error,
+      });
+      orgEmailStatus = 'failed';
+    }
+
     const afterOrgEmail =
       (await receiptRepo.findByDonationIdWithDonation(donationId)) ?? afterEmail;
-    const whatsappStatus = await deliverWhatsApp(afterOrgEmail, forcePending);
+    let whatsappStatus: DeliveryStatus | null = null;
+    try {
+      whatsappStatus = await deliverWhatsApp(afterOrgEmail, forcePending);
+    } catch (error) {
+      logger.error('WhatsApp delivery threw an error', {
+        donationId,
+        receiptId: afterOrgEmail.id,
+        error: error instanceof Error ? error.message : error,
+      });
+      whatsappStatus = 'failed';
+    }
+
     const afterWhatsApp =
       (await receiptRepo.findByDonationIdWithDonation(donationId)) ?? afterOrgEmail;
-    const smsStatus = await deliverSms(afterWhatsApp, forcePending);
+    let smsStatus: DeliveryStatus | null = null;
+    try {
+      smsStatus = await deliverSms(afterWhatsApp, forcePending);
+    } catch (error) {
+      logger.error('SMS delivery threw an error', {
+        donationId,
+        receiptId: afterWhatsApp.id,
+        error: error instanceof Error ? error.message : error,
+      });
+      smsStatus = 'failed';
+    }
 
     // A dry run records every channel as not sent on purpose — retrying it
     // would only repeat the same no-op.
@@ -703,15 +747,38 @@ export async function retryFailedDeliveries(donationId: string): Promise<{
   let whatsappStatus: DeliveryStatus | null = receipt.whatsappStatus;
 
   if (receipt.donation.donor.email && receipt.emailStatus !== 'sent') {
-    emailStatus = await retryReceiptEmail(donationId);
+    try {
+      emailStatus = await retryReceiptEmail(donationId);
+    } catch (error) {
+      logger.error('Failed to retry receipt email', {
+        donationId,
+        error: error instanceof Error ? error.message : error,
+      });
+      emailStatus = 'failed';
+    }
   }
   if (receipt.donation.donor.phone && receipt.whatsappStatus !== 'sent') {
-    whatsappStatus = await retryReceiptWhatsApp(donationId);
+    try {
+      whatsappStatus = await retryReceiptWhatsApp(donationId);
+    } catch (error) {
+      logger.error('Failed to retry receipt WhatsApp', {
+        donationId,
+        error: error instanceof Error ? error.message : error,
+      });
+      whatsappStatus = 'failed';
+    }
   }
   // The organisation copy rides along on any retry; its status is internal,
   // so the donor-facing response shape is unchanged.
   if (receipt.orgEmailStatus !== 'sent') {
-    await retryReceiptOrgEmail(donationId);
+    try {
+      await retryReceiptOrgEmail(donationId);
+    } catch (error) {
+      logger.error('Failed to retry receipt organisation email', {
+        donationId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
   }
 
   return { emailStatus, whatsappStatus };

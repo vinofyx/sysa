@@ -6,9 +6,14 @@ import { processRazorpayWebhook } from '@services/webhook.service';
 export const webhooksRouter = Router();
 
 /**
- * Shared Razorpay webhook handler — mounted at both `POST /webhooks/razorpay`
- * (historical dashboard URL) and `POST /donations/razorpay-webhook` (spec
- * alias). Not rate-limited or session-authenticated; trust comes entirely
+ * Shared Razorpay webhook handler — mounted at:
+ * - `POST /api/v1/payments/razorpay/webhook` (primary Razorpay production webhook URL: https://sysa.in/api/v1/payments/razorpay/webhook)
+ * - `POST /api/v1/payments/razorpay`
+ * - `POST /api/v1/webhooks/razorpay`
+ * - `POST /api/v1/webhooks/razorpay/webhook`
+ * - `POST /api/v1/donations/razorpay-webhook` (spec alias)
+ *
+ * Not rate-limited or session-authenticated; trust comes entirely
  * from the HMAC check inside `processRazorpayWebhook`.
  */
 export async function handleRazorpayWebhook(
@@ -30,3 +35,6 @@ export async function handleRazorpayWebhook(
 }
 
 webhooksRouter.post('/razorpay', handleRazorpayWebhook);
+webhooksRouter.post('/razorpay/webhook', handleRazorpayWebhook);
+webhooksRouter.post('/razorpay-webhook', handleRazorpayWebhook);
+webhooksRouter.post('/webhook', handleRazorpayWebhook);

@@ -82,6 +82,7 @@ v1Router.use('/bank-transfers', bankTransfersRouter);
 
 // Payments (Phase 7)
 v1Router.use('/webhooks', webhooksRouter);
+v1Router.use('/payments', webhooksRouter);
 v1Router.use('/donor-auth', donorAuthRouter);
 v1Router.use('/donors', donorsRouter);
 

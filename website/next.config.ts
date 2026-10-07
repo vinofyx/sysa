@@ -33,7 +33,9 @@ function buildContentSecurityPolicy(): string {
   // port in dev, typically a separate subdomain in production) — the public
   // site's client-side code calls it directly via axios, so it MUST be
   // allowed in connect-src or every fetch from the browser breaks.
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL ??
+    (process.env.NODE_ENV === 'production' ? 'https://sysa.in' : 'http://localhost:4000');
   const apiOrigin = new URL(apiUrl).origin;
 
   // `next dev`'s webpack runtime wraps every module in `eval(...)` for fast

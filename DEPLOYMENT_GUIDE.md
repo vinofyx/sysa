@@ -55,7 +55,7 @@ Do these in order. Secrets exist only on the Node host.
 11. Upload `.htaccess`, `api-proxy.php`, and the rebuilt site from `website/out/` (or `hostinger-site/`).
 12. Confirm `curl -i https://sysa.in/api/v1/health` is JSON 200 from Node (via the proxy).
 13. Confirm `/donate` uses Checkout (`initiate` → Razorpay Checkout → `verify`). It must not contain `payment-button.js` or `pl_TRewIwDkL2fw6u`.
-14. Razorpay Dashboard webhook: `https://sysa.in/api/v1/webhooks/razorpay`, event `payment.captured`. Keep alias `/api/v1/donations/razorpay-webhook`. Secret only on the Node host.
+14. Razorpay Dashboard webhook: `https://sysa.in/api/v1/payments/razorpay/webhook`, event `payment.captured`. Keep aliases `/api/v1/webhooks/razorpay` and `/api/v1/donations/razorpay-webhook`. Secret only on the Node host.
 15. Configure SMTP and Cloudinary on the Node host. WhatsApp is optional.
 16. One **Razorpay test-mode** donation. Do not use live keys merely to test. Confirm one PDF, Cloudinary when configured, email, WhatsApp when configured, independent delivery statuses, no duplicate receipt on repeat verify/webhook.
 
@@ -196,9 +196,9 @@ pm2 startup   # persist across server reboots
 ## 7. Razorpay Webhook Configuration (do this after deployment)
 
 1. In the Razorpay Dashboard → Settings → Webhooks, set the webhook URL to:
-   `https://sysa.in/api/v1/webhooks/razorpay`
-   (fallback if the API is only on a subdomain: `https://api.sysa.in/api/v1/webhooks/razorpay`)
-2. Subscribe to `payment.captured` (required). `payment.failed` is optional. The alias `POST /api/v1/donations/razorpay-webhook` uses the same handler — keep it working; do not point Razorpay at Render.
+   `https://sysa.in/api/v1/payments/razorpay/webhook`
+   (aliases supported: `https://sysa.in/api/v1/webhooks/razorpay`, `https://sysa.in/api/v1/donations/razorpay-webhook`; fallback if on subdomain: `https://api.sysa.in/api/v1/payments/razorpay/webhook`)
+2. Subscribe to `payment.captured` (required). `payment.failed` is optional. All aliases use the same HMAC-verified handler; do not point Razorpay at Render.
 3. Razorpay will show you a **webhook secret** at creation time — this is `RAZORPAY_WEBHOOK_SECRET`, distinct from your API key secret. Set it only in the API host environment. Never put it in the static website.
 4. Use Razorpay's "Send Test Webhook" feature to confirm delivery — the API should respond `200`. A `401` means the webhook secret doesn't match; check for copy-paste errors.
 

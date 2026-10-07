@@ -142,7 +142,7 @@ This starts MySQL, the API, the Next.js frontend, and an Nginx reverse proxy (`h
 - **Public API URL:** `https://sysa.in/api/v1`. Hostinger `api-proxy.php` forwards `/api/*` (method, query, Authorization, raw body) to the Node origin in `api-upstream.php`. Do not put `/api/v1` on that origin.
 - **Database:** Hostinger MySQL via `DATABASE_URL` on the Node host only. Enable **Remote MySQL** for the Node host IP. Run `npx prisma migrate deploy` against production — never `migrate reset`, never local `sysa_local_dev`.
 - **Secrets:** Razorpay secret, webhook secret, SMTP, WhatsApp, Cloudinary secret, JWT, and `DATABASE_URL` stay on the Node host. The website may only contain `NEXT_PUBLIC_API_URL=https://sysa.in` and the public Razorpay key returned by `initiate`.
-- **Razorpay:** Checkout is `initiate` → Checkout → `verify`. Webhook `https://sysa.in/api/v1/webhooks/razorpay` (`payment.captured`). Validate with **test-mode** keys, not live charges.
+- **Razorpay:** Checkout is `initiate` → Checkout → `verify`. Webhook `https://sysa.in/api/v1/payments/razorpay/webhook` (`payment.captured`, alias `https://sysa.in/api/v1/webhooks/razorpay`). Validate with **test-mode** keys, not live charges.
 
 Step-by-step checklist, env templates (`api/.env.production.example`), and proxy files: [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md).
 

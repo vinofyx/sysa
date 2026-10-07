@@ -11,8 +11,16 @@ import { z } from 'zod';
 // files — they configure everything they need in src/tests/setup-env.ts,
 // which also sets SYSA_TEST_ISOLATION so this holds even if NODE_ENV is off.
 if (process.env.NODE_ENV !== 'test' && process.env.SYSA_TEST_ISOLATION !== '1') {
+  const explicitPort = process.env.PORT;
+  const explicitBindHost = process.env.BIND_HOST;
   loadDotenv();
   loadDotenv({ path: '.env.local', override: true });
+  if (explicitPort) {
+    process.env.PORT = explicitPort;
+  }
+  if (explicitBindHost) {
+    process.env.BIND_HOST = explicitBindHost;
+  }
 }
 
 /**
@@ -117,9 +125,10 @@ const envSchema = z.object({
   MSG91_WHATSAPP_INTEGRATED_NUMBER: z.string().optional(),
   MSG91_WHATSAPP_TEMPLATE_NAME: z.string().optional(),
   MSG91_WHATSAPP_TEMPLATE_LANGUAGE: z.string().default('en'),
-  // Namespace of the approved sysa_general_update template (per WABA
-  // account, not a secret).
-  MSG91_WHATSAPP_TEMPLATE_NAMESPACE: z.string().default('f8f2a2af_29b5_4fab_a60c_d1ba6dbfd04f'),
+  // Namespace of the approved sysa_general_update template (optional — MSG91
+  // automatically resolves the template namespace from the integrated number
+  // and template name unless explicitly specified).
+  MSG91_WHATSAPP_TEMPLATE_NAMESPACE: z.string().optional(),
   MSG91_WHATSAPP_API_URL: z.string().url().optional(),
   // Optional JSON map of MSG91 component keys to receipt fields, e.g.
   // '{"body_1":"customerName","body_2":"amountFormatted","body_3":"receiptNumber"}'

@@ -48,3 +48,38 @@ describe('Razorpay signature verification', () => {
     assert.equal(verifyWebhookSignature(rawBody, 'deadbeef'), false);
   });
 });
+
+describe('Razorpay webhook endpoint handler (POST /api/v1/payments/razorpay/webhook)', () => {
+  it('rejects missing rawBody with 400 Bad Request', async () => {
+    const { handleRazorpayWebhook } = await import('@routes/v1/webhooks.routes');
+    const { ApiError } = await import('@utils/api-error');
+
+    let capturedError: unknown = null;
+    await handleRazorpayWebhook({ headers: {} } as any, {} as any, (err) => {
+      capturedError = err;
+    });
+
+    assert.ok(capturedError instanceof ApiError);
+    assert.equal(capturedError.statusCode, 400);
+    assert.equal(capturedError.message, 'Missing request body');
+  });
+
+  it('rejects an invalid webhook signature with 401 Unauthorized', async () => {
+    const { handleRazorpayWebhook } = await import('@routes/v1/webhooks.routes');
+    const { ApiError } = await import('@utils/api-error');
+
+    let capturedError: unknown = null;
+    const req = {
+      headers: { 'x-razorpay-signature': 'invalid_signature_hex' },
+      rawBody: Buffer.from(JSON.stringify({ event: 'payment.captured' })),
+    };
+
+    await handleRazorpayWebhook(req as any, {} as any, (err) => {
+      capturedError = err;
+    });
+
+    assert.ok(capturedError instanceof ApiError);
+    assert.equal(capturedError.statusCode, 401);
+    assert.equal(capturedError.message, 'Invalid webhook signature');
+  });
+});

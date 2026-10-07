@@ -31,11 +31,11 @@ function resolveClientEnv() {
   return {
     NEXT_PUBLIC_API_URL:
       process.env.NODE_ENV !== 'production' && usingProductionHost(apiUrl)
-        ? 'http://localhost:5050'
+        ? 'http://localhost:8081'
         : apiUrl,
     NEXT_PUBLIC_SITE_URL:
       process.env.NODE_ENV !== 'production' && usingProductionHost(siteUrl)
-        ? 'http://localhost:3030'
+        ? 'http://localhost:3031'
         : siteUrl,
   };
 }

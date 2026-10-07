@@ -409,6 +409,38 @@ describe('Provider failures never affect the payment', () => {
     assert.equal(smsBodies.length, attempts + 1);
     assert.equal(db.donations.get(donationId)?.status, 'completed');
   });
+
+  it('unexpected email crash does not prevent WhatsApp or SMS from going out', async () => {
+    mock.method(getMailer(), 'sendMail', async () => {
+      throw new Error('Unexpected fatal mailer crash');
+    });
+    const { donationId } = await payAndVerify();
+    const receipt = receiptFor(donationId);
+    assert.equal(db.donations.get(donationId)?.status, 'completed');
+    assert.equal(receipt.emailStatus, 'failed');
+    assert.equal(receipt.whatsappStatus, 'sent');
+    assert.equal(receipt.smsStatus, 'sent');
+  });
+
+  it('unexpected WhatsApp crash does not prevent SMS from going out', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('whatsapp')) {
+        throw new Error('Unexpected fatal WhatsApp transport crash');
+      }
+      return originalFetch(input, init);
+    };
+    try {
+      const { donationId } = await payAndVerify();
+      const receipt = receiptFor(donationId);
+      assert.equal(db.donations.get(donationId)?.status, 'completed');
+      assert.equal(receipt.whatsappStatus, 'failed');
+      assert.equal(receipt.smsStatus, 'sent');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Dry-run mode (local / Razorpay test mode)', () => {

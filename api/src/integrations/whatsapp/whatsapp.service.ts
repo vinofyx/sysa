@@ -110,7 +110,7 @@ function receiptCaption(): string {
 }
 
 function msg91AuthKey(): string | undefined {
-  return env.MSG91_WHATSAPP_AUTHKEY || env.SMS_PROVIDER_API_KEY;
+  return env.MSG91_AUTHKEY || env.MSG91_WHATSAPP_AUTHKEY || env.SMS_PROVIDER_API_KEY;
 }
 
 let warnedDefaultComponentMap = false;
@@ -151,7 +151,14 @@ export function parseTemplateVarMap(raw: string): TemplateVarMapResult {
 }
 
 function msg91ComponentMap(): TemplateVarMapResult {
+  if (env.MSG91_WHATSAPP_TEMPLATE_VARS === 'none' || env.MSG91_WHATSAPP_TEMPLATE_VARS === 'empty') {
+    return { ok: true, map: {} };
+  }
   if (!env.MSG91_WHATSAPP_TEMPLATE_VARS) {
+    if (env.MSG91_WHATSAPP_TEMPLATE_NAME === 'sysa_general_update') {
+      // The approved sysa_general_update template on MSG91 has no variables (variables: []).
+      return { ok: true, map: {} };
+    }
     // The default is a guess at the approved template's variable positions.
     // It should be pinned via scripts/msg91-inspect-whatsapp-template.ts.
     if (!warnedDefaultComponentMap) {
@@ -390,8 +397,9 @@ export async function sendWhatsAppReceipt(
   }
 
   const missing = [
-    !msg91AuthKey() && 'MSG91_WHATSAPP_AUTHKEY or SMS_PROVIDER_API_KEY',
-    !env.MSG91_WHATSAPP_INTEGRATED_NUMBER && 'MSG91_WHATSAPP_INTEGRATED_NUMBER',
+    !msg91AuthKey() && 'MSG91_AUTHKEY (or MSG91_WHATSAPP_AUTHKEY / SMS_PROVIDER_API_KEY)',
+    !env.MSG91_WHATSAPP_INTEGRATED_NUMBER &&
+      'MSG91_WHATSAPP_NUMBER or MSG91_WHATSAPP_INTEGRATED_NUMBER',
     !env.MSG91_WHATSAPP_TEMPLATE_NAME && 'MSG91_WHATSAPP_TEMPLATE_NAME',
   ].filter((v): v is string => !!v);
 

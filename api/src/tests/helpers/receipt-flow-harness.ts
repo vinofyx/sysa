@@ -31,6 +31,7 @@ process.env.MSG91_WHATSAPP_NUMBER = '+91 9490118877';
 process.env.MSG91_WABA_ID = '1511221500759195';
 process.env.MSG91_WHATSAPP_TEMPLATE_NAME = 'sysa_general_update';
 process.env.MSG91_WHATSAPP_TEMPLATE_ID = '546722';
+process.env.MSG91_WHATSAPP_TEMPLATE_NAMESPACE = 'f8f2a2af_29b5_4fab_a60c_d1ba6dbfd04f';
 process.env.MSG91_WHATSAPP_TEMPLATE_VARS = JSON.stringify({
   body_1: 'customerName',
   body_2: 'amountFormatted',
