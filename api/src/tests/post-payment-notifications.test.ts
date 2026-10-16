@@ -1,4 +1,10 @@
-import { db, resetDb, seedPendingDonation, type SeedOptions } from './helpers/receipt-flow-harness';
+import {
+  fakeRazorpayPayment,
+  db,
+  resetDb,
+  seedPendingDonation,
+  type SeedOptions,
+} from './helpers/receipt-flow-harness';
 
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -49,7 +55,10 @@ interface SmsBody {
 }
 
 let razorpayStatus = 'captured';
+let razorpayOverrides: Record<string, unknown> = {};
 let smtpAccepts = true;
+/** 5xx = permanent recipient rejection; 4xx = temporary (retryable). */
+let smtpRejectResponse = '550 mailbox unavailable';
 let whatsappOk = true;
 let whatsappErrorMessage = 'Template variables mismatch';
 let smsOk = true;
@@ -67,7 +76,9 @@ function jsonResponse(status: number, body: unknown): Response {
 beforeEach(() => {
   resetDb();
   razorpayStatus = 'captured';
+  razorpayOverrides = {};
   smtpAccepts = true;
+  smtpRejectResponse = '550 mailbox unavailable';
   whatsappOk = true;
   whatsappErrorMessage = 'Template variables mismatch';
   smsOk = true;
@@ -75,13 +86,9 @@ beforeEach(() => {
   whatsappBodies = [];
   smsBodies = [];
 
-  mock.method(getRazorpayClient().payments, 'fetch', async (paymentId: string) => ({
-    id: paymentId,
-    status: razorpayStatus,
-    method: 'upi',
-    fee: 5000,
-    tax: 900,
-  }));
+  mock.method(getRazorpayClient().payments, 'fetch', async (paymentId: string) =>
+    fakeRazorpayPayment(paymentId, razorpayStatus, razorpayOverrides),
+  );
 
   mock.method(getMailer(), 'sendMail', async (message: SentMail) => {
     sentMail.push(message);
@@ -96,7 +103,7 @@ beforeEach(() => {
           accepted: [],
           rejected: [message.to],
           messageId: null,
-          response: '550 mailbox unavailable',
+          response: smtpRejectResponse,
         };
   });
 
@@ -203,7 +210,7 @@ describe('Notifications after a verified payment', () => {
     assert.equal(env.ORG_RECEIPT_EMAIL, ORG_EMAIL);
     assert.equal(orgMail().length, 1);
     const [mail] = orgMail();
-    assert.equal(mail.subject, 'Donation Receipt - Sai Yadadri Seva Ashramam');
+    assert.equal(mail.subject, 'Donation Receipt - Sai Yadadri Seva Ashram');
     for (const expected of [
       'Donor Name: Ravi Kumar',
       `Receipt Number: ${receiptNumber}`,
@@ -225,8 +232,8 @@ describe('Notifications after a verified payment', () => {
     // WhatsApp → donor mobile, approved template, name/amount/receipt only.
     assert.equal(whatsappBodies.length, 1);
     const template = whatsappBodies[0].payload.template;
-    assert.equal(template.name, 'sysa_general_update');
-    assert.equal(template.namespace, 'f8f2a2af_29b5_4fab_a60c_d1ba6dbfd04f');
+    assert.equal(template.name, 'sysa_donation_receipt');
+    assert.equal(template.namespace, 'test_namespace');
     assert.equal(template.language.code, 'en');
     const [recipient] = template.to_and_components;
     assert.deepEqual(recipient.to, ['919876543210']);
@@ -244,7 +251,10 @@ describe('Notifications after a verified payment', () => {
 
     // Donor still receives their own receipt email, same receipt number.
     assert.equal(donorMail().length, 1);
-    assert.equal(donorMail()[0].subject, `Payment Receipt - ${receiptNumber}`);
+    assert.equal(
+      donorMail()[0].subject,
+      `Donation Receipt — Sai Yadadri Seva Ashram — Receipt ${receiptNumber}`,
+    );
   });
 
   it('keeps PAN/Aadhaar out of WhatsApp and SMS, and only masked in email', async () => {
@@ -365,6 +375,7 @@ describe('Idempotency', () => {
 describe('Provider failures never affect the payment', () => {
   it('email failure: payment stays completed, failure recorded, retry sends once with the same receipt', async () => {
     smtpAccepts = false;
+    smtpRejectResponse = '451 4.3.0 temporary local problem'; // transient
     const { donationId } = await payAndVerify();
     const before = receiptFor(donationId);
     assert.equal(db.donations.get(donationId)?.status, 'completed');
@@ -459,15 +470,20 @@ describe('Dry-run mode (local / Razorpay test mode)', () => {
     assert.match(String(receipt.orgEmailFailureReason), /dry-run/);
   });
 
-  it('defaults to dry run in development and for rzp_test_ keys, live for live keys', () => {
+  it('defaults to dry run everywhere and never switches to live automatically', () => {
     const base = { ...env, NOTIFICATIONS_MODE: undefined } as Env;
     assert.equal(notificationsMode({ ...base, NODE_ENV: 'development' }), 'dry_run');
     assert.equal(
       notificationsMode({ ...base, NODE_ENV: 'production', RAZORPAY_KEY_ID: 'rzp_test_abc' }),
       'dry_run',
     );
+    // Even production with LIVE payment keys stays dry-run until opted in.
     assert.equal(
       notificationsMode({ ...base, NODE_ENV: 'production', RAZORPAY_KEY_ID: 'rzp_live_abc' }),
+      'dry_run',
+    );
+    assert.equal(
+      notificationsMode({ ...base, NODE_ENV: 'production', NOTIFICATIONS_MODE: 'live' }),
       'live',
     );
     assert.equal(
@@ -488,8 +504,10 @@ describe('PAN/Aadhaar redaction in logs and stored errors', () => {
     });
     const transport = new winston.transports.Stream({ stream, format: winston.format.json() });
     const previousLevel = logger.level;
-    const silenced = logger.transports.filter((t) => !t.silent);
-    silenced.forEach((t) => (t.silent = true));
+    const silenced = logger.transports.filter((t: winston.transport) => !t.silent);
+    silenced.forEach((t: winston.transport) => {
+      t.silent = true;
+    });
     logger.level = 'debug';
     logger.add(transport);
     return {
@@ -497,7 +515,9 @@ describe('PAN/Aadhaar redaction in logs and stored errors', () => {
       stop: () => {
         logger.remove(transport);
         logger.level = previousLevel;
-        silenced.forEach((t) => (t.silent = false));
+        silenced.forEach((t: winston.transport) => {
+          t.silent = false;
+        });
       },
     };
   }
@@ -532,7 +552,10 @@ describe('PAN/Aadhaar redaction in logs and stored errors', () => {
       capture.stop();
     }
     const reason = String(receiptFor(donationId).whatsappFailureReason);
-    assert.equal(reason, 'Rejected payload for [PAN REDACTED] / [AADHAAR REDACTED]');
+    assert.equal(
+      reason,
+      '[not retried automatically] Rejected payload for [PAN REDACTED] / [AADHAAR REDACTED]',
+    );
     const logText = capture.lines.join('\n');
     assert.ok(!logText.includes('ABCDE1234F') && !logText.includes('1234-5678-9012'));
   });

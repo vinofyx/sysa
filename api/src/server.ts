@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { env } from '@config/env';
 import { logger } from '@lib/logger';
 import { prisma } from '@lib/prisma';
+import { startDeliveryRetryWorker } from './jobs/delivery-retry.worker';
 
 const app = createApp();
 
@@ -12,6 +13,9 @@ const server = app.listen(env.PORT, env.BIND_HOST, () => {
   logger.info(`   Health check: ${env.API_URL}/api/v1/health`);
 });
 
+// Durable receipt-delivery retries (database-backed; see the worker).
+const stopDeliveryRetryWorker = startDeliveryRetryWorker();
+
 /**
  * Graceful shutdown — closes the HTTP server and database connection cleanly on
  * termination signals, so in-flight requests (including donation webhooks) are not
@@ -20,6 +24,7 @@ const server = app.listen(env.PORT, env.BIND_HOST, () => {
  */
 function shutdown(signal: string) {
   logger.info(`${signal} received — shutting down gracefully`);
+  stopDeliveryRetryWorker();
 
   server.close(async () => {
     logger.info('HTTP server closed');

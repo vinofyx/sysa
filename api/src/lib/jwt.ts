@@ -25,6 +25,14 @@ export function signAccessToken(payload: AccessTokenPayload): string {
   } as SignOptions);
 }
 
+/** Admin access tokens only. Donor-session and receipt-link JWTs are signed
+ * with the same secret (lib/donor-jwt.ts), so a valid signature alone is not
+ * enough: without the `type` check a donor's login or a receipt link would
+ * pass as an admin token wherever this is the access check. */
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+  const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as Partial<AccessTokenPayload>;
+  if (payload.type !== 'admin' || !payload.sub || !payload.sid) {
+    throw new jwt.JsonWebTokenError('Not an admin access token');
+  }
+  return payload as AccessTokenPayload;
 }

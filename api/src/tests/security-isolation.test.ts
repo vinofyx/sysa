@@ -43,7 +43,8 @@ describe('Test network isolation', () => {
       'RAZORPAY_KEY_ID',
       'CLOUDINARY_API_SECRET',
     ] as const) {
-      assert.equal(env[key], undefined, `${key} leaked into the test environment`);
+      // assert.ok, not assert.equal: a failure must never print the secret value.
+      assert.ok(env[key] === undefined, `${key} leaked into the test environment`);
     }
   });
 
@@ -89,6 +90,40 @@ describe('Environment resolution', () => {
     assert.ok(result.success, 'env should parse');
     return result.data;
   }
+
+  it('requires DONATION_TOKENS_ISSUED_AFTER to be a past ISO 8601 instant with an explicit zone', () => {
+    assert.equal(
+      resolve({
+        DONATION_TOKENS_ISSUED_AFTER: '2026-10-15T14:00:00Z',
+      }).DONATION_TOKENS_ISSUED_AFTER?.toISOString(),
+      '2026-10-15T14:00:00.000Z',
+    );
+    assert.equal(
+      resolve({
+        DONATION_TOKENS_ISSUED_AFTER: '2026-10-15T19:30:00+05:30',
+      }).DONATION_TOKENS_ISSUED_AFTER?.toISOString(),
+      '2026-10-15T14:00:00.000Z',
+    );
+    assert.equal(resolve({}).DONATION_TOKENS_ISSUED_AFTER, undefined);
+    assert.equal(
+      resolve({ DONATION_TOKENS_ISSUED_AFTER: '' }).DONATION_TOKENS_ISSUED_AFTER,
+      undefined,
+    );
+    // Zoneless (ambiguous), date-only, epoch, garbage, and future values fail at boot.
+    for (const value of [
+      '2026-10-15T14:00:00',
+      '2026-10-15',
+      '1739000000',
+      'garbage',
+      '2099-01-01T00:00:00Z',
+    ]) {
+      assert.equal(
+        parseEnv({ ...base, DONATION_TOKENS_ISSUED_AFTER: value }).success,
+        false,
+        value,
+      );
+    }
+  });
 
   it('makes MSG91_AUTHKEY canonical over stale legacy key names', () => {
     const data = resolve({

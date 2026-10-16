@@ -548,7 +548,7 @@ async function main() {
       titleEn: 'Vanaprasthasramam (Old Age Home)',
       iconOrImageUrl: '/images/real/residents-activities.jpg',
       descriptionEn: `
-<p>Vanaprasthasramam is the residential Old Age Home of Sai Yadadri Seva Ashramam, located at Peddakonduru Village, Choutuppal Mandal, Yadadri Bhuvanagiri District. The home is run in association with the Indian Red Cross Society and currently supports 40 residents, providing them with a safe and caring residential environment.</p>
+<p>Vanaprasthasramam is the residential Old Age Home of Sai Yadadri Seva Ashram, located at Peddakonduru Village, Choutuppal Mandal, Yadadri Bhuvanagiri District. The home is run in association with the Indian Red Cross Society and currently supports 40 residents, providing them with a safe and caring residential environment.</p>
 <h2>A Home Built on Care, Companionship and Respect</h2>
 <p>Vanaprasthasramam strives to provide poor elderly people with a supportive environment where their everyday needs are cared for with dignity and compassion. The home brings together essential residential care, nourishment, companionship and wellbeing support, helping residents experience a sense of belonging and community.</p>
 <h2>Supporting Everyday Life with Care</h2>
@@ -565,7 +565,7 @@ async function main() {
 <h2>A Community of 40 Residents</h2>
 <p>The home currently supports 40 residents. Beyond providing accommodation, Vanaprasthasramam seeks to create an environment where residents can spend their days with companionship, care and dignity.</p>
 <h2>Your Support Helps Us Continue This Seva</h2>
-<p>Your support can help Sai Yadadri Seva Ashramam continue providing care, nourishment, companionship and wellbeing support to the residents of Vanaprasthasramam. Every contribution becomes a meaningful part of this service.</p>
+<p>Your support can help Sai Yadadri Seva Ashram continue providing care, nourishment, companionship and wellbeing support to the residents of Vanaprasthasramam. Every contribution becomes a meaningful part of this service.</p>
 <p><em>At Vanaprasthasramam, care is expressed through everyday acts of kindness, companionship and service.</em></p>
 `.trim(),
       linkedCategoryCode: 'OLD_AGE_HOME',
@@ -577,9 +577,9 @@ async function main() {
       iconOrImageUrl: '/images/real/annaprasadam-hall.jpg',
       descriptionEn: `
 <p><em>Sharing Food. Sharing Care. Serving with Love.</em></p>
-<p>Annaprasadam is a simple and meaningful way to serve the residents of Sai Yadadri Seva Ashramam. Individuals and families can sponsor nutritious meals on birthdays, anniversaries, memorial days and other special family occasions, turning personal moments into opportunities for selfless service.</p>
+<p>Annaprasadam is a simple and meaningful way to serve the residents of Sai Yadadri Seva Ashram. Individuals and families can sponsor nutritious meals on birthdays, anniversaries, memorial days and other special family occasions, turning personal moments into opportunities for selfless service.</p>
 <h2>A Meal Offered with Love</h2>
-<p>At Sai Yadadri Seva Ashramam, Annaprasadam represents more than providing a meal. It is an expression of care, dignity and togetherness. Through the support of individuals and families, meals are sponsored for the residents of the Ashram, creating a meaningful connection between special occasions and the spirit of seva.</p>
+<p>At Sai Yadadri Seva Ashram, Annaprasadam represents more than providing a meal. It is an expression of care, dignity and togetherness. Through the support of individuals and families, meals are sponsored for the residents of the Ashram, creating a meaningful connection between special occasions and the spirit of seva.</p>
 <h2>How You Can Sponsor</h2>
 <p>You can dedicate a meal in honour of a special occasion or loved one and make your celebration a meaningful act of service.</p>
 <ul>
@@ -599,7 +599,7 @@ async function main() {
 <h2>Why Annaprasadam Matters</h2>
 <p>A nutritious meal is more than food — it is an expression of care, dignity and community. Annaprasadam brings donors and residents together through a simple, heartfelt act of service and allows special occasions to become moments of sharing and compassion.</p>
 <h2>Share a Meal. Share Your Blessings.</h2>
-<p>Your support helps us continue providing meals to the residents of Sai Yadadri Seva Ashramam. Make your next special occasion an opportunity to serve, share and bring warmth to someone else's day.</p>
+<p>Your support helps us continue providing meals to the residents of Sai Yadadri Seva Ashram. Make your next special occasion an opportunity to serve, share and bring warmth to someone else's day.</p>
 `.trim(),
       linkedCategoryCode: 'ANNAPRASADAM',
       displayOrder: 2,
@@ -610,7 +610,7 @@ async function main() {
       iconOrImageUrl: '/images/real/goshala-goseva.jpg',
       descriptionEn: `
 <p><em>Serving with Compassion. Caring with Devotion.</em></p>
-<p>Sai Yadadri Seva Ashramam maintains a dedicated cow shelter caring for 10 cows and 10 calves, supported by approximately 2 acres of land dedicated to fodder cultivation (Gograsam).</p>
+<p>Sai Yadadri Seva Ashram maintains a dedicated cow shelter caring for 10 cows and 10 calves, supported by approximately 2 acres of land dedicated to fodder cultivation (Gograsam).</p>
 <h2>A Dedicated Space for Goseva</h2>
 <p>The Ashram's Goshala provides a dedicated space for the care and well-being of its cows and calves. The Goshala is supported by approximately 2 acres of land used for fodder (Gograsam) cultivation, helping provide the resources needed for their daily care.</p>
 <h2>What Goseva Involves</h2>
@@ -633,7 +633,7 @@ async function main() {
 <li><strong>Monthly Goseva — ₹11,116:</strong> Provide enhanced monthly support towards the continued care and maintenance of the Goshala.</li>
 </ul>
 <h2>Support Goseva</h2>
-<p>Your support helps Sai Yadadri Seva Ashramam continue the daily care, shelter maintenance and fodder cultivation that sustain the Goshala. Offer your support and become part of this ongoing seva.</p>
+<p>Your support helps Sai Yadadri Seva Ashram continue the daily care, shelter maintenance and fodder cultivation that sustain the Goshala. Offer your support and become part of this ongoing seva.</p>
 `.trim(),
       linkedCategoryCode: 'GOSHALA',
       displayOrder: 3,
@@ -644,7 +644,7 @@ async function main() {
       iconOrImageUrl: '/images/real/education-outreach.jpg',
       descriptionEn: `
 <p><em>Supporting Learning. Creating Opportunities.</em></p>
-<p>Sai Yadadri Seva Ashramam supports education through school support, study materials, tuition assistance and Vidya Volunteers, helping reduce the financial barriers that can prevent children and students from accessing learning opportunities.</p>
+<p>Sai Yadadri Seva Ashram supports education through school support, study materials, tuition assistance and Vidya Volunteers, helping reduce the financial barriers that can prevent children and students from accessing learning opportunities.</p>
 <h2>Education as a Path to Opportunity</h2>
 <p>The Ashram believes that financial circumstances should not become a barrier to learning. Through education-focused initiatives, the Ashram supports students and schools with learning materials, academic assistance and targeted financial support.</p>
 <h2>Our Education Initiatives</h2>
@@ -671,7 +671,7 @@ async function main() {
       iconOrImageUrl: '/images/real/medical-camp.jpg',
       descriptionEn: `
 <p><em>Extending Care When It Matters Most.</em></p>
-<p>Sai Yadadri Seva Ashramam extends support to people facing healthcare challenges through medical camps, eye-testing camps, financial assistance for chronic illness, and support for essential medicines and medical infrastructure.</p>
+<p>Sai Yadadri Seva Ashram extends support to people facing healthcare challenges through medical camps, eye-testing camps, financial assistance for chronic illness, and support for essential medicines and medical infrastructure.</p>
 <h2>Care, Compassion and Practical Support</h2>
 <p>Healthcare needs can place a significant financial and emotional burden on vulnerable individuals and families. Through its medical support initiatives, the Ashram seeks to provide practical assistance to people who may otherwise struggle to meet essential healthcare needs.</p>
 <h2>Our Medical Support Initiatives</h2>
@@ -688,7 +688,7 @@ async function main() {
 <h2>Emergency Medical Corpus</h2>
 <p>The Emergency Medical Corpus enables the Ashram to extend targeted financial support towards urgent medical needs and healthcare challenges faced by people in need.</p>
 <h2>Help Us Continue This Seva</h2>
-<p>Your support helps Sai Yadadri Seva Ashramam continue providing medical assistance, essential medicines and community health support to people facing healthcare challenges.</p>
+<p>Your support helps Sai Yadadri Seva Ashram continue providing medical assistance, essential medicines and community health support to people facing healthcare challenges.</p>
 `.trim(),
       linkedCategoryCode: 'EMERGENCY_MEDICAL_FUND',
       displayOrder: 5,
@@ -699,7 +699,7 @@ async function main() {
       iconOrImageUrl: '/images/real/dailyseva.png',
       descriptionEn: `
 <p><em>A Daily Rhythm of Prayer, Care and Togetherness.</em></p>
-<p>Life at Sai Yadadri Seva Ashramam includes daily activities that support the physical, emotional and spiritual wellbeing of residents. These simple routines bring structure, companionship, recreation and opportunities for devotion into everyday life.</p>
+<p>Life at Sai Yadadri Seva Ashram includes daily activities that support the physical, emotional and spiritual wellbeing of residents. These simple routines bring structure, companionship, recreation and opportunities for devotion into everyday life.</p>
 <h2>Life at the Ashram</h2>
 <p>The Ashram is more than a residence. It is a community where everyday moments are shared through prayer, reflection, recreation and companionship. Our daily routine encourages residents to remain engaged, connected and supported while creating a peaceful rhythm of life.</p>
 <h2>Our Daily Routine</h2>
@@ -715,7 +715,7 @@ async function main() {
 <h2>A Community, Not Just a Residence</h2>
 <p>These everyday activities help create a sense of routine, companionship and belonging for residents. From beginning the day with prayer to sharing time through bhajans, games and walks, each activity becomes part of a community built around care and togetherness.</p>
 <h2>Seva in Everyday Life</h2>
-<p>At Sai Yadadri Seva Ashramam, daily life is guided by the spirit of Maanava Sevaaye Madhava Seva — Service to Humanity is Service to God. Prayer, devotion, companionship and care come together as part of the Ashram's continuing journey of seva.</p>
+<p>At Sai Yadadri Seva Ashram, daily life is guided by the spirit of Maanava Sevaaye Madhava Seva — Service to Humanity is Service to God. Prayer, devotion, companionship and care come together as part of the Ashram's continuing journey of seva.</p>
 <h2>Every Day, A Little More Together</h2>
 <p>A meaningful routine is built through simple moments shared with others. Your support helps us continue this work and nurture a community where care, devotion and companionship remain part of everyday life.</p>
 `.trim(),
@@ -728,7 +728,7 @@ async function main() {
       iconOrImageUrl: '/images/real/fitness-room.jpg',
       descriptionEn: `
 <p><em>Creating a Safe, Supportive and Comfortable Environment.</em></p>
-<p>A caring environment also depends on safe, reliable infrastructure. The facilities at Sai Yadadri Seva Ashramam are intended to support the daily needs, comfort and wellbeing of residents.</p>
+<p>A caring environment also depends on safe, reliable infrastructure. The facilities at Sai Yadadri Seva Ashram are intended to support the daily needs, comfort and wellbeing of residents.</p>
 <h2>Wellness Centre Activities</h2>
 <p>The Ashram's Wellness Centre provides opportunities for people to focus on physical well-being, healthy living and holistic wellness through supportive and community-oriented activities.</p>
 <h2>A Place Designed for Everyday Wellbeing</h2>
@@ -774,7 +774,7 @@ async function main() {
 <h2>Learning as an Act of Care</h2>
 <p>By bringing knowledge and guidance directly to those in our care, these programmes seek to support not only physical health but also emotional and spiritual well-being.</p>
 <h2>Help Us Continue This Seva</h2>
-<p>Your support helps Sai Yadadri Seva Ashramam continue conducting awareness programmes for the residents and beneficiaries who rely on our care.</p>
+<p>Your support helps Sai Yadadri Seva Ashram continue conducting awareness programmes for the residents and beneficiaries who rely on our care.</p>
 `.trim(),
       linkedCategoryCode: null,
       displayOrder: 8,
@@ -791,7 +791,7 @@ async function main() {
 <h2>Why Spiritual Tours Matter</h2>
 <p>Spiritual tours offer a space for quiet reflection, renewed devotion and fellowship among those who share the Ashram's values, strengthening the sense of community that sustains its wider service.</p>
 <h2>Help Us Continue This Seva</h2>
-<p>Your support helps Sai Yadadri Seva Ashramam continue organising spiritual tours that bring devotion, reflection and fellowship to our community.</p>
+<p>Your support helps Sai Yadadri Seva Ashram continue organising spiritual tours that bring devotion, reflection and fellowship to our community.</p>
 `.trim(),
       linkedCategoryCode: null,
       displayOrder: 9,
@@ -966,14 +966,14 @@ async function main() {
   const ABOUT_BLOCKS_EN: Record<string, string> = {
     aboutEn: `
 <p><em>Maanava Sevaaye Madhava Seva</em><br>Service to Humanity is Service to God</p>
-<p>Sai Yadadri Seva Ashramam is a registered social service organisation committed to serving vulnerable and underserved sections of society with compassion, dignity and care.</p>
+<p>Sai Yadadri Seva Ashram is a registered social service organisation committed to serving vulnerable and underserved sections of society with compassion, dignity and care.</p>
 <p>Guided by the belief that serving humanity is a form of serving God, the Ashram works to create a safe and supportive environment for poor elderly people and others in need. Our work focuses on providing essential care, nourishment, health support and opportunities for a life of dignity and belonging.</p>
 <h2>Our Journey</h2>
-<p>The journey of Sai Yadadri Seva Ashramam began in 2019 under the vision and leadership of Sri Debbadi Ashok, a BSNL Executive who was already involved in running an old age home at Sai Lingi Village in Adilabad District.</p>
+<p>The journey of Sai Yadadri Seva Ashram began in 2019 under the vision and leadership of Sri Debbadi Ashok, a BSNL Executive who was already involved in running an old age home at Sai Lingi Village in Adilabad District.</p>
 <p>With a desire to extend this service to more people, he joined hands with like-minded BSNL employees, including serving and retired employees, along with socially conscious citizens. Together, they worked towards building a wider platform for compassionate community service and established the Hyderabad chapter.</p>
 <p>What began as an initiative driven by a small group of committed individuals has grown into a network of more than 100 members united by a shared commitment to social service.</p>
 <h2>Our Home</h2>
-<p>At the heart of Sai Yadadri Seva Ashramam is our Free Old Age Home at Pedakonduru Village, Choutuppal Mandal, Yadadri Bhuvanagiri District.</p>
+<p>At the heart of Sai Yadadri Seva Ashram is our Free Old Age Home at Pedakonduru Village, Choutuppal Mandal, Yadadri Bhuvanagiri District.</p>
 <p>Since February 2020, the home has been operating at a capacity of 40 permanent residents. It provides a peaceful and supportive environment where poor elderly people can receive care, nourishment, companionship and essential support.</p>
 <p>The facility operates from a building generously donated by Respected Donor Sri Mayreddi Satyanarayana Reddy Garu and Smt. Janakamma Garu. Their contribution has provided a strong foundation for the Ashram's continued service to poor elderly people.</p>
 <h2>Our Approach to Service</h2>
@@ -993,24 +993,24 @@ async function main() {
 <h2>Our Mission</h2>
 <p>To translate the principle of "Maanava Sevaaye Madhava Seva" into meaningful action by providing care and support to poor elderly people and extending assistance through nourishment, education, healthcare and community-oriented service initiatives.</p>
 <h2>Our Community</h2>
-<p>Sai Yadadri Seva Ashramam is strengthened by a growing community of members, donors, volunteers and well-wishers.</p>
+<p>Sai Yadadri Seva Ashram is strengthened by a growing community of members, donors, volunteers and well-wishers.</p>
 <p>Their collective support helps sustain the Ashram's ongoing activities and enables the organisation to continue responding to the needs of people who require care and assistance.</p>
 <p>Together, we seek to build more than a place of shelter — we seek to create a community founded on compassion, dignity and service.</p>
 <h2>A Shared Commitment</h2>
-<p>The journey of Sai Yadadri Seva Ashramam continues through the people who believe that even a small act of kindness can create meaningful change.</p>
+<p>The journey of Sai Yadadri Seva Ashram continues through the people who believe that even a small act of kindness can create meaningful change.</p>
 <p>With the continued support of our members, donors, volunteers and well-wishers, we remain committed to serving with compassion and strengthening the lives of those who need support.</p>
 <p><em>Maanava Sevaaye Madhava Seva.</em><br>Service to Humanity is Service to God.</p>
 `.trim(),
     historyEn: `
 <h2>A Journey Rooted in Seva</h2>
 <p><em>Maanava Sevaaye Madhava Seva</em><br>Service to Humanity is Service to God</p>
-<p>The history of Sai Yadadri Seva Ashramam is a story of faith expressed through service. What began with a desire to care for those who needed support has grown into a continuing journey of compassion, collective responsibility and devotion.</p>
+<p>The history of Sai Yadadri Seva Ashram is a story of faith expressed through service. What began with a desire to care for those who needed support has grown into a continuing journey of compassion, collective responsibility and devotion.</p>
 <p>At the heart of this journey is the belief that spirituality is not limited to prayer or worship. It is also expressed through caring for another person, sharing food, offering support in times of need and creating a place where every individual is treated with dignity.</p>
 <h2>The Beginning</h2>
 <p>The seeds of the Ashram's service journey were sown in 2019 under the vision and leadership of Sri Debbadi Ashok, a BSNL Executive who was already involved in running an old age home at Sai Lingi Village in Adilabad District.</p>
 <p>With a desire to extend this spirit of service further, Sri Debbadi Ashok joined hands with like-minded BSNL employees, including serving and retired employees, as well as socially conscious citizens.</p>
 <p>Together, they envisioned an organisation where people could come together not simply as donors or volunteers, but as a community united by a shared purpose — to serve humanity with compassion and devotion.</p>
-<p>This vision became the foundation for the establishment of the Hyderabad chapter of Sai Yadadri Seva Ashramam.</p>
+<p>This vision became the foundation for the establishment of the Hyderabad chapter of Sai Yadadri Seva Ashram.</p>
 <h2>From a Vision to a Community</h2>
 <p>The early journey was driven by a small group of people who believed that meaningful social change begins with individual responsibility.</p>
 <p>The founding members contributed their resources, time and commitment to establish a sustainable foundation for the Ashram's work. Their collective effort gradually brought together a wider circle of people who shared the same values.</p>
@@ -1059,7 +1059,7 @@ async function main() {
 <p>The initial foundation was supported by the founding members, who contributed significant personal resources towards establishing the organisation.</p>
 <p>As the Ashram grew, members, donors, volunteers and well-wishers continued to contribute according to their ability and commitment.</p>
 <p>This spirit of collective giving remains central to the Ashram's journey.</p>
-<p>The strength of Sai Yadadri Seva Ashramam is therefore not measured only by its facilities or activities, but by the people who continue to stand behind its mission.</p>
+<p>The strength of Sai Yadadri Seva Ashram is therefore not measured only by its facilities or activities, but by the people who continue to stand behind its mission.</p>
 <h2>A Spiritual Journey Through Service</h2>
 <p>The Ashram's journey is deeply connected to the principle:</p>
 <p><em>Maanava Sevaaye Madhava Seva<br>Service to Humanity is Service to God.</em></p>
@@ -1072,13 +1072,13 @@ async function main() {
 <p>From the founders who gave the first direction, to members who contribute regularly, donors who support specific needs, volunteers who give their time and well-wishers who continue to encourage the organisation — the Ashram's history belongs to a collective community.</p>
 <p>Their contribution has helped transform an initial vision into an ongoing movement of service.</p>
 <h2>The Journey Continues</h2>
-<p>The story of Sai Yadadri Seva Ashramam is still being written.</p>
+<p>The story of Sai Yadadri Seva Ashram is still being written.</p>
 <p>From its beginnings in 2019, to the establishment of the Free Old Age Home in February 2020, and the continuing expansion of its service initiatives, the Ashram has grown through faith, commitment and collective effort.</p>
 <p>Its journey continues with the same foundational belief:</p>
 <p><em>When we serve another human being with compassion, we are serving something divine.</em></p>
 <p>The future of the Ashram rests on continuing this spirit of seva — strengthening care for poor elderly people, supporting education and healthcare, nurturing community participation and creating opportunities for more people to experience the joy of service.</p>
 <h2>A Journey of Seva, A Journey of Hope</h2>
-<p>Sai Yadadri Seva Ashramam began with a vision.<br>It grew through collective faith.<br>It was strengthened through generosity.<br>And it continues through seva.</p>
+<p>Sai Yadadri Seva Ashram began with a vision.<br>It grew through collective faith.<br>It was strengthened through generosity.<br>And it continues through seva.</p>
 <p>As the Ashram moves forward, its purpose remains unchanged:</p>
 <p><strong>To serve with compassion.<br>To care with dignity.<br>To give with devotion.</strong></p>
 <p><em>Maanava Sevaaye Madhava Seva.<br>Service to Humanity is Service to God.</em></p>
@@ -1086,7 +1086,7 @@ async function main() {
     visionEn: `
 <h2>A Life of Dignity. A Community of Compassion. A Journey of Seva.</h2>
 <p><em>Maanava Sevaaye Madhava Seva</em><br>Service to Humanity is Service to God</p>
-<p>The vision of Sai Yadadri Seva Ashramam is to build a compassionate society where every person, especially those who are vulnerable or in need, can live with dignity, care, security and hope.</p>
+<p>The vision of Sai Yadadri Seva Ashram is to build a compassionate society where every person, especially those who are vulnerable or in need, can live with dignity, care, security and hope.</p>
 <p>We believe that true spirituality is expressed not only through prayer and devotion, but also through selfless service. Every act of kindness, every meal shared, every helping hand extended and every life supported is an opportunity to experience the divine through seva.</p>
 <h2>Our Core Purpose</h2>
 <p>At the heart of our vision is a simple purpose:</p>
@@ -1094,7 +1094,7 @@ async function main() {
 <p>Through the Ashram's work, we seek to provide meaningful support to poor elderly people and extend our spirit of service towards education, healthcare, nourishment and other genuine community needs.</p>
 <p>Our goal is not merely to provide temporary assistance. We aspire to create lasting support systems that help individuals experience a greater sense of security, belonging and wellbeing.</p>
 <h2>Our Long-Term Vision</h2>
-<p>We envision Sai Yadadri Seva Ashramam growing into a sustainable centre of seva, compassion and spiritual community.</p>
+<p>We envision Sai Yadadri Seva Ashram growing into a sustainable centre of seva, compassion and spiritual community.</p>
 <p>In the years ahead, we aspire to:</p>
 <ul>
 <li>Strengthen the care and wellbeing provided to poor elderly people.</li>
@@ -1140,7 +1140,7 @@ async function main() {
 <p>We want it to remain a place of belonging — where poor elderly people can experience companionship, where devotees can participate in meaningful seva, where volunteers can share their time and abilities, and where visitors can discover the joy of giving.</p>
 <p>A peaceful environment, caring relationships and spiritual practices can help create a community where service becomes part of everyday life.</p>
 <h2>Our Commitment to Devotees and the Community</h2>
-<p>Sai Yadadri Seva Ashramam seeks to create meaningful opportunities for devotees and well-wishers to participate in seva according to their ability and interest.</p>
+<p>Sai Yadadri Seva Ashram seeks to create meaningful opportunities for devotees and well-wishers to participate in seva according to their ability and interest.</p>
 <p>Some may offer financial support.</p>
 <p>Some may give their time.</p>
 <p>Some may share their skills.</p>
@@ -1154,7 +1154,7 @@ async function main() {
 <p>Growth, for us, is not simply about becoming larger.</p>
 <p>Growth means being able to serve more people, serve them better and preserve the spirit of compassion that began this journey.</p>
 <h2>Our Promise</h2>
-<p>As Sai Yadadri Seva Ashramam moves forward, our fundamental purpose remains unchanged:</p>
+<p>As Sai Yadadri Seva Ashram moves forward, our fundamental purpose remains unchanged:</p>
 <p><strong>To serve with compassion.<br>To care with dignity.<br>To give with humility.<br>To grow through seva.</strong></p>
 <p>We remain committed to creating a future where vulnerable individuals receive support, poor elderly people experience dignity and belonging, devotees find meaningful opportunities for service, and communities come together for the greater good.</p>
 <p><em>Maanava Sevaaye Madhava Seva<br>Service to Humanity is Service to God.</em></p>
@@ -1162,7 +1162,7 @@ async function main() {
     missionEn: `
 <h2>Serving Humanity. Nurturing Spirituality. Walking the Path of Seva.</h2>
 <p><em>Maanava Sevaaye Madhava Seva</em><br>Service to Humanity is Service to God</p>
-<p>The mission of Sai Yadadri Seva Ashramam is to bring spiritual values into everyday life through selfless service, compassion and devotion.</p>
+<p>The mission of Sai Yadadri Seva Ashram is to bring spiritual values into everyday life through selfless service, compassion and devotion.</p>
 <p>We believe that spirituality is not separate from society. True devotion is reflected in how we treat those around us, how we respond to suffering and how willingly we offer our time, resources and abilities for the wellbeing of others.</p>
 <p>Through seva, we seek to create a community where devotion inspires service and service deepens devotion.</p>
 <h2>Our Spiritual Mission</h2>
@@ -1184,7 +1184,7 @@ async function main() {
 </ul>
 <p>Each initiative represents the same underlying purpose — to respond to genuine need with compassion and responsibility.</p>
 <h2>Preserving Sanatana Dharma</h2>
-<p>Sai Yadadri Seva Ashramam seeks to preserve and promote the timeless values of Sanatana Dharma through spiritual practice, righteous living, compassion and seva.</p>
+<p>Sai Yadadri Seva Ashram seeks to preserve and promote the timeless values of Sanatana Dharma through spiritual practice, righteous living, compassion and seva.</p>
 <p>We believe that Sanatana Dharma is not merely a tradition to be preserved in words. Its principles can be kept alive through the way we live, serve and treat others.</p>
 <p>Values such as:</p>
 <ul>
@@ -1243,7 +1243,7 @@ async function main() {
 </ul>
 <p>This creates a continuous journey where Bhakti and Seva strengthen one another.</p>
 <h2>Our Commitment</h2>
-<p>Sai Yadadri Seva Ashramam remains committed to pursuing its mission with faith, humility, compassion and responsibility.</p>
+<p>Sai Yadadri Seva Ashram remains committed to pursuing its mission with faith, humility, compassion and responsibility.</p>
 <p>We seek to preserve the spiritual values that guide our organisation while responding meaningfully to the changing needs of society.</p>
 <p>Our mission is not measured only by the number of people we serve.</p>
 <p>It is also measured by the lives touched, the hope restored, the compassion awakened and the devotees inspired to walk the path of selfless service.</p>
@@ -1344,13 +1344,13 @@ async function main() {
 <li>Member of Indian Red Cross Society</li>
 </ul>
 <h2>A Vision Rooted in Seva</h2>
-<p>The founding vision of Sai Yadadri Seva Ashramam is based on a simple but powerful belief:</p>
+<p>The founding vision of Sai Yadadri Seva Ashram is based on a simple but powerful belief:</p>
 <p><em>True devotion finds expression through service.</em></p>
 <p>For Sri Debbadi Ashok and the Ashram community, seva is not merely an activity. It is a way of living one's spiritual values.</p>
 <p>The Ashram seeks to provide opportunities for people to transform their faith into action — through caring for poor elderly people, supporting those in need, participating in community welfare and contributing towards a compassionate society.</p>
 <p>This vision continues to guide the Ashram's work today.</p>
 <h2>The Leadership Team</h2>
-<p>The journey of Sai Yadadri Seva Ashramam has been strengthened by the collective dedication of its founding members and volunteers.</p>
+<p>The journey of Sai Yadadri Seva Ashram has been strengthened by the collective dedication of its founding members and volunteers.</p>
 <p>Since its establishment in 2019, the leadership team has worked together to uphold the Ashram's spiritual and social mission and to build a community based on service, devotion and responsibility.</p>
 <h3>Sri Appalaraju</h3>
 <img src="/images/real/committee-g-appala-raju.jpg" alt="Sri Appalaraju">
@@ -1377,7 +1377,7 @@ async function main() {
 <li><strong>Collective Responsibility</strong> — recognising that meaningful service becomes stronger when people work together.</li>
 </ul>
 <h2>Continuing the Founding Vision</h2>
-<p>The leadership of Sai Yadadri Seva Ashramam remains committed to carrying forward the vision with which the organisation began in 2019.</p>
+<p>The leadership of Sai Yadadri Seva Ashram remains committed to carrying forward the vision with which the organisation began in 2019.</p>
 <p>As the Ashram continues its journey, the founding principle remains unchanged:</p>
 <p><em>Maanava Sevaaye Madhava Seva.<br>Service to Humanity is Service to God.</em></p>
 <p>The Founder and Leadership Team continue to guide the Ashram towards a future where spirituality inspires service, service strengthens community, and compassion becomes a way of life.</p>
@@ -1435,7 +1435,7 @@ async function main() {
       titleEn: 'Free Health Check-up Camp',
       titleTe: 'ఉచిత ఆరోగ్య పరీక్ష శిబిరం',
       descriptionEn:
-        "<p><em>Care, Compassion and Community Wellbeing</em></p>\n<p>Sai Yadadri Seva Ashramam is organising a free general health check-up camp for elderly residents and members of the local community. The camp is supported by volunteer doctors and nurses who are coming together in the spirit of seva to provide general health check-up support.</p>\n<h2>About the Health Check-up Camp</h2>\n<p>The health check-up camp is intended to provide general health check-up support to elderly residents and people from the surrounding community. Volunteer doctors and nurses will contribute their time and professional support as part of this community-oriented seva initiative.</p>\n<h2>Serving Through Healthcare Seva</h2>\n<p>Access to basic healthcare support can be especially valuable for elderly people and members of communities who may face challenges in seeking regular health check-ups. Through initiatives such as this camp, Sai Yadadri Seva Ashramam seeks to encourage community participation and extend the spirit of compassionate service.</p>\n<h2>A Step Towards Community Wellbeing</h2>\n<p>This initiative reflects the Ashram's belief that service to society is an expression of devotion. By bringing healthcare professionals and the community together, the camp creates an opportunity to serve with compassion and care.</p>\n<h2>Be Part of the Seva</h2>\n<p>Community initiatives become stronger when people come together. We welcome the support and participation of those who wish to contribute to the Ashram's continuing journey of service.</p>",
+        "<p><em>Care, Compassion and Community Wellbeing</em></p>\n<p>Sai Yadadri Seva Ashram is organising a free general health check-up camp for elderly residents and members of the local community. The camp is supported by volunteer doctors and nurses who are coming together in the spirit of seva to provide general health check-up support.</p>\n<h2>About the Health Check-up Camp</h2>\n<p>The health check-up camp is intended to provide general health check-up support to elderly residents and people from the surrounding community. Volunteer doctors and nurses will contribute their time and professional support as part of this community-oriented seva initiative.</p>\n<h2>Serving Through Healthcare Seva</h2>\n<p>Access to basic healthcare support can be especially valuable for elderly people and members of communities who may face challenges in seeking regular health check-ups. Through initiatives such as this camp, Sai Yadadri Seva Ashram seeks to encourage community participation and extend the spirit of compassionate service.</p>\n<h2>A Step Towards Community Wellbeing</h2>\n<p>This initiative reflects the Ashram's belief that service to society is an expression of devotion. By bringing healthcare professionals and the community together, the camp creates an opportunity to serve with compassion and care.</p>\n<h2>Be Part of the Seva</h2>\n<p>Community initiatives become stronger when people come together. We welcome the support and participation of those who wish to contribute to the Ashram's continuing journey of service.</p>",
       descriptionTe:
         'వాలంటీర్ వైద్యులు మరియు నర్సుల సహకారంతో వృద్ధ నివాసితులు మరియు స్థానిక సమాజం కోసం నిర్వహించే ఉచిత సాధారణ ఆరోగ్య పరీక్ష శిబిరం.',
       slug: 'free-health-checkup-camp',
@@ -1443,7 +1443,7 @@ async function main() {
       location: 'Sai Yadadri Seva Ashram, Uppal, Hyderabad',
       featuredImageUrl: '/images/real/medical-camp.jpg',
       status: 'published',
-      metaTitleEn: 'Free Health Check-up Camp | Sai Yadadri Seva Ashramam',
+      metaTitleEn: 'Free Health Check-up Camp | Sai Yadadri Seva Ashram',
       metaDescriptionEn:
         'Join the Free Health Check-up Camp on 27 August 2026 at Sai Yadadri Seva Ashram, Uppal, Hyderabad, supporting elderly residents and the local community through volunteer healthcare seva.',
     },
@@ -1457,7 +1457,7 @@ async function main() {
       titleEn: 'Annual Annaprasadam Day',
       titleTe: 'వార్షిక అన్నప్రసాదం దినోత్సవం',
       descriptionEn:
-        '<p><em>A Day of Sharing, Service and Togetherness</em></p>\n<p>Sai Yadadri Seva Ashramam invites devotees, families, members and well-wishers to come together for our Annual Annaprasadam Day. The occasion brings the community together to serve nutritious meals to Ashram residents and visiting devotees in the spirit of selfless service.</p>\n<h2>About Annual Annaprasadam Day</h2>\n<p>Annaprasadam is an important expression of seva at Sai Yadadri Seva Ashramam. This annual community meal-sponsorship day provides an opportunity for people to come together, offer food with devotion and share a meaningful occasion with the residents and visiting devotees of the Ashram.</p>\n<h2>Sharing Food, Sharing Blessings</h2>\n<p>A meal offered with love can become a simple yet meaningful act of service. Annaprasadam brings people together through the joy of sharing, creating an atmosphere of community, gratitude and togetherness.</p>\n<h2>Join Us in Seva</h2>\n<p>Devotees, families, members and well-wishers are welcome to participate in this special day of Annaprasadam seva. Whether through sponsoring meals, volunteering time or simply joining the community, every sincere contribution adds to the spirit of the occasion.</p>\n<h2>Be Part of Annaprasadam Seva</h2>\n<p>Come together with the Ashram community to share food, offer your service and make this Annual Annaprasadam Day a meaningful celebration of compassion and togetherness.</p>',
+        '<p><em>A Day of Sharing, Service and Togetherness</em></p>\n<p>Sai Yadadri Seva Ashram invites devotees, families, members and well-wishers to come together for our Annual Annaprasadam Day. The occasion brings the community together to serve nutritious meals to Ashram residents and visiting devotees in the spirit of selfless service.</p>\n<h2>About Annual Annaprasadam Day</h2>\n<p>Annaprasadam is an important expression of seva at Sai Yadadri Seva Ashram. This annual community meal-sponsorship day provides an opportunity for people to come together, offer food with devotion and share a meaningful occasion with the residents and visiting devotees of the Ashram.</p>\n<h2>Sharing Food, Sharing Blessings</h2>\n<p>A meal offered with love can become a simple yet meaningful act of service. Annaprasadam brings people together through the joy of sharing, creating an atmosphere of community, gratitude and togetherness.</p>\n<h2>Join Us in Seva</h2>\n<p>Devotees, families, members and well-wishers are welcome to participate in this special day of Annaprasadam seva. Whether through sponsoring meals, volunteering time or simply joining the community, every sincere contribution adds to the spirit of the occasion.</p>\n<h2>Be Part of Annaprasadam Seva</h2>\n<p>Come together with the Ashram community to share food, offer your service and make this Annual Annaprasadam Day a meaningful celebration of compassion and togetherness.</p>',
       descriptionTe:
         'మా వార్షిక సామూహిక భోజన స్పాన్సర్‌షిప్ దినోత్సవం — నివాసితులకు మరియు సందర్శించే భక్తులకు అన్నప్రసాదం వడ్డించడంలో మాతో చేరండి.',
       slug: 'annual-annaprasadam-day',
@@ -1465,9 +1465,9 @@ async function main() {
       location: 'Sai Yadadri Seva Ashram, Uppal, Hyderabad',
       featuredImageUrl: '/images/real/annaprasadam-hall.jpg',
       status: 'published',
-      metaTitleEn: 'Annual Annaprasadam Day | Sai Yadadri Seva Ashramam',
+      metaTitleEn: 'Annual Annaprasadam Day | Sai Yadadri Seva Ashram',
       metaDescriptionEn:
-        'Join Sai Yadadri Seva Ashramam on Sunday, 20 September 2026 for Annual Annaprasadam Day at Uppal, Hyderabad, and participate in a meaningful community meal-sponsorship seva.',
+        'Join Sai Yadadri Seva Ashram on Sunday, 20 September 2026 for Annual Annaprasadam Day at Uppal, Hyderabad, and participate in a meaningful community meal-sponsorship seva.',
     },
   });
 
@@ -1505,7 +1505,7 @@ async function main() {
         'Community Service',
         'Sai Yadadri Seva Ashram',
       ]),
-      metaTitleEn: 'District Collector Visits Sai Yadadri Seva Ashram | Sai Yadadri Seva Ashramam',
+      metaTitleEn: 'District Collector Visits Sai Yadadri Seva Ashram | Sai Yadadri Seva Ashram',
       metaDescriptionEn:
         "Read about the District Collector's visit to Sai Yadadri Seva Ashram and the focus on improving facilities and care for elderly residents, as covered by Andhra Prabha.",
     },

@@ -23,6 +23,9 @@ const donorFieldsSchema = z.object({
     .regex(/^\d{6}$/, 'Pincode must be exactly 6 digits')
     .optional(),
   donorState: z.string().max(100).optional(),
+  // Explicit, optional opt-in to a WhatsApp receipt (unticked by default).
+  // Supplying a mobile number is never treated as WhatsApp consent.
+  whatsappReceiptConsent: z.boolean().optional().default(false),
 });
 
 /** FR-DON-02: category, amount, donor identity — guest checkout, no account

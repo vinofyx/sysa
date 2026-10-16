@@ -10,10 +10,12 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/** Whole rupees without decimals; any paise always with two places. */
 function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency,
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(amount);
 }
@@ -42,9 +44,11 @@ export function donationReportEmail(params: {
   donorAddress: string | null;
   panNumberMasked: string | null;
   aadhaarNumberMasked: string | null;
+  /** Authenticated receipt download (lib/receipt-link.ts); null = none. */
+  receiptUrl?: string | null;
   businessName?: string;
 }) {
-  const businessName = params.businessName ?? 'Sai Yadadri Seva Ashramam';
+  const businessName = params.businessName ?? 'Sai Yadadri Seva Ashram';
   const rows: Array<[string, string]> = [
     ['Donor Name', params.donorName],
     ['Donation Amount', formatCurrency(params.amount, params.currency)],
@@ -64,7 +68,7 @@ export function donationReportEmail(params: {
     'PAN and Aadhaar are shown masked. Full numbers are not stored or sent by this system.';
 
   return {
-    subject: 'Donation Receipt - Sai Yadadri Seva Ashramam',
+    subject: 'Donation Receipt - Sai Yadadri Seva Ashram',
     html: emailLayout({
       title: 'Donation Receipt',
       bodyHtml: `
@@ -75,17 +79,41 @@ export function donationReportEmail(params: {
         <p style="font-size:14px; color:#1A1D1A; line-height:1.6;">
           ${rows.map(([label, value]) => `${label}: <strong>${escapeHtml(value)}</strong>`).join('<br />')}
         </p>
+        ${params.receiptUrl ? button(params.receiptUrl, 'Download Receipt') : ''}
         <p style="font-size:12px; color:#6B7269; line-height:1.6;">${escapeHtml(note)}</p>
       `,
     }),
     text: [
       `A donation to ${businessName} has been received and verified. The donor receipt PDF is attached.`,
       ...rows.map(([label, value]) => `${label}: ${value}`),
+      ...(params.receiptUrl ? [`Download receipt: ${params.receiptUrl}`] : []),
       note,
     ].join('\n'),
   };
 }
 
+/** Rows whose value is present — a missing optional detail is left out. */
+function optionalRows(rows: Array<[string, string | null | undefined]>): Array<[string, string]> {
+  return rows.filter(
+    (row): row is [string, string] => typeof row[1] === 'string' && row[1].trim() !== '',
+  );
+}
+
+/** Label/value rows as an email-safe table (inline styles only). */
+function detailsTable(rows: Array<[string, string]>): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:14px; margin:8px 0 16px;">${rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:6px 12px 6px 0; color:#6B7269; border-bottom:1px solid #E3E1DA; white-space:nowrap; vertical-align:top;">${escapeHtml(label)}</td><td style="padding:6px 0; color:#1A1D1A; border-bottom:1px solid #E3E1DA; font-weight:600; word-break:break-all;">${escapeHtml(value)}</td></tr>`,
+    )
+    .join('')}</table>`;
+}
+
+/**
+ * Donor receipt email. Sent only for a completed (verified) donation — see
+ * issueReceipt in receipt.service.ts — with the receipt PDF attached by the
+ * caller. Donor-supplied values are escaped.
+ */
 export function donationReceiptEmail(params: {
   donorName: string;
   amount: number;
@@ -97,6 +125,15 @@ export function donationReceiptEmail(params: {
   paymentId: string | null;
   /** Razorpay order id when present, otherwise the internal donation id. */
   orderId?: string | null;
+  /** Donor details as on the receipt. Mobile and PAN arrive already masked;
+   * Aadhaar is never part of the donor email. */
+  donorPhoneMasked?: string | null;
+  panNumberMasked?: string | null;
+  donorAddress?: string | null;
+  donorCity?: string | null;
+  donorState?: string | null;
+  donorPincode?: string | null;
+  paymentMethod?: string | null;
   orgName?: string;
   orgPhone?: string | null;
   orgEmail?: string | null;
@@ -109,45 +146,68 @@ export function donationReceiptEmail(params: {
   const contactLine = [params.orgPhone, params.orgEmail, website].filter(Boolean).join(' · ');
 
   const name = escapeHtml(params.donorName);
+  const confirmation =
+    `We confirm that your donation of ${formatted} towards ${params.categoryName} has been ` +
+    `received successfully by ${businessName}.`;
   const rows: Array<[string, string]> = [
-    ['Customer Name', params.donorName],
     ['Receipt Number', params.receiptNumber],
-    ...(params.paymentId ? [['Payment ID', params.paymentId] as [string, string]] : []),
-    ...(params.orderId ? [['Order/Donation ID', params.orderId] as [string, string]] : []),
+    ['Donor Name', params.donorName],
+    ...optionalRows([
+      ['Mobile Number', params.donorPhoneMasked],
+      ['PAN', params.panNumberMasked],
+      ['Address', params.donorAddress],
+      ['City', params.donorCity],
+      ['State', params.donorState],
+      ['Pincode', params.donorPincode],
+    ]),
+    ['Donation Category', params.categoryName],
     ['Amount', formatted],
-    ['Payment Date', params.donationDate],
-    ['Service/Order', params.categoryName],
-    ['Payment Status', 'Successful'],
+    ['Donation Date', params.donationDate],
+    ['Payment Status', 'Paid Successfully'],
+    ...optionalRows([['Payment Method', params.paymentMethod]]),
+    ...(params.paymentId ? [['Razorpay Payment ID', params.paymentId] as [string, string]] : []),
+    ...(params.orderId
+      ? [
+          [
+            params.orderId.startsWith('order_') ? 'Razorpay Order ID' : 'Donation Reference',
+            params.orderId,
+          ] as [string, string],
+        ]
+      : []),
   ];
 
   return {
-    subject: `Payment Receipt - ${params.receiptNumber}`,
+    // Exact subject wording requested for donor receipts.
+    subject: `Donation Receipt — Sai Yadadri Seva Ashram — Receipt ${params.receiptNumber}`,
     html: emailLayout({
-      title: 'Payment Receipt',
+      title: 'Donation Receipt',
       bodyHtml: `
-        <p style="font-size:16px; color:#1A1D1A;">Hello ${name},</p>
+        <p style="font-size:16px; color:#1A1D1A;">Dear ${name},</p>
         <p style="font-size:14px; color:#1A1D1A; line-height:1.6;">
-          Thank you for your payment. Your payment has been successfully received
-          by <strong>${escapeHtml(businessName)}</strong>. Please find your payment receipt attached.
+          Thank you for your donation. ${escapeHtml(confirmation)}
+          Your official receipt is attached to this email as a PDF.
         </p>
-        <p style="font-size:14px; color:#1A1D1A; line-height:1.6;">
-          ${rows.map(([label, value]) => `${label}: <strong>${escapeHtml(value)}</strong>`).join('<br />')}
-        </p>
+        ${detailsTable(rows)}
+        ${params.receiptUrl ? button(params.receiptUrl, 'Download Receipt') : ''}
         <p style="font-size:13px; color:#6B7269; line-height:1.6;">
+          With gratitude,<br />
           ${escapeHtml(businessName)}<br />
           ${escapeHtml(contactLine)}
         </p>
-        ${params.receiptUrl ? button(params.receiptUrl, 'Download Receipt') : '<p style="font-size:13px; color:#6B7269;">Your receipt PDF is attached to this email.</p>'}
       `,
     }),
     text: [
-      `Hello ${params.donorName},`,
-      `Thank you for your payment. Your payment has been successfully received by ${businessName}.`,
+      `Dear ${params.donorName},`,
+      '',
+      `Thank you for your donation. ${confirmation}`,
+      'Your official receipt is attached to this email as a PDF.',
+      '',
       ...rows.map(([label, value]) => `${label}: ${value}`),
-      `${businessName} · ${contactLine}`,
-      params.receiptUrl
-        ? `Download your receipt: ${params.receiptUrl}`
-        : 'Your receipt PDF is attached to this email.',
+      '',
+      ...(params.receiptUrl ? [`Download your receipt: ${params.receiptUrl}`, ''] : []),
+      'With gratitude,',
+      businessName,
+      contactLine,
     ].join('\n'),
   };
 }

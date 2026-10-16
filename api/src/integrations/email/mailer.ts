@@ -50,6 +50,15 @@ export interface MailDeliveryResult {
   status: MailSendStatus;
   messageId?: string | null;
   failureReason?: string | null;
+  /** The server permanently rejected this recipient (5xx) — retrying the
+   * same message cannot succeed, so it is never auto-retried. */
+  permanent?: boolean;
+}
+
+/** SMTP reply code at the start of a server response ("550 5.1.1 …"). */
+function smtpReplyCode(response: unknown): number | null {
+  const match = typeof response === 'string' ? response.match(/^\s*([2-5]\d\d)\b/) : null;
+  return match ? Number(match[1]) : null;
 }
 
 /** @deprecated Use MailDeliveryResult.status — kept so existing callers still type-check. */
@@ -92,7 +101,11 @@ export function evaluateSmtpResult(info: {
         ? `SMTP rejected the recipient (${response})`
         : `SMTP did not accept the recipient (${response})`,
     );
-    return { status: 'failed', messageId, failureReason };
+    // A 4xx (e.g. 450 mailbox busy) is temporary; a 5xx — or an explicit
+    // rejection with no parsable code — is a permanent recipient rejection.
+    const code = smtpReplyCode(info.response);
+    const permanent = code !== null ? code >= 500 : rejected.length > 0;
+    return { status: 'failed', messageId, failureReason, permanent };
   }
 
   return { status: 'sent', messageId };
@@ -111,8 +124,13 @@ export function evaluateSmtpResult(info: {
  * nodemailer call that rejected the address is `'failed'`.
  */
 export async function sendMail(input: SendMailInput): Promise<MailDeliveryResult> {
+  // Not `timestamp`: that key would overwrite the logger's own timestamp, so
+  // an SMTP reply would appear logged at the moment the attempt started.
+  const attemptStartedAt = new Date().toISOString();
+
   if (!env.SMTP_HOST) {
     logger.warn('Email not sent (SMTP not configured)', {
+      attemptStartedAt,
       subject: input.subject,
       to: maskEmail(input.to),
     });
@@ -136,30 +154,60 @@ export async function sendMail(input: SendMailInput): Promise<MailDeliveryResult
     const result = evaluateSmtpResult(info);
     if (result.status !== 'sent') {
       logger.error('SMTP did not accept the email', {
+        attemptStartedAt,
         to: maskEmail(input.to),
         subject: input.subject,
-        smtpResponse: info.response,
+        messageId: result.messageId,
+        smtpResponse: typeof info.response === 'string' ? info.response : undefined,
+        acceptedRecipients: Array.isArray(info.accepted)
+          ? info.accepted.map((r: unknown) => maskEmail(String(r)))
+          : [],
+        rejectedRecipients: Array.isArray(info.rejected)
+          ? info.rejected.map((r: unknown) => maskEmail(String(r)))
+          : [],
         failureReason: result.failureReason,
       });
       return result;
     }
 
     logger.info('Email accepted by SMTP', {
+      attemptStartedAt,
       to: maskEmail(input.to),
       subject: input.subject,
       attachmentCount: input.attachments?.length ?? 0,
       messageId: result.messageId,
+      smtpResponse: typeof info.response === 'string' ? info.response : undefined,
     });
     return result;
   } catch (error) {
+    const rawError = error instanceof Error ? error.message : String(error);
     const failureReason = truncateReason(
       error instanceof Error ? error.message : 'SMTP send failed',
     );
+    const err = error as {
+      code?: string;
+      command?: string;
+      response?: string;
+      responseCode?: number;
+    };
     logger.error('Failed to send email', {
+      attemptStartedAt,
       to: maskEmail(input.to),
       subject: input.subject,
-      error: error instanceof Error ? error.message : error,
+      errorCode: err?.code,
+      smtpCommand: err?.command,
+      smtpResponse: err?.response,
+      failureReason,
+      error: redactSecrets(rawError),
     });
-    return { status: 'failed', failureReason };
+    // Only a 5xx at RCPT TO is about THIS recipient. Account-level 5xx (e.g.
+    // 535 auth failure) and network errors stay retryable: fixing the config
+    // should let the automatic retry go out.
+    const permanent =
+      typeof err?.responseCode === 'number' &&
+      err.responseCode >= 500 &&
+      typeof err.command === 'string' &&
+      err.command.toUpperCase().startsWith('RCPT');
+    return { status: 'failed', failureReason, permanent };
   }
 }

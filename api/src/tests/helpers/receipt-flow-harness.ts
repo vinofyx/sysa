@@ -29,14 +29,13 @@ process.env.SMTP_FROM_EMAIL = 'receipts@test.invalid';
 process.env.MSG91_AUTHKEY = 'msg91-authkey-SECRET-value';
 process.env.MSG91_WHATSAPP_NUMBER = '+91 9490118877';
 process.env.MSG91_WABA_ID = '1511221500759195';
-process.env.MSG91_WHATSAPP_TEMPLATE_NAME = 'sysa_general_update';
-process.env.MSG91_WHATSAPP_TEMPLATE_ID = '546722';
-process.env.MSG91_WHATSAPP_TEMPLATE_NAMESPACE = 'f8f2a2af_29b5_4fab_a60c_d1ba6dbfd04f';
-process.env.MSG91_WHATSAPP_TEMPLATE_VARS = JSON.stringify({
-  body_1: 'customerName',
-  body_2: 'amountFormatted',
-  body_3: 'receiptNumber',
-});
+process.env.MSG91_WHATSAPP_TEMPLATE_NAME = 'sysa_donation_receipt';
+process.env.MSG91_WHATSAPP_TEMPLATE_NAMESPACE = 'test_namespace';
+process.env.MSG91_WHATSAPP_TEMPLATE_ID = '567627';
+process.env.MSG91_WHATSAPP_TEMPLATE_APPROVED = 'true';
+// Exercise the built-in sysa_donation_receipt mapping, not a pinned override.
+delete process.env.MSG91_WHATSAPP_TEMPLATE_VARS;
+process.env.SMS_DLT_CONTENT_VERIFIED = 'true';
 process.env.SMS_SENDER_ID = 'SYSAOF';
 process.env.SMS_DLT_TEMPLATE_ID = 'test-msg91-flow-template-id';
 delete process.env.CLOUDINARY_CLOUD_NAME;
@@ -65,19 +64,42 @@ function uniqueViolation(target: string): Prisma.PrismaClientKnownRequestError {
 
 /** Minimal Prisma `where` evaluator — equality, `null`, `{ in }`, `{ not }`,
  * `{ startsWith }` and `OR`, which is all the receipt/donation repos use. */
+/** Dates compare by instant (Prisma semantics), everything else by value. */
+function same(a: unknown, b: unknown): boolean {
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  return a === b;
+}
+
+function comparable(v: unknown): number | string | null {
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === 'number' || typeof v === 'string') return v;
+  return null;
+}
+
 function matches(row: Row, where: Row): boolean {
   return Object.entries(where).every(([key, cond]) => {
     if (key === 'OR') return (cond as Row[]).some((c) => matches(row, c));
+    // Donation → receipt relation filter: `receipt: { is: null }`.
+    if (key === 'receipt' && cond && typeof cond === 'object' && 'is' in (cond as Row)) {
+      const hasReceipt = [...db.receipts.values()].some((r) => r.donationId === row.id);
+      return (cond as Row).is === null ? !hasReceipt : hasReceipt;
+    }
     const value = row[key] ?? null;
     if (cond === null) return value === null;
     if (typeof cond === 'object' && !(cond instanceof Date)) {
       const c = cond as Row;
       if ('in' in c) return (c.in as unknown[]).includes(value);
-      if ('not' in c) return value !== c.not;
+      if ('not' in c) return !same(value, c.not);
       if ('startsWith' in c)
         return typeof value === 'string' && value.startsWith(c.startsWith as string);
+      const v = comparable(value);
+      if (v === null) return false;
+      if ('lte' in c && !((v as number) <= (comparable(c.lte) as number))) return false;
+      if ('lt' in c && !((v as number) < (comparable(c.lt) as number))) return false;
+      if ('gte' in c && !((v as number) >= (comparable(c.gte) as number))) return false;
+      return true;
     }
-    return value === cond;
+    return same(value, cond);
   });
 }
 
@@ -87,6 +109,19 @@ function findOne(table: Map<string, Row>, where: Row): Row | undefined {
 
 function stripUndefined(data: Row): Row {
   return Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+}
+
+/** Applies `data` to `row`, supporting Prisma's `{ increment: n }`. */
+function applyData(row: Row, data: Row): Row {
+  const next: Row = { ...row };
+  for (const [key, value] of Object.entries(stripUndefined(data))) {
+    if (value && typeof value === 'object' && !(value instanceof Date) && 'increment' in value) {
+      next[key] = Number(row[key] ?? 0) + Number((value as Row).increment);
+    } else {
+      next[key] = value;
+    }
+  }
+  return next;
 }
 
 function donationWithRelations(row: Row, include?: Row): Row {
@@ -118,6 +153,41 @@ export const fakePrisma = {
   auditLog: { create: async () => ({}) },
   siteSettings: { findUnique: async () => null },
   appeal: { update: async () => ({}) },
+  donor: {
+    findFirst: async ({ where }: { where: Row }) => {
+      const row = findOne(db.donors, where);
+      return row ? { ...row } : null;
+    },
+    findUnique: async ({ where }: { where: Row }) => {
+      const row = findOne(db.donors, where);
+      return row ? { ...row } : null;
+    },
+    create: async ({ data }: { data: Row }) => {
+      if (data.email && findOne(db.donors, { email: data.email })) throw uniqueViolation('email');
+      const row: Row = {
+        id: randomUUID(),
+        email: null,
+        address: null,
+        city: null,
+        pincode: null,
+        state: null,
+        panNumberMasked: null,
+        aadhaarNumberMasked: null,
+        whatsappReceiptConsent: false,
+        whatsappConsentUpdatedAt: null,
+        ...stripUndefined(data),
+      };
+      db.donors.set(row.id as string, row);
+      return { ...row };
+    },
+    update: async ({ where, data }: { where: Row; data: Row }) => {
+      const row = findOne(db.donors, where);
+      if (!row) throw new Error('Record to update not found');
+      const next = { ...row, ...stripUndefined(data) };
+      db.donors.set(row.id as string, next);
+      return { ...next };
+    },
+  },
   paymentWebhookEvent: {
     findUnique: async ({ where }: { where: Row }) => findOne(db.webhookEvents, where) ?? null,
     create: async ({ data }: { data: Row }) => {
@@ -127,7 +197,49 @@ export const fakePrisma = {
       return row;
     },
   },
+  donationCategory: {
+    findUnique: async ({ where }: { where: Row }) => {
+      const row = findOne(db.categories, where);
+      return row ? { isActive: true, ...row } : null;
+    },
+  },
   donation: {
+    /** What `/donations/initiate` writes (donor/category arrive as connects). */
+    create: async ({ data, include }: { data: Row; include?: Row }) => {
+      const {
+        donor,
+        category,
+        appeal: _appeal,
+        ...fields
+      } = data as Row & {
+        donor: { connect: { id: string } };
+        category: { connect: { id: string } };
+      };
+      const row: Row = {
+        id: randomUUID(),
+        donorId: donor.connect.id,
+        categoryId: category.connect.id,
+        appealId: null,
+        subscriptionId: null,
+        paymentMethod: null,
+        paymentGatewayRef: null,
+        failureReason: null,
+        completedAt: null,
+        createdAt: new Date(),
+        receiptEmail: null,
+        receiptPhone: null,
+        whatsappReceiptConsent: null,
+        ...stripUndefined(fields),
+        amount: new Prisma.Decimal(fields.amount as number),
+      };
+      db.donations.set(row.id as string, row);
+      return donationWithRelations(row, include);
+    },
+    findMany: async ({ where, take }: { where: Row; take?: number }) =>
+      [...db.donations.values()]
+        .filter((row) => matches(row, where))
+        .slice(0, take)
+        .map((row) => ({ id: row.id })),
     findUnique: async ({ where, include }: { where: Row; include?: Row }) => {
       const row = findOne(db.donations, where);
       return row ? donationWithRelations(row, include) : null;
@@ -147,6 +259,26 @@ export const fakePrisma = {
     },
   },
   receipt: {
+    findMany: async ({
+      where,
+      orderBy,
+      take,
+    }: {
+      where: Row;
+      orderBy?: Record<string, 'asc' | 'desc'>;
+      take?: number;
+    }) => {
+      const rows = [...db.receipts.values()].filter((row) => matches(row, where));
+      const [field, dir] = Object.entries(orderBy ?? {})[0] ?? [];
+      if (field) {
+        rows.sort(
+          (a, b) =>
+            ((comparable(a[field]) as number) - (comparable(b[field]) as number)) *
+            (dir === 'desc' ? -1 : 1),
+        );
+      }
+      return rows.slice(0, take ?? rows.length).map((row) => ({ ...row }));
+    },
     findUnique: async ({ where, include }: { where: Row; include?: Row }) => {
       const row = findOne(db.receipts, where);
       return row ? receiptWithRelations(row, include) : null;
@@ -189,6 +321,9 @@ export const fakePrisma = {
         whatsappMessageId: null,
         whatsappFailureReason: null,
         updatedAt: new Date(),
+        deliveryRetryCount: 0,
+        nextDeliveryRetryAt: null,
+        whatsappDeliveryStatus: null,
         ...stripUndefined(data),
       };
       db.receipts.set(row.id as string, row);
@@ -197,7 +332,7 @@ export const fakePrisma = {
     update: async ({ where, data }: { where: Row; data: Row }) => {
       const row = findOne(db.receipts, where);
       if (!row) throw new Error('Record to update not found');
-      const next = { ...row, ...stripUndefined(data), updatedAt: new Date() };
+      const next = { ...applyData(row, data), updatedAt: new Date() };
       db.receipts.set(row.id as string, next);
       return { ...next };
     },
@@ -205,11 +340,7 @@ export const fakePrisma = {
       let count = 0;
       for (const row of db.receipts.values()) {
         if (!matches(row, where)) continue;
-        db.receipts.set(row.id as string, {
-          ...row,
-          ...stripUndefined(data),
-          updatedAt: new Date(),
-        });
+        db.receipts.set(row.id as string, { ...applyData(row, data), updatedAt: new Date() });
         count += 1;
       }
       return { count };
@@ -223,6 +354,8 @@ export interface SeedOptions {
   email?: string | null;
   phone?: string | null;
   amount?: number;
+  /** Defaults to true: most flow tests exercise WhatsApp delivery. */
+  whatsappReceiptConsent?: boolean;
 }
 
 /** Seeds a pending online donation exactly as `createCheckout` leaves it. */
@@ -246,6 +379,8 @@ export function seedPendingDonation(options: SeedOptions = {}): {
     state: null,
     panNumberMasked: null,
     aadhaarNumberMasked: null,
+    whatsappReceiptConsent: options.whatsappReceiptConsent ?? true,
+    whatsappConsentUpdatedAt: null,
   });
   db.categories.set(categoryId, { id: categoryId, nameEn: 'Annadanam' });
   db.donations.set(donationId, {
@@ -265,4 +400,34 @@ export function seedPendingDonation(options: SeedOptions = {}): {
     completedAt: null,
   });
   return { donationId, orderId };
+}
+
+/** What Razorpay's `payments.fetch` returns for a payment made against one of
+ * the seeded donations' orders: the real order id, amount (paise) and
+ * currency, so the server-side order/amount/currency check sees a genuine
+ * match. Resolves the donation from the `pay_X` ↔ `order_X` naming used by
+ * `seedPendingDonation`, falling back to the only pending donation. */
+export function fakeRazorpayPayment(
+  paymentId: string,
+  status: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const donations = [...db.donations.values()];
+  const orderId = paymentId.replace(/^pay_/, 'order_');
+  const pending = donations.filter((d) => d.status === 'pending');
+  const donation =
+    donations.find((d) => d.razorpayOrderId === orderId) ??
+    donations.find((d) => d.paymentGatewayRef === paymentId) ??
+    (pending.length === 1 ? pending[0] : undefined);
+  return {
+    id: paymentId,
+    status,
+    method: 'upi',
+    fee: 5000,
+    tax: 900,
+    order_id: donation?.razorpayOrderId ?? null,
+    amount: donation ? Math.round(Number(donation.amount) * 100) : 0,
+    currency: (donation?.currency as string | undefined) ?? 'INR',
+    ...overrides,
+  };
 }

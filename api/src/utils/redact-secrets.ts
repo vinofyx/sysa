@@ -42,12 +42,20 @@ export function redactIdentityNumbers(text: string): string {
   return text.replace(FULL_PAN, '[PAN REDACTED]').replace(FULL_AADHAAR, '[AADHAAR REDACTED]');
 }
 
+/** Access tokens travel in receipt/status link query strings (`?token=…`);
+ * any URL that reaches a log keeps its path but never the token value. */
+const URL_TOKEN_PARAM = /([?&](?:token|access_token|signature|__cld_token__)=)[^&#\s"'<>]+/gi;
+
+export function redactUrlTokens(text: string): string {
+  return text.replace(URL_TOKEN_PARAM, `$1${REDACTED}`);
+}
+
 export function redactSecrets(text: string): string {
   let out = text;
   for (const secret of secretValues()) {
     if (out.includes(secret)) out = out.split(secret).join(REDACTED);
   }
-  return redactIdentityNumbers(out);
+  return redactIdentityNumbers(redactUrlTokens(out));
 }
 
 /** Redacts string leaves of plain objects/arrays in place-safe copies. */

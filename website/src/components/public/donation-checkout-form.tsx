@@ -23,6 +23,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -91,6 +92,7 @@ function buildSchema(tForms: (key: string) => string) {
       .optional()
       .or(z.literal('')),
     donorState: z.string().max(100).optional().or(z.literal('')),
+    whatsappReceiptConsent: z.boolean(),
     categoryId: z.string().min(1, tForms('requiredError')),
     amount: z.coerce.number().positive(tForms('positiveAmountError')),
     contributionType: z.enum(['one_time', 'automatic_monthly']),
@@ -157,6 +159,7 @@ export function DonationCheckoutForm({
       donorCity: '',
       donorPincode: '',
       donorState: '',
+      whatsappReceiptConsent: false,
       categoryId: defaultCategoryId ?? categories[0]?.id ?? '',
       amount: PRESET_AMOUNTS[1],
       contributionType: 'one_time',
@@ -188,6 +191,7 @@ export function DonationCheckoutForm({
         donorCity: values.donorCity || undefined,
         donorPincode: values.donorPincode || undefined,
         donorState: values.donorState || undefined,
+        whatsappReceiptConsent: values.whatsappReceiptConsent,
         categoryId: values.categoryId,
         appealId: selectedAppealId || undefined,
         amount: values.amount,
@@ -276,6 +280,7 @@ export function DonationCheckoutForm({
         donorCity: values.donorCity || undefined,
         donorPincode: values.donorPincode || undefined,
         donorState: values.donorState || undefined,
+        whatsappReceiptConsent: values.whatsappReceiptConsent,
         categoryId: values.categoryId,
         amount: values.amount,
       });
@@ -554,6 +559,25 @@ export function DonationCheckoutForm({
                       )}
                     />
                   </div>
+                  {/* Explicit, optional opt-in — a mobile number alone is not
+                      WhatsApp consent. Unticked by default. */}
+                  <FormField
+                    control={form.control}
+                    name="whatsappReceiptConsent"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start gap-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => field.onChange(checked === true)}
+                          />
+                        </FormControl>
+                        <FormLabel className="leading-snug font-normal">
+                          {t('whatsappReceiptConsent')}
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}

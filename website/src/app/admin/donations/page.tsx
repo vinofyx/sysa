@@ -58,6 +58,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { apiClient, type ApiErrorBody } from '@/lib/api-client';
+import { donationReceiptPdfUrl } from '@/lib/public-api';
 import { createResourceHooks, apiErrorMessage } from '@/hooks/use-resource';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useHasPermission } from '@/hooks/use-permission';
@@ -66,7 +67,7 @@ type DonationStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 type PaymentMethod =
   'upi' | 'card' | 'netbanking' | 'wallet' | 'bank_transfer_manual' | 'cash' | 'cheque';
 type SettlementStatus = 'not_settled' | 'pending' | 'settled' | 'failed' | 'unknown';
-type DeliveryStatus = 'pending' | 'sent' | 'failed' | 'not_configured';
+type DeliveryStatus = 'pending' | 'sent' | 'failed' | 'not_configured' | 'skipped';
 
 interface DonationReceipt {
   receiptNumber: string;
@@ -1047,16 +1048,15 @@ export default function DonationsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2">
-                {detailsDonation.receipt?.pdfUrl && (
-                  <Button
-                    variant="outline"
-                    render={
-                      <a href={detailsDonation.receipt.pdfUrl} target="_blank" rel="noreferrer" />
-                    }
-                  >
-                    <FileDown /> Download receipt
-                  </Button>
-                )}
+                {detailsDonation.status === 'completed' &&
+                  detailsDonation.receipt?.receiptNumber && (
+                    <Button
+                      variant="outline"
+                      render={<a href={donationReceiptPdfUrl(detailsDonation.id)} download />}
+                    >
+                      <FileDown /> Download receipt
+                    </Button>
+                  )}
                 {detailsDonation.paymentGatewayRef && (
                   <Button
                     variant="outline"

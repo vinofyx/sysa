@@ -41,19 +41,25 @@ export const logger = winston.createLogger({
     new winston.transports.Console({
       format: consoleFormat,
     }),
-    new winston.transports.File({
-      filename: path.join(logsDir, 'error.log'),
-      level: 'error',
-      format: fileFormat,
-      maxsize: 5 * 1024 * 1024, // 5MB
-      maxFiles: 5,
-    }),
-    new winston.transports.File({
-      filename: path.join(logsDir, 'combined.log'),
-      format: fileFormat,
-      maxsize: 5 * 1024 * 1024,
-      maxFiles: 5,
-    }),
+    // Tests never write to logs/: their mocked provider failures would
+    // otherwise be indistinguishable from real ones when diagnosing.
+    ...(process.env.SYSA_TEST_ISOLATION === '1'
+      ? []
+      : [
+          new winston.transports.File({
+            filename: path.join(logsDir, 'error.log'),
+            level: 'error',
+            format: fileFormat,
+            maxsize: 5 * 1024 * 1024, // 5MB
+            maxFiles: 5,
+          }),
+          new winston.transports.File({
+            filename: path.join(logsDir, 'combined.log'),
+            format: fileFormat,
+            maxsize: 5 * 1024 * 1024,
+            maxFiles: 5,
+          }),
+        ]),
   ],
   exitOnError: false,
 });

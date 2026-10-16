@@ -50,6 +50,42 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+
+  // Donation/receipt link tokens (lib/donor-jwt.ts). DONATION_TOKEN_SECRET is
+  // their own signing key — rotating it revokes every donation link without
+  // logging admins out (unset: derived from JWT_ACCESS_SECRET).
+  // DONATION_TOKENS_ISSUED_AFTER revokes every donation link and emailed
+  // receipt link issued before that instant. Old unversioned links (no expiry)
+  // are honoured only until DONATION_TOKEN_LEGACY_UNTIL.
+  DONATION_TOKEN_SECRET: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(32, 'DONATION_TOKEN_SECRET must be at least 32 characters').optional(),
+  ),
+  DONATION_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(365).default(30),
+  // ISO 8601 with an explicit zone ("2026-10-15T14:05:00Z" or "…+05:30") —
+  // a zoneless value would mean IST on one machine and UTC on another. Never
+  // in the future: that would also reject every link issued until then
+  // (including brand-new checkouts' status pages).
+  DONATION_TOKENS_ISSUED_AFTER: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z
+      .string()
+      .regex(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/,
+        'DONATION_TOKENS_ISSUED_AFTER must be ISO 8601 with Z or an offset, e.g. 2026-10-15T14:05:00Z',
+      )
+      .transform((value) => new Date(value))
+      .refine(
+        (date) => !Number.isNaN(date.getTime()),
+        'DONATION_TOKENS_ISSUED_AFTER is not a valid date',
+      )
+      .refine(
+        (date) => date.getTime() <= Date.now() + 5 * 60 * 1000,
+        'DONATION_TOKENS_ISSUED_AFTER must not be in the future',
+      )
+      .optional(),
+  ),
+  DONATION_TOKEN_LEGACY_UNTIL: z.coerce.date().default(new Date('2026-11-15T00:00:00Z')),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
   COOKIE_DOMAIN: z.string().optional(),
   // Set to true only when the API is deployed on a different site than the
@@ -112,9 +148,10 @@ const envSchema = z.object({
   // deliverOrgEmail). Same public contact address as above — not a secret.
   ORG_RECEIPT_EMAIL: z.string().email().default('sysaorg1@gmail.com'),
   // Post-payment notifications (email, WhatsApp, SMS). `dry_run` records each
-  // channel as not sent without contacting any provider. Unset: dry_run in
-  // development and whenever Razorpay is on a rzp_test_ key (test payments
-  // must never message real donors); live otherwise. See notificationsMode().
+  // channel as not sent without contacting any provider. Unset: dry_run
+  // everywhere (except the test suite, whose providers are all local stubs).
+  // Live sending is never switched on automatically — production must set
+  // NOTIFICATIONS_MODE=live explicitly. See notificationsMode().
   NOTIFICATIONS_MODE: z.enum(['live', 'dry_run']).optional(),
 
   // WhatsApp receipt delivery — MSG91 WhatsApp API is the primary provider
@@ -133,6 +170,15 @@ const envSchema = z.object({
   // Optional JSON map of MSG91 component keys to receipt fields, e.g.
   // '{"body_1":"customerName","body_2":"amountFormatted","body_3":"receiptNumber"}'
   MSG91_WHATSAPP_TEMPLATE_VARS: z.string().optional(),
+  // Set to `true` ONLY after scripts/msg91-inspect-whatsapp-template.ts shows
+  // the template as APPROVED by Meta. "Enabled" in the MSG91 dashboard is not
+  // proof of approval. Until then live WhatsApp sends are refused.
+  MSG91_WHATSAPP_TEMPLATE_APPROVED: z.enum(['true', 'false']).optional(),
+  // Shared secret for the MSG91 WhatsApp delivery-report webhook
+  // (POST /api/v1/webhooks/msg91/whatsapp). Configure the same value as a
+  // custom header (x-sysa-webhook-token) or ?token= in the MSG91 webhook
+  // settings. Unset (or shorter than 16 chars) = endpoint disabled.
+  MSG91_WEBHOOK_SECRET: z.string().optional(),
   // Spec aliases. MSG91_AUTHKEY is the single account authkey — it backs
   // WhatsApp and SMS unless their channel-specific keys are set.
   // MSG91_WHATSAPP_NUMBER aliases MSG91_WHATSAPP_INTEGRATED_NUMBER (any
@@ -163,6 +209,11 @@ const envSchema = z.object({
   // template/flow id from the MSG91 dashboard; there is no freeform-message
   // fallback, so a send is only attempted once this is set.
   SMS_DLT_TEMPLATE_ID: z.string().optional(),
+  // Set to `true` ONLY once the DLT content template, sender ID and PE-TM
+  // chain are verified as approved AND matching the text MSG91 sends. A
+  // sender ID being "Added" or the chain being "Active" is not enough.
+  // Until then live SMS sends are refused.
+  SMS_DLT_CONTENT_VERIFIED: z.enum(['true', 'false']).optional(),
   // Optional JSON override of the template's variable names, e.g.
   // '{"donorName":"##name##","category":"##category##","amount":"##amount##"}'
   // — only needed if the DLT template wasn't built with MSG91's default
@@ -230,8 +281,7 @@ export const env = validateEnv();
 export function notificationsMode(source: Env = env): 'live' | 'dry_run' {
   if (source.NOTIFICATIONS_MODE) return source.NOTIFICATIONS_MODE;
   if (source.NODE_ENV === 'test') return 'live';
-  if (source.NODE_ENV === 'development') return 'dry_run';
-  return source.RAZORPAY_KEY_ID?.startsWith('rzp_test_') ? 'dry_run' : 'live';
+  return 'dry_run';
 }
 
 /** Transactional From address — SMTP_FROM aliases EMAIL_FROM for the spec. */

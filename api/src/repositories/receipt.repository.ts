@@ -67,6 +67,79 @@ export function updateEmailDelivery(id: string, update: EmailDeliveryUpdate) {
   });
 }
 
+type SkippableChannel = 'email' | 'whatsapp' | 'sms';
+
+/** Records that a channel was deliberately not attempted, with the reason —
+ * only if nothing was recorded for it yet (never overwrites a real outcome).
+ * SMS has no reason column; its status alone is recorded. */
+export async function markChannelSkipped(
+  id: string,
+  channel: SkippableChannel,
+  reason: string,
+): Promise<void> {
+  const data =
+    channel === 'email'
+      ? { emailStatus: 'skipped' as const, emailFailureReason: reason }
+      : channel === 'whatsapp'
+        ? { whatsappStatus: 'skipped' as const, whatsappFailureReason: reason }
+        : { smsStatus: 'skipped' as const };
+  const statusField =
+    channel === 'email' ? 'emailStatus' : channel === 'whatsapp' ? 'whatsappStatus' : 'smsStatus';
+  await prisma.receipt.updateMany({ where: { id, [statusField]: null }, data });
+}
+
+/** Durable retry schedule (see delivery-retry.worker.ts). */
+export function setNextDeliveryRetry(donationId: string, at: Date | null) {
+  return prisma.receipt.updateMany({ where: { donationId }, data: { nextDeliveryRetryAt: at } });
+}
+
+export function findDueDeliveryRetries(now: Date, maxAttempts: number, take: number) {
+  return prisma.receipt.findMany({
+    where: { nextDeliveryRetryAt: { lte: now }, deliveryRetryCount: { lt: maxAttempts } },
+    orderBy: { nextDeliveryRetryAt: 'asc' },
+    take,
+    select: { id: true, donationId: true, nextDeliveryRetryAt: true, deliveryRetryCount: true },
+  });
+}
+
+/** Atomically takes a due retry (compare-and-set on the scheduled time), so
+ * two API instances can never run the same retry. */
+export async function claimDueDeliveryRetry(id: string, scheduledAt: Date): Promise<boolean> {
+  const result = await prisma.receipt.updateMany({
+    where: { id, nextDeliveryRetryAt: scheduledAt },
+    data: { nextDeliveryRetryAt: null, deliveryRetryCount: { increment: 1 } },
+  });
+  return result.count > 0;
+}
+
+export function findByWhatsappMessageId(whatsappMessageId: string) {
+  return prisma.receipt.findFirst({ where: { whatsappMessageId } });
+}
+
+/** Applies a provider delivery report only if it moves the status FORWARD
+ * (from any of `from`, or from no report yet) — atomically, so duplicate or
+ * concurrent callbacks can never regress or double-apply it. Never touches
+ * `whatsappStatus` (MSG91 acceptance), which is a separate fact. */
+export async function applyWhatsappDeliveryReport(
+  id: string,
+  status: string,
+  from: string[],
+  failureReason?: string | null,
+): Promise<boolean> {
+  const result = await prisma.receipt.updateMany({
+    where: {
+      id,
+      OR: [{ whatsappDeliveryStatus: null }, { whatsappDeliveryStatus: { in: from } }],
+    },
+    data: {
+      whatsappDeliveryStatus: status,
+      whatsappDeliveryUpdatedAt: new Date(),
+      ...(failureReason ? { whatsappFailureReason: failureReason } : {}),
+    },
+  });
+  return result.count > 0;
+}
+
 export function updateWhatsappDelivery(id: string, update: WhatsAppDeliveryUpdate) {
   return prisma.receipt.update({
     where: { id },

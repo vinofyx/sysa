@@ -119,6 +119,16 @@ export function findByIdempotencyKey(idempotencyKey: string) {
   return prisma.donation.findUnique({ where: { idempotencyKey }, include });
 }
 
+/** Completed donations that never got a receipt row (e.g. the DB write
+ * failed right after payment) — picked up by the delivery-retry worker. */
+export function findCompletedWithoutReceipt(since: Date, take: number) {
+  return prisma.donation.findMany({
+    where: { status: 'completed', completedAt: { gte: since }, receipt: { is: null } },
+    select: { id: true },
+    take,
+  });
+}
+
 export function findByPaymentGatewayRef(paymentGatewayRef: string) {
   return prisma.donation.findUnique({ where: { paymentGatewayRef } });
 }

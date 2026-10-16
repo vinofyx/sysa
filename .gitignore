@@ -23,6 +23,7 @@ build/
 # Let's Encrypt certificates/private keys (generated on the VPS by certbot —
 # see infrastructure/README-SSL.md)
 infrastructure/certbot/
+*.pem
 
 # Prisma
 apps/api/prisma/migrations/dev/

@@ -104,8 +104,12 @@ publicApiClient.interceptors.response.use(
 
 export async function getSiteSettings(): Promise<SiteSettings> {
   if (isStaticExport) return staticSite.siteSettings;
-  const { data } = await publicApiClient.get<{ settings: SiteSettings }>('/site-settings/public');
-  return data.settings;
+  try {
+    const { data } = await publicApiClient.get<{ settings: SiteSettings }>('/site-settings/public');
+    return data.settings;
+  } catch {
+    return staticSite.siteSettings;
+  }
 }
 
 export type PageKey =
@@ -119,30 +123,46 @@ export type PageKey =
 
 export async function getPageContent(pageKey: PageKey): Promise<PageContent> {
   if (isStaticExport) return staticSite.pageContents[pageKey];
-  const { data } = await publicApiClient.get<{ content: PageContent }>(
-    `/page-content/public/${pageKey}`,
-  );
-  return data.content;
+  try {
+    const { data } = await publicApiClient.get<{ content: PageContent }>(
+      `/page-content/public/${pageKey}`,
+    );
+    return data.content;
+  } catch {
+    return staticSite.pageContents[pageKey];
+  }
 }
 
 export async function getHeroBanners(): Promise<HeroBanner[]> {
   if (isStaticExport) return staticSite.heroBanners;
-  const { data } = await publicApiClient.get<{ banners: HeroBanner[] }>('/hero-banners/public');
-  return data.banners;
+  try {
+    const { data } = await publicApiClient.get<{ banners: HeroBanner[] }>('/hero-banners/public');
+    return data.banners;
+  } catch {
+    return staticSite.heroBanners;
+  }
 }
 
 export async function getTestimonials(): Promise<Testimonial[]> {
   if (isStaticExport) return staticSite.testimonials;
-  const { data } = await publicApiClient.get<{ testimonials: Testimonial[] }>(
-    '/testimonials/public',
-  );
-  return data.testimonials;
+  try {
+    const { data } = await publicApiClient.get<{ testimonials: Testimonial[] }>(
+      '/testimonials/public',
+    );
+    return data.testimonials;
+  } catch {
+    return staticSite.testimonials;
+  }
 }
 
 export async function getActivities(): Promise<Activity[]> {
   if (isStaticExport) return staticActivities;
-  const { data } = await publicApiClient.get<{ activities: Activity[] }>('/activities/public');
-  return data.activities;
+  try {
+    const { data } = await publicApiClient.get<{ activities: Activity[] }>('/activities/public');
+    return data.activities;
+  } catch {
+    return staticActivities;
+  }
 }
 
 export async function getActivityBySlug(slug: string): Promise<Activity | null> {
@@ -153,40 +173,60 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
     );
     return data.activity;
   } catch {
-    return null;
+    return staticActivities.find((a) => a.slug === slug) ?? null;
   }
 }
 
 export async function getCommitteeMembers(): Promise<CommitteeMember[]> {
   if (isStaticExport) return staticCommitteeMembers;
-  const { data } = await publicApiClient.get<{ members: CommitteeMember[] }>('/committee/public');
-  return data.members;
+  try {
+    const { data } = await publicApiClient.get<{ members: CommitteeMember[] }>('/committee/public');
+    return data.members;
+  } catch {
+    return staticCommitteeMembers;
+  }
 }
 
 export async function getSocialLinks(): Promise<SocialLink[]> {
   if (isStaticExport) return staticSite.socialLinks;
-  const { data } = await publicApiClient.get<{ links: SocialLink[] }>('/social-links/public');
-  return data.links;
+  try {
+    const { data } = await publicApiClient.get<{ links: SocialLink[] }>('/social-links/public');
+    return data.links;
+  } catch {
+    return staticSite.socialLinks;
+  }
 }
 
 export async function getNavigation(): Promise<NavigationTree> {
   if (isStaticExport) return staticSite.navigation;
-  const { data } = await publicApiClient.get<NavigationTree>('/navigation/public');
-  return data;
+  try {
+    const { data } = await publicApiClient.get<NavigationTree>('/navigation/public');
+    return data;
+  } catch {
+    return staticSite.navigation;
+  }
 }
 
 export async function getDonationCategories(): Promise<DonationCategory[]> {
   if (isStaticExport) return staticDonationCategories;
-  const { data } = await publicApiClient.get<{ categories: DonationCategory[] }>(
-    '/donation-categories/public',
-  );
-  return data.categories;
+  try {
+    const { data } = await publicApiClient.get<{ categories: DonationCategory[] }>(
+      '/donation-categories/public',
+    );
+    return data.categories;
+  } catch {
+    return staticDonationCategories;
+  }
 }
 
 export async function getAppeals(): Promise<Appeal[]> {
   if (isStaticExport) return staticAppeals;
-  const { data } = await publicApiClient.get<{ appeals: Appeal[] }>('/appeals/public');
-  return data.appeals;
+  try {
+    const { data } = await publicApiClient.get<{ appeals: Appeal[] }>('/appeals/public');
+    return data.appeals;
+  } catch {
+    return staticAppeals;
+  }
 }
 
 export async function getPublicDocuments(category?: string): Promise<PublicDocument[]> {
@@ -195,16 +235,26 @@ export async function getPublicDocuments(category?: string): Promise<PublicDocum
       ? staticSite.documents.filter((d) => d.category === category)
       : staticSite.documents;
   }
-  const { data } = await publicApiClient.get<{ data: PublicDocument[] }>('/documents/public', {
-    params: category ? { category } : undefined,
-  });
-  return data.data;
+  try {
+    const { data } = await publicApiClient.get<{ data: PublicDocument[] }>('/documents/public', {
+      params: category ? { category } : undefined,
+    });
+    return data.data;
+  } catch {
+    return category
+      ? staticSite.documents.filter((d) => d.category === category)
+      : staticSite.documents;
+  }
 }
 
 export async function getPublicEvents(): Promise<PublicEvent[]> {
   if (isStaticExport) return staticEvents;
-  const { data } = await publicApiClient.get<{ events: PublicEvent[] }>('/events/public');
-  return data.events;
+  try {
+    const { data } = await publicApiClient.get<{ events: PublicEvent[] }>('/events/public');
+    return data.events;
+  } catch {
+    return staticEvents;
+  }
 }
 
 export async function getPublicEventBySlug(slug: string): Promise<PublicEvent | null> {
@@ -213,7 +263,7 @@ export async function getPublicEventBySlug(slug: string): Promise<PublicEvent | 
     const { data } = await publicApiClient.get<{ event: PublicEvent }>(`/events/public/${slug}`);
     return data.event;
   } catch {
-    return null;
+    return staticEvents.find((e) => e.slug === slug) ?? null;
   }
 }
 
@@ -221,10 +271,14 @@ export async function getPublicNewsPosts(category?: string): Promise<NewsPost[]>
   if (isStaticExport) {
     return category ? staticNewsPosts.filter((p) => p.category === category) : staticNewsPosts;
   }
-  const { data } = await publicApiClient.get<{ posts: NewsPost[] }>('/news/public', {
-    params: category ? { category } : undefined,
-  });
-  return data.posts;
+  try {
+    const { data } = await publicApiClient.get<{ posts: NewsPost[] }>('/news/public', {
+      params: category ? { category } : undefined,
+    });
+    return data.posts;
+  } catch {
+    return category ? staticNewsPosts.filter((p) => p.category === category) : staticNewsPosts;
+  }
 }
 
 export async function getPublicNewsPostBySlug(slug: string): Promise<NewsPost | null> {
@@ -233,14 +287,18 @@ export async function getPublicNewsPostBySlug(slug: string): Promise<NewsPost | 
     const { data } = await publicApiClient.get<{ post: NewsPost }>(`/news/public/${slug}`);
     return data.post;
   } catch {
-    return null;
+    return staticNewsPosts.find((p) => p.slug === slug) ?? null;
   }
 }
 
 export async function getGalleryAlbums(): Promise<GalleryAlbum[]> {
   if (isStaticExport) return staticGalleryAlbums;
-  const { data } = await publicApiClient.get<{ albums: GalleryAlbum[] }>('/gallery/public');
-  return data.albums;
+  try {
+    const { data } = await publicApiClient.get<{ albums: GalleryAlbum[] }>('/gallery/public');
+    return data.albums;
+  } catch {
+    return staticGalleryAlbums;
+  }
 }
 
 export interface InitiateDonationPayload {
@@ -253,6 +311,8 @@ export interface InitiateDonationPayload {
   donorCity?: string;
   donorPincode?: string;
   donorState?: string;
+  /** Explicit WhatsApp receipt opt-in (checkbox). */
+  whatsappReceiptConsent?: boolean;
   categoryId: string;
   appealId?: string;
   amount: number;
@@ -307,6 +367,8 @@ export interface CreateSubscriptionPayload {
   donorCity?: string;
   donorPincode?: string;
   donorState?: string;
+  /** Explicit WhatsApp receipt opt-in (checkbox). */
+  whatsappReceiptConsent?: boolean;
   categoryId: string;
   amount: number;
 }
@@ -354,6 +416,14 @@ export async function getDonationStatus(
     { params: { token } },
   );
   return data.data;
+}
+
+/** The receipt PDF download (GET /donations/:id/receipt/pdf): rendered by the
+ * API from the receipt record and served as "<receipt number>.pdf". A plain
+ * link, so the browser downloads it with the API's filename and type. */
+export function donationReceiptPdfUrl(donationId: string, token?: string): string {
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${env.NEXT_PUBLIC_API_URL}/api/v1/donations/${donationId}/receipt/pdf${query}`;
 }
 
 export async function getDonationReceipt(

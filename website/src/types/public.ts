@@ -239,7 +239,8 @@ export interface SubscriptionSession {
 
 export type DonationPaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 
-export type SmsDeliveryStatus = 'pending' | 'sent' | 'failed' | 'not_configured';
+/** `skipped` = deliberately not attempted (no email/phone, or no WhatsApp opt-in). */
+export type SmsDeliveryStatus = 'pending' | 'sent' | 'failed' | 'not_configured' | 'skipped';
 
 export interface DonationStatusResult {
   id: string;
@@ -265,19 +266,34 @@ export interface DonationStatusResult {
   paymentReference: string | null;
   razorpayOrderId: string | null;
   razorpayPaymentId?: string | null;
+  /** Donor opted in to WhatsApp receipts. False = WhatsApp not requested. */
+  whatsappConsent?: boolean;
+  /** Provider delivery report: sent | delivered | read | failed (null = none yet). */
+  whatsappDeliveryStatus?: string | null;
+  /** Backend is in notification dry-run mode — nothing was sent on purpose. */
+  notificationsDryRun?: boolean;
+  /** Channel held back by an earlier dry run (mode is live now): unsent and
+   * resendable, but not a delivery failure. */
+  emailHeldByDryRun?: boolean;
+  whatsappHeldByDryRun?: boolean;
+  /** Receipt view: the same details the PDF prints (contact details masked). */
+  organisationName?: string;
+  donorName?: string;
+  donorEmailMasked?: string | null;
+  donorPhoneMasked?: string | null;
+  donorAddress?: string | null;
+  donorCity?: string | null;
+  donorState?: string | null;
+  donorPincode?: string | null;
+  /** Stored masked form only (e.g. ******308B); Aadhaar is never returned. */
+  panNumberMasked?: string | null;
+  donationDate?: string;
+  paymentMethod?: string | null;
 }
 
-export interface DonationReceipt {
-  receiptNumber: string | null;
+/** GET /donations/:id/receipt — the status payload plus the stored PDF link. */
+export interface DonationReceipt extends DonationStatusResult {
   pdfUrl: string | null;
-  receiptUrl: string | null;
-  emailStatus: SmsDeliveryStatus | null;
-  whatsappStatus: SmsDeliveryStatus | null;
-  smsStatus: SmsDeliveryStatus | null;
-  razorpayPaymentId?: string | null;
-  razorpayOrderId?: string | null;
-  paymentStatus?: string;
-  amount?: number;
 }
 
 export interface MyDonation {
