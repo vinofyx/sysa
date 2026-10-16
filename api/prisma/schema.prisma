@@ -169,6 +169,10 @@ model Donor {
   pincode             String?
   state               String?
   recognitionOptIn    Boolean             @default(false) @map("recognition_opt_in")
+  /// Explicit opt-in to WhatsApp receipts (checkout checkbox, unticked by
+  /// default). Entering a mobile number is NOT consent. Latest choice wins.
+  whatsappReceiptConsent Boolean          @default(false) @map("whatsapp_receipt_consent")
+  whatsappConsentUpdatedAt DateTime?      @map("whatsapp_consent_updated_at")
   donorTier           DonorTier           @default(one_time) @map("donor_tier")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
@@ -268,6 +272,14 @@ model Donation {
   /// is safe to retry on network failure without creating duplicate pending
   /// rows (documentation/13-API-Requirements.md §7).
   idempotencyKey        String?             @unique @map("idempotency_key")
+  /// Contact details submitted with THIS donation (validated, phone
+  /// normalized) and its WhatsApp opt-in. Receipts are delivered here — not
+  /// to whatever the matched donor record holds. Null for donations created
+  /// before these columns existed, or not from the checkout form (manual,
+  /// bank transfer, subscription charges): those fall back to the donor.
+  receiptEmail          String?             @map("receipt_email") @db.VarChar(255)
+  receiptPhone          String?             @map("receipt_phone") @db.VarChar(20)
+  whatsappReceiptConsent Boolean?           @map("whatsapp_receipt_consent")
   status                DonationStatus      @default(pending)
   source                DonationSource      @default(online)
   frequency             DonationFrequency   @default(one_time)
@@ -397,6 +409,10 @@ model Receipt {
   whatsappSentAt        DateTime?          @map("whatsapp_sent_at")
   whatsappMessageId     String?            @map("whatsapp_message_id")
   whatsappFailureReason String?            @map("whatsapp_failure_reason") @db.VarChar(500)
+  /// Provider delivery report (MSG91 webhook), separate from `whatsappStatus`
+  /// which only means "accepted by MSG91": sent | delivered | read | failed.
+  whatsappDeliveryStatus String?           @map("whatsapp_delivery_status") @db.VarChar(20)
+  whatsappDeliveryUpdatedAt DateTime?      @map("whatsapp_delivery_updated_at")
   /// Organisation copy (ORG_RECEIPT_EMAIL, e.g. sysaorg1@gmail.com) — tracked
   /// separately from the donor's own receipt email above so one channel
   /// failing never masks or re-triggers the other.
@@ -407,6 +423,14 @@ model Receipt {
   updatedAt             DateTime           @updatedAt @map("updated_at")
   donation              Donation           @relation(fields: [donationId], references: [id], onDelete: Cascade)
 
+  /// Durable delivery retries (replaces the in-memory timer): when due, the
+  /// delivery-retry worker re-drives this receipt's unsent channels. Bounded
+  /// by `deliveryRetryCount`; null = nothing scheduled.
+  deliveryRetryCount    Int       @default(0) @map("delivery_retry_count")
+  nextDeliveryRetryAt   DateTime? @map("next_delivery_retry_at")
+
+  @@index([whatsappMessageId])
+  @@index([nextDeliveryRetryAt])
   @@map("receipt")
 }
 
@@ -936,6 +960,9 @@ enum SmsDeliveryStatus {
   sent
   failed
   not_configured
+  /// Deliberately not attempted (no email/phone, or no WhatsApp opt-in);
+  /// the reason is in the channel's failure-reason column.
+  skipped
 }
 
 enum AppealStatus {
