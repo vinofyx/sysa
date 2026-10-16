@@ -40,7 +40,7 @@ export const newsPosts: NewsPost[] = [
       'Community Service',
       'Sai Yadadri Seva Ashram',
     ],
-    metaTitleEn: 'District Collector Visits Sai Yadadri Seva Ashram | Sai Yadadri Seva Ashramam',
+    metaTitleEn: 'District Collector Visits Sai Yadadri Seva Ashram | Sai Yadadri Seva Ashram',
     metaDescriptionEn:
       "Read about the District Collector's visit to Sai Yadadri Seva Ashram and the focus on improving facilities and care for elderly residents, as covered by Andhra Prabha.",
   },
