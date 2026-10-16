@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { writeAuditLog } from '@lib/audit-log';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
@@ -26,6 +27,7 @@ import * as checkoutService from '@services/donation-checkout.service';
 import * as subscriptionService from '@services/subscription.service';
 import { verifyAndCompletePayment } from '@services/payment-verification.service';
 import {
+  renderReceiptPdfForDownload,
   retryFailedDeliveries,
   retryReceiptEmail,
   retryReceiptSms,
@@ -44,6 +46,43 @@ function bearerToken(req: Request): string | undefined {
 
 function donationAccessTokenFrom(req: Request, queryToken?: string): string | undefined {
   return queryToken || bearerToken(req);
+}
+
+/** The admin user id for an authenticated admin session (Bearer/query token
+ * or the admin cookie), else null. Only admins may resend a message a
+ * provider rejected permanently (e.g. Meta 131049, SMTP 550) — donors and
+ * receipt-access tokens may not. Exported for tests. */
+export function adminIdFromRequest(req: Request, token: string | undefined): string | null {
+  for (const candidate of [
+    donationAccessTokenFrom(req, token),
+    req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined,
+  ]) {
+    if (!candidate) continue;
+    try {
+      const payload = verifyAccessToken(candidate);
+      if (payload?.type === 'admin' && payload.sub) return payload.sub;
+    } catch {
+      /* not an admin token */
+    }
+  }
+  return null;
+}
+
+/** Every resend is audit-logged: which channel(s), the outcome, and who
+ * asked (an admin id, or the donor / receipt link). Never PII or secrets. */
+async function auditResend(
+  donationId: string,
+  adminId: string | null,
+  channel: string,
+  outcome: unknown,
+): Promise<void> {
+  await writeAuditLog({
+    adminUserId: adminId ?? undefined,
+    action: 'RECEIPT_RESENT',
+    entityType: 'donation',
+    entityId: donationId,
+    afterState: { channel, outcome, requestedBy: adminId ? 'admin' : 'donor_or_receipt_link' },
+  });
 }
 
 /** Same "who may act on this donation" contract as `/:id/receipt` below
@@ -234,6 +273,43 @@ donationCheckoutRouter.get(
   },
 );
 
+// The downloadable receipt PDF, rendered from the verified receipt record.
+// Same access rule as GET /:id/receipt; a real PDF content type and a
+// "<receipt number>.pdf" filename, never cached by shared caches.
+const receiptPdfLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+donationCheckoutRouter.get(
+  '/:id/receipt/pdf',
+  receiptPdfLimiter,
+  validate({ params: idParamSchema }),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params as unknown as z.infer<typeof idParamSchema>;
+      const token = req.query.token as string | undefined;
+
+      const donation = await donationRepo.findById(id);
+      if (!donation) throw ApiError.notFound('Donation not found');
+
+      const authorized = await isAuthorizedForDonation(req, id, donation.donorId, token);
+      if (!authorized) throw ApiError.unauthorized();
+
+      const { filename, pdf } = await renderReceiptPdfForDownload(id);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', String(pdf.length));
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.status(200).end(pdf);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 // Deliberately tighter than `checkoutLimiter` — this never creates a
 // donation/payment, but each call does trigger a real outbound SMS-provider
 // request once one is configured, so it needs its own low-frequency cap
@@ -261,6 +337,7 @@ donationCheckoutRouter.post(
       if (!authorized) throw ApiError.unauthorized();
 
       const smsStatus = await retryReceiptSms(id);
+      await auditResend(id, adminIdFromRequest(req, token), 'sms', smsStatus);
       res.status(200).json({ data: { smsStatus } });
     } catch (error) {
       next(error);
@@ -283,7 +360,9 @@ donationCheckoutRouter.post(
       const authorized = await isAuthorizedForDonation(req, id, donation.donorId, token);
       if (!authorized) throw ApiError.unauthorized();
 
-      const emailStatus = await retryReceiptEmail(id);
+      const adminId = adminIdFromRequest(req, token);
+      const emailStatus = await retryReceiptEmail(id, { overridePermanent: adminId !== null });
+      await auditResend(id, adminId, 'donor_email', emailStatus);
       res.status(200).json({ data: { emailStatus } });
     } catch (error) {
       next(error);
@@ -306,7 +385,11 @@ donationCheckoutRouter.post(
       const authorized = await isAuthorizedForDonation(req, id, donation.donorId, token);
       if (!authorized) throw ApiError.unauthorized();
 
-      const whatsappStatus = await retryReceiptWhatsApp(id);
+      const adminId = adminIdFromRequest(req, token);
+      const whatsappStatus = await retryReceiptWhatsApp(id, {
+        overridePermanent: adminId !== null,
+      });
+      await auditResend(id, adminId, 'whatsapp', whatsappStatus);
       res.status(200).json({ data: { whatsappStatus } });
     } catch (error) {
       next(error);
@@ -329,7 +412,9 @@ donationCheckoutRouter.post(
       const authorized = await isAuthorizedForDonation(req, id, donation.donorId, token);
       if (!authorized) throw ApiError.unauthorized();
 
-      const result = await retryFailedDeliveries(id);
+      const adminId = adminIdFromRequest(req, token);
+      const result = await retryFailedDeliveries(id, { overridePermanent: adminId !== null });
+      await auditResend(id, adminId, 'all_unsent', result);
       res.status(200).json({ data: result });
     } catch (error) {
       next(error);

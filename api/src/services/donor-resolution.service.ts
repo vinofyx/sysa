@@ -16,6 +16,7 @@ export interface DonorIdentityInput {
   donorCity?: string;
   donorPincode?: string;
   donorState?: string;
+  whatsappReceiptConsent?: boolean;
 }
 
 /**
@@ -52,7 +53,7 @@ export async function resolveDonor(input: DonorIdentityInput) {
   // only the profile refresh is skipped.
   const matchedByPhone = donor.phone === normalizedPhone;
 
-  const donorUpdate: Record<string, string> = {};
+  const donorUpdate: Record<string, string | boolean | Date> = {};
   if (!matchedByPhone) return donor;
 
   if (input.panNumber && !donor.panNumberMasked) {
@@ -66,6 +67,14 @@ export async function resolveDonor(input: DonorIdentityInput) {
   if (input.donorPincode) donorUpdate.pincode = input.donorPincode;
   if (input.donorState) donorUpdate.state = input.donorState;
   if (input.donorName && input.donorName !== donor.name) donorUpdate.name = input.donorName;
+  // WhatsApp consent belongs to the phone's owner, so it is only ever set on
+  // a phone match (never via the email fallback above). Latest choice wins —
+  // including withdrawing it.
+  const consent = input.whatsappReceiptConsent === true;
+  if (consent !== donor.whatsappReceiptConsent) {
+    donorUpdate.whatsappReceiptConsent = consent;
+    donorUpdate.whatsappConsentUpdatedAt = new Date();
+  }
 
   // `email` is unique at the DB level. `donor` here was matched by phone
   // (the primary identity — see comment above), so its stored email can

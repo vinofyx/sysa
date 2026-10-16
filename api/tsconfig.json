@@ -4,7 +4,7 @@
     "lib": ["ES2022"],
     "module": "CommonJS",
     "moduleResolution": "node",
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
     "baseUrl": "./src",
     "paths": {
@@ -36,6 +36,6 @@
     "declaration": false,
     "incremental": false
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests", "src/**/*.test.ts", "src/tests/**"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
 }

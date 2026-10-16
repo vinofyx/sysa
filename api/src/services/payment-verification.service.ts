@@ -80,6 +80,26 @@ export async function completeDonationFromPayment(
     throw ApiError.badRequest(`Payment was not captured (status: ${payment.status}).`);
   }
 
+  // A captured payment is only proof for THIS donation if it was made against
+  // this donation's order, for exactly its amount and currency. On mismatch
+  // nothing is completed or receipted; the donation stays pending (money may
+  // really have been captured) for Finance to review via the audit log.
+  const mismatch = paymentMismatch(donation, payment);
+  if (mismatch) {
+    logger.error('Captured payment does not match donation — not completing', {
+      donationId: donation.id,
+      paymentId: razorpayPaymentId,
+      mismatch,
+    });
+    await writeAuditLog({
+      action: 'PAYMENT_MISMATCH',
+      entityType: 'donation',
+      entityId: donation.id,
+      afterState: { paymentId: razorpayPaymentId, mismatch },
+    });
+    throw ApiError.conflict('Payment details do not match this donation. Please contact us.');
+  }
+
   // `payment` was already fetched above to check `status === 'captured'` —
   // its `fee`/`tax` (paise, present on every captured payment) are free to
   // capture here too, no extra Razorpay call. Purely informational
@@ -132,6 +152,24 @@ export async function completeDonationFromPayment(
   });
 
   return updated;
+}
+
+/** Returns which of order id / amount / currency differ (names only — no
+ * amounts or ids, so it is safe to log), or null when they all match. */
+export function paymentMismatch(
+  donation: { razorpayOrderId: string | null; amount: unknown; currency: string },
+  payment: { order_id?: string | null; amount?: number | string | null; currency?: string | null },
+): string[] | null {
+  const problems: string[] = [];
+  if (donation.razorpayOrderId && payment.order_id !== donation.razorpayOrderId) {
+    problems.push('order_id');
+  }
+  const expectedPaise = Math.round(Number(donation.amount) * 100);
+  if (Number(payment.amount) !== expectedPaise) problems.push('amount');
+  if ((payment.currency ?? '').toUpperCase() !== donation.currency.toUpperCase()) {
+    problems.push('currency');
+  }
+  return problems.length > 0 ? problems : null;
 }
 
 export interface VerifyPaymentInput {

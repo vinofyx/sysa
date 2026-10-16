@@ -32,6 +32,7 @@ function ChannelRow({
   retry,
   skipped,
   skippedLabel,
+  heldLabel,
 }: {
   label: string;
   status: SmsDeliveryStatus | null | undefined;
@@ -41,7 +42,21 @@ function ChannelRow({
   retry: React.ReactNode;
   skipped?: boolean;
   skippedLabel?: string;
+  /** Set when a dry run held this channel back: shown neutrally, still resendable. */
+  heldLabel?: string;
 }) {
+  if (heldLabel) {
+    return (
+      <div className="border-pub-neutral-200 flex flex-col gap-2 border-t py-3 first:border-t-0">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-pub-neutral-500">{label}</span>
+          <span className="text-pub-neutral-500 text-right text-sm">{heldLabel}</span>
+        </div>
+        {retry}
+      </div>
+    );
+  }
+
   if (skipped) {
     return (
       <div className="border-pub-neutral-200 flex flex-col gap-2 border-t py-3 first:border-t-0">
@@ -99,8 +114,15 @@ export function ReceiptDeliveryPanel({
 
   const emailStatus = status?.emailStatus ?? null;
   const whatsappStatus = status?.whatsappStatus ?? null;
-  const emailSkipped = hasEmail === false;
-  const whatsappSkipped = status?.mobileOnFile === false;
+  const emailSkipped = hasEmail === false || status?.emailStatus === 'skipped';
+  const whatsappSkipped =
+    status?.mobileOnFile === false ||
+    status?.whatsappConsent === false ||
+    status?.whatsappStatus === 'skipped';
+  // The provider accepting the request ('sent') is not delivery; only a
+  // delivery report may say the message actually arrived.
+  const whatsappDelivered =
+    status?.whatsappDeliveryStatus === 'delivered' || status?.whatsappDeliveryStatus === 'read';
   const stillProcessing =
     (!emailSkipped && isProcessing(emailStatus)) ||
     (!whatsappSkipped && isProcessing(whatsappStatus));
@@ -128,6 +150,17 @@ export function ReceiptDeliveryPanel({
     };
   }, [donationId, token, stillProcessing]);
 
+  // Dry run: the backend deliberately sent nothing, so neither "failed" nor a
+  // retry button would be honest — show a neutral note instead.
+  if (status?.notificationsDryRun) {
+    return (
+      <div className="border-pub-neutral-200 bg-pub-neutral-white mt-4 rounded-xl border p-5 text-left text-sm">
+        <p className="font-medium">{t('receiptDeliveryHeading')}</p>
+        <p className="text-pub-neutral-500 mt-1">{t('receiptDeliveryNotSent')}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="border-pub-neutral-200 bg-pub-neutral-white mt-4 rounded-xl border p-5 text-left text-sm">
       <p className="font-medium">{t('receiptDeliveryHeading')}</p>
@@ -142,16 +175,20 @@ export function ReceiptDeliveryPanel({
         processingLabel={t('receiptDeliveryProcessing')}
         skipped={emailSkipped}
         skippedLabel={t('emailNotProvided')}
+        heldLabel={status?.emailHeldByDryRun ? t('deliveryNotSentYet') : undefined}
         retry={<RetryDeliveryButton donationId={donationId} token={token} channel="email" />}
       />
       <ChannelRow
         label={t('whatsappDeliveryLabel')}
         status={whatsappStatus}
-        sentLabel={t('whatsappSentSuccessfully')}
+        sentLabel={whatsappDelivered ? t('whatsappDelivered') : t('whatsappSentSuccessfully')}
         failedLabel={t('whatsappDeliveryFailed')}
         processingLabel={t('receiptDeliveryProcessing')}
         skipped={whatsappSkipped}
-        skippedLabel={t('mobileNotProvided')}
+        skippedLabel={
+          status?.mobileOnFile === false ? t('mobileNotProvided') : t('whatsappNotRequested')
+        }
+        heldLabel={status?.whatsappHeldByDryRun ? t('deliveryNotSentYet') : undefined}
         retry={<RetryDeliveryButton donationId={donationId} token={token} channel="whatsapp" />}
       />
     </div>

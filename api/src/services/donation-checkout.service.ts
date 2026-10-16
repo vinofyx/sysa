@@ -1,13 +1,18 @@
-import { env } from '@config/env';
+import { env, notificationsMode } from '@config/env';
 import { writeAuditLog } from '@lib/audit-log';
 import { signDonationAccessToken } from '@lib/donor-jwt';
 import { ApiError } from '@utils/api-error';
+import { maskEmail, maskPhone } from '@utils/pii-mask';
+import { normalizeIndianMobile } from '@utils/mobile';
 
 import * as donationRepo from '@repositories/donation.repository';
 import * as donationCategoryRepo from '@repositories/donation-category.repository';
 import * as appealRepo from '@repositories/appeal.repository';
 import { createOrder } from '@services/razorpay-order.service';
 import { resolveDonor } from '@services/donor-resolution.service';
+import { heldByDryRun } from '@services/receipt.service';
+import { receiptRecipients } from '@services/receipt-recipients';
+import { ORG_NAME } from '@services/receipt-pdf.service';
 
 export interface InitiateDonationInput {
   donorName: string;
@@ -19,6 +24,8 @@ export interface InitiateDonationInput {
   donorCity?: string;
   donorPincode?: string;
   donorState?: string;
+  /** Explicit WhatsApp receipt opt-in for this donation (default false). */
+  whatsappReceiptConsent?: boolean;
   categoryId: string;
   appealId?: string;
   amount: number;
@@ -95,6 +102,11 @@ export async function initiateDonation(input: InitiateDonationInput): Promise<Ch
     status: 'pending',
     razorpayOrderId: order.id,
     idempotencyKey: input.idempotencyKey,
+    // Receipts go to what was submitted with this donation, whichever donor
+    // record it was matched to (see receipt.service.ts receiptRecipients).
+    receiptEmail: input.donorEmail ?? null,
+    receiptPhone: normalizeIndianMobile(input.donorPhone),
+    whatsappReceiptConsent: input.whatsappReceiptConsent === true,
   });
 
   await writeAuditLog({
@@ -112,6 +124,8 @@ export async function getDonationStatus(donationId: string) {
   if (!donation) throw ApiError.notFound('Donation not found');
 
   const receipt = donation.receipt;
+  // Same recipients the receipt is delivered to (receipt-recipients.ts).
+  const recipients = receiptRecipients(donation);
   return {
     id: donation.id,
     status: donation.status,
@@ -120,6 +134,20 @@ export async function getDonationStatus(donationId: string) {
     currency: donation.currency,
     category: donation.category.nameEn,
     failureReason: donation.failureReason,
+    // Website receipt view — the same donor details the PDF prints, with
+    // contact details masked because this response is reachable by link.
+    organisationName: ORG_NAME,
+    donorName: donation.donor.name,
+    donorEmailMasked: recipients.email ? maskEmail(recipients.email) : null,
+    donorPhoneMasked: recipients.phone ? maskPhone(recipients.phone) : null,
+    donorAddress: donation.donor.address || null,
+    donorCity: donation.donor.city || null,
+    donorState: donation.donor.state || null,
+    donorPincode: donation.donor.pincode || null,
+    // Only the stored masked PAN ever leaves the API; Aadhaar is not returned.
+    panNumberMasked: donation.donor.panNumberMasked || null,
+    donationDate: donation.completedAt ?? donation.createdAt,
+    paymentMethod: donation.paymentMethod,
     receiptAvailable: !!receipt?.pdfUrl || !!receipt?.receiptNumber,
     receiptGenerated: !!receipt?.receiptGeneratedAt || !!receipt?.receiptNumber,
     receiptNumber: receipt?.receiptNumber ?? null,
@@ -130,11 +158,22 @@ export async function getDonationStatus(donationId: string) {
     emailStatus: receipt?.emailStatus ?? null,
     emailSentAt: receipt?.emailSentAt ?? null,
     emailFailureReason: receipt?.emailFailureReason ?? null,
-    emailOnFile: !!donation.donor.email,
+    emailOnFile: !!recipients.email,
     whatsappStatus: receipt?.whatsappStatus ?? null,
     whatsappSentAt: receipt?.whatsappSentAt ?? null,
     whatsappFailureReason: receipt?.whatsappFailureReason ?? null,
-    mobileOnFile: !!donation.donor.phone,
+    mobileOnFile: !!recipients.phone,
+    whatsappConsent: recipients.whatsappConsent,
+    // Provider delivery report (null until MSG91 reports one). `whatsappStatus`
+    // 'sent' alone only means MSG91 accepted the request.
+    whatsappDeliveryStatus: receipt?.whatsappDeliveryStatus ?? null,
+    // True while NOTIFICATIONS_MODE is dry_run: channels read not_configured
+    // on purpose, so the success page must not present them as failures.
+    notificationsDryRun: notificationsMode() === 'dry_run',
+    // Per channel: held back by a dry run that has since ended (mode is now
+    // live). Still unsent — resendable — but never a delivery failure.
+    emailHeldByDryRun: heldByDryRun(receipt?.emailStatus, receipt?.emailFailureReason),
+    whatsappHeldByDryRun: heldByDryRun(receipt?.whatsappStatus, receipt?.whatsappFailureReason),
     createdAt: receipt?.issuedAt ?? donation.createdAt,
     updatedAt: receipt?.updatedAt ?? donation.completedAt ?? donation.createdAt,
     paymentReference: donation.paymentGatewayRef,

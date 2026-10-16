@@ -4,8 +4,11 @@ import { getLocale, getTranslations } from 'next-intl/server';
 
 import { Link } from '@/i18n/navigation';
 import { PageHero } from '@/components/public/page-hero';
+import { ReceiptSummary } from '@/components/public/receipt-summary';
 import { Button } from '@/components/ui/button';
-import { getDonationReceipt } from '@/lib/public-api';
+import { ReceiptAccessMessage } from '@/components/public/receipt-access-message';
+import { donationReceiptPdfUrl, getDonationReceipt } from '@/lib/public-api';
+import { loadWithReceiptAccess, type ReceiptAccessFailure } from '@/lib/receipt-access';
 import { buildMetadata } from '@/lib/seo';
 import { isStaticExport } from '@/lib/static-mode';
 
@@ -49,7 +52,19 @@ export default async function DonationReceiptPage({
   const t = await getTranslations('Donate');
   const tNav = await getTranslations('Nav');
 
-  const receipt = isStaticExport ? null : await getDonationReceipt(id, token).catch(() => null);
+  // Always settles into one explicit state — an expired link or an outage is
+  // never shown as "being prepared".
+  const result = isStaticExport
+    ? null
+    : await loadWithReceiptAccess(token, (accessToken) => getDonationReceipt(id, accessToken));
+  const receipt = result?.ok ? result.data : null;
+  const failure: ReceiptAccessFailure | null = result
+    ? result.ok
+      ? result.data.status === 'completed'
+        ? null
+        : 'not_completed'
+      : result.reason
+    : null;
 
   return (
     <div>
@@ -63,23 +78,23 @@ export default async function DonationReceiptPage({
             <CloudOff className="text-pub-neutral-500 mx-auto size-16" />
             <p className="text-pub-neutral-500 mt-4">{t('receiptUnavailableStatic')}</p>
           </>
+        ) : failure ? (
+          <ReceiptAccessMessage
+            reason={failure}
+            retryHref={`/donate/receipt/${id}${token ? `?token=${encodeURIComponent(token)}` : ''}`}
+          />
         ) : receipt ? (
           <>
             <FileDown className="text-pub-primary-700 mx-auto size-16" />
             <h2 className="font-pub-heading text-pub-primary-900 dark:text-pub-neutral-900 mt-4 text-xl font-semibold">
               {receipt.receiptNumber}
             </h2>
+            <ReceiptSummary status={receipt} />
             <div className="mt-6">
-              {receipt.pdfUrl || receipt.receiptUrl ? (
+              {receipt.receiptNumber ? (
                 <Button
                   className="bg-pub-primary-700 hover:bg-pub-primary-500"
-                  render={
-                    <a
-                      href={receipt.pdfUrl ?? receipt.receiptUrl ?? '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                    />
-                  }
+                  render={<a href={donationReceiptPdfUrl(id, token)} download />}
                 >
                   <FileDown /> {t('downloadReceipt')}
                 </Button>

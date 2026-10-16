@@ -5,17 +5,22 @@
  *
  *   npx tsx scripts/msg91-inspect-whatsapp-template.ts
  *
+ *   npx tsx scripts/msg91-inspect-whatsapp-template.ts sysa_donation_receipt
+ *
  * Reads MSG91_AUTHKEY (only — never a legacy key name), MSG91_WHATSAPP_NUMBER
  * (or MSG91_WHATSAPP_INTEGRATED_NUMBER), MSG91_WHATSAPP_TEMPLATE_NAME and
- * MSG91_WHATSAPP_TEMPLATE_ID from api/.env (never .env.local). Read-only: a
- * single GET that lists templates; it sends no message. The authkey is only
- * ever placed in the request header — never printed or written anywhere.
+ * MSG91_WHATSAPP_TEMPLATE_ID the same way the API does: api/.env, then
+ * api/.env.local on top. A template name argument overrides the env one.
+ * Read-only: a single GET that lists templates; it sends no message. The
+ * authkey is only ever placed in the request header — never printed (any
+ * echo of it in provider output is redacted) or written anywhere.
  */
 import { config as loadDotenv } from 'dotenv';
 
-// override: api/.env is the only source — a stale key exported in the shell
-// must not be used instead.
+// Same precedence as src/config/env.ts (.env, then .env.local on top), with
+// override so a stale key exported in the shell is never used instead.
 loadDotenv({ path: '.env', override: true });
+loadDotenv({ path: '.env.local', override: true });
 
 const FIELD_CHOICES =
   '<customerName|amountFormatted|receiptNumber|donationDate|paymentId|receiptUrl>';
@@ -30,6 +35,11 @@ interface TemplateComponent {
 }
 
 interface TemplateLanguage {
+  /** MSG91 returns components as `code` (older docs call it `components`). */
+  code?: TemplateComponent[];
+  msg91_template_id?: number | string;
+  variables?: string[];
+  rejection_reason?: string;
   language?: string;
   status?: string;
   id?: string | number;
@@ -55,7 +65,7 @@ async function main(): Promise<void> {
     process.env.MSG91_WHATSAPP_NUMBER ||
     ''
   ).replace(/\D/g, '');
-  const templateName = process.env.MSG91_WHATSAPP_TEMPLATE_NAME;
+  const templateName = process.argv[2] || process.env.MSG91_WHATSAPP_TEMPLATE_NAME;
   const expectedId = process.env.MSG91_WHATSAPP_TEMPLATE_ID;
 
   const missing = [
@@ -70,6 +80,11 @@ async function main(): Promise<void> {
 
   const url = `${TEMPLATE_API}/${number}?template_name=${encodeURIComponent(templateName as string)}`;
   const response = await fetch(url, { headers: { authkey: authkey as string } });
+  const redact = (text: string): string => text.split(authkey as string).join('[REDACTED]');
+  const log = console.log;
+  console.log = (...args: unknown[]) => log(...args.map((a) => redact(String(a))));
+  const logError = console.error;
+  console.error = (...args: unknown[]) => logError(...args.map((a) => redact(String(a))));
   const body = (await response.json().catch(() => null)) as {
     data?: TemplateEntry[];
     message?: string;
@@ -92,15 +107,22 @@ async function main(): Promise<void> {
     if (template.namespace) console.log(`  namespace: ${template.namespace}`);
     for (const lang of template.languages ?? []) {
       const idNote =
-        expectedId && lang.id != null && String(lang.id) !== expectedId
+        expectedId && ![String(lang.id), String(lang.msg91_template_id)].includes(expectedId)
           ? `  (≠ MSG91_WHATSAPP_TEMPLATE_ID ${expectedId})`
           : '';
       console.log(
-        `  language=${lang.language}  status=${lang.status}  id=${lang.id ?? '?'}${idNote}`,
+        `  language=${lang.language}  status=${lang.status}  meta_id=${lang.id ?? '?'}  msg91_template_id=${lang.msg91_template_id ?? '?'}${idNote}`,
       );
+      if (lang.rejection_reason && lang.rejection_reason !== 'NONE') {
+        console.log(`  rejection_reason=${lang.rejection_reason}`);
+      }
+      if (lang.variables?.length) console.log(`  variables: ${lang.variables.join(', ')}`);
+      if (String(lang.status).toUpperCase() !== 'APPROVED') {
+        console.log('  NOT APPROVED — keep MSG91_WHATSAPP_TEMPLATE_APPROVED unset.');
+      }
 
       const suggested: Record<string, string> = {};
-      for (const component of lang.components ?? []) {
+      for (const component of lang.code ?? lang.components ?? []) {
         const type = (component.type ?? '').toLowerCase();
         console.log(
           `    [${type}${component.format ? `:${component.format}` : ''}] ${component.text ?? ''}`,

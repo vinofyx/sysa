@@ -16,7 +16,37 @@ export interface WhatsAppDeliveryResult {
   status: WhatsAppSendStatus;
   messageId?: string | null;
   failureReason?: string | null;
+  /** The provider rejected this message for a reason a retry cannot fix
+   * (e.g. Meta 131049, a 4xx validation error). Never auto-retried. */
+  permanent?: boolean;
 }
+
+/** The transactional receipt template and its approved variable order:
+ * {{1}} donor name, {{2}} donation amount, {{3}} receipt number. */
+export const RECEIPT_TEMPLATE_NAME = 'sysa_donation_receipt';
+/** Same body variables, plus the receipt PDF as a DOCUMENT header (header_1).
+ * Mapping verified with scripts/msg91-inspect-whatsapp-template.ts. */
+export const RECEIPT_PDF_TEMPLATE_NAME = 'sysa_donation_receipt_pdf';
+const KNOWN_TEMPLATE_MAPS: Record<string, Record<string, ReceiptField>> = {
+  [RECEIPT_TEMPLATE_NAME]: {
+    body_1: 'customerName',
+    body_2: 'amountFormatted',
+    body_3: 'receiptNumber',
+  },
+  [RECEIPT_PDF_TEMPLATE_NAME]: {
+    header_1: 'document',
+    body_1: 'customerName',
+    body_2: 'amountFormatted',
+    body_3: 'receiptNumber',
+  },
+};
+
+/** Marketing templates must never carry a transactional receipt. */
+const MARKETING_TEMPLATES = new Set(['sysa_general_update']);
+
+/** Meta: "message not delivered to maintain healthy ecosystem engagement" —
+ * a per-recipient limit; resending quickly makes it worse. */
+const META_ECOSYSTEM_LIMIT_CODE = '131049';
 
 const DEFAULT_GRAPH_VERSION = 'v21.0';
 const MSG91_WHATSAPP_URL = 'https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/';
@@ -80,6 +110,24 @@ export interface WhatsAppReceiptInput {
 }
 
 /** Persisted as the channel's failure reason — secrets are scrubbed first. */
+/** Error codes MSG91/Meta put in a rejection body (`code`, `error_code`,
+ * `errorCode`, at any depth), deduplicated. Codes only — never values. */
+export function providerErrorCodes(body: unknown): string[] {
+  const codes = new Set<string>();
+  const visit = (node: unknown, depth: number): void => {
+    if (!node || typeof node !== 'object' || depth > 5) return;
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (['code', 'error_code', 'errorCode'].includes(key) && /^\d{3,7}$/.test(String(value))) {
+        codes.add(String(value));
+      } else {
+        visit(value, depth + 1);
+      }
+    }
+  };
+  visit(body, 0);
+  return [...codes];
+}
+
 function truncateReason(rawReason: string, max = 500): string {
   const reason = redactSecrets(rawReason);
   return reason.length <= max ? reason : `${reason.slice(0, max - 1)}…`;
@@ -155,10 +203,8 @@ function msg91ComponentMap(): TemplateVarMapResult {
     return { ok: true, map: {} };
   }
   if (!env.MSG91_WHATSAPP_TEMPLATE_VARS) {
-    if (env.MSG91_WHATSAPP_TEMPLATE_NAME === 'sysa_general_update') {
-      // The approved sysa_general_update template on MSG91 has no variables (variables: []).
-      return { ok: true, map: {} };
-    }
+    const known = KNOWN_TEMPLATE_MAPS[env.MSG91_WHATSAPP_TEMPLATE_NAME ?? ''];
+    if (known) return { ok: true, map: { ...known } };
     // The default is a guess at the approved template's variable positions.
     // It should be pinned via scripts/msg91-inspect-whatsapp-template.ts.
     if (!warnedDefaultComponentMap) {
@@ -172,6 +218,14 @@ function msg91ComponentMap(): TemplateVarMapResult {
   // A configured-but-invalid map fails the channel rather than silently
   // falling back to the guess.
   return parseTemplateVarMap(env.MSG91_WHATSAPP_TEMPLATE_VARS);
+}
+
+/** True when the configured template carries the receipt PDF as a document
+ * (a DOCUMENT-header template mapped as header_1 = "document"), so a fetchable
+ * document link must be prepared before sending. False for text templates. */
+export function templateNeedsDocument(): boolean {
+  const mapResult = msg91ComponentMap();
+  return mapResult.ok && Object.values(mapResult.map).some((field) => field === 'document');
 }
 
 function fieldValue(input: WhatsAppReceiptInput, field: ReceiptField): string | null {
@@ -332,14 +386,34 @@ async function sendViaMsg91(input: WhatsAppReceiptInput): Promise<WhatsAppDelive
         body?.message ||
         (typeof body?.data?.message === 'string' ? body.data.message : undefined) ||
         `MSG91 rejected the request (HTTP ${response.status})`;
+      const metaLimited = JSON.stringify(body ?? {}).includes(META_ECOSYSTEM_LIMIT_CODE);
+      // Keep any provider/Meta error codes — they are what diagnosis needs.
+      const codes = providerErrorCodes(body);
+      const withCodes =
+        codes.length > 0 ? `${providerMessage} (code ${codes.join(', ')})` : providerMessage;
+      // 4xx (other than 408/429) is a request the provider will keep
+      // rejecting — retrying it blindly only repeats the failure.
+      const permanent =
+        metaLimited ||
+        (response.status >= 400 && response.status < 500 && ![408, 429].includes(response.status));
       logger.error('WhatsApp MSG91 rejected the request', {
         to: maskPhone(input.to),
         httpStatus: response.status,
         providerType: body?.type,
         providerStatus: body?.status,
         providerMessage: body?.message,
+        providerCodes: codes,
+        permanent,
       });
-      return { status: 'failed', failureReason: truncateReason(providerMessage) };
+      return {
+        status: 'failed',
+        permanent,
+        failureReason: truncateReason(
+          metaLimited
+            ? `Meta ${META_ECOSYSTEM_LIMIT_CODE}: WhatsApp declined delivery to this recipient (engagement limit). ${withCodes}`
+            : withCodes,
+        ),
+      };
     }
 
     const messageId = msg91MessageId(body);
@@ -389,6 +463,30 @@ export async function sendWhatsAppReceipt(
   }
 
   if (msg91Configured()) {
+    const templateName = env.MSG91_WHATSAPP_TEMPLATE_NAME as string;
+    if (MARKETING_TEMPLATES.has(templateName)) {
+      logger.warn('WhatsApp receipt not sent — configured template is a marketing template', {
+        templateName,
+      });
+      return {
+        status: 'not_configured',
+        failureReason: `${templateName} is a marketing template and is never used for receipts — set MSG91_WHATSAPP_TEMPLATE_NAME=${RECEIPT_TEMPLATE_NAME}`,
+      };
+    }
+    if (!env.MSG91_WHATSAPP_TEMPLATE_ID) {
+      logger.warn('WhatsApp receipt not sent — template id not configured', { templateName });
+      return {
+        status: 'not_configured',
+        failureReason: `MSG91_WHATSAPP_TEMPLATE_ID is not set — use the id the inspect script verifies for ${templateName}`,
+      };
+    }
+    if (env.MSG91_WHATSAPP_TEMPLATE_APPROVED !== 'true') {
+      logger.warn('WhatsApp receipt not sent — template approval not confirmed', { templateName });
+      return {
+        status: 'not_configured',
+        failureReason: `Meta approval of ${templateName} is not confirmed (set MSG91_WHATSAPP_TEMPLATE_APPROVED=true once the inspect script shows APPROVED)`,
+      };
+    }
     return sendViaMsg91(input);
   }
 

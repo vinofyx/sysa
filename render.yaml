@@ -75,6 +75,10 @@ services:
         sync: false
       - key: WHATSAPP_TEMPLATE_LANGUAGE
         value: en
+      # Post-payment notifications default to dry_run (nothing is sent). Set
+      # to `live` in the dashboard only after the controlled live test.
+      - key: NOTIFICATIONS_MODE
+        sync: false
       # --- MSG91 (WhatsApp receipts + SMS). MSG91_AUTHKEY is the canonical
       # secret — set it in the Render dashboard, never in this file. ---
       - key: MSG91_AUTHKEY
@@ -83,10 +87,17 @@ services:
         value: "+919490118877"
       - key: MSG91_WABA_ID
         value: "1511221500759195"
+      # Transactional receipt template (never sysa_general_update).
       - key: MSG91_WHATSAPP_TEMPLATE_NAME
-        value: sysa_general_update
+        value: sysa_donation_receipt
       - key: MSG91_WHATSAPP_TEMPLATE_ID
-        value: "546722"
+        value: "567627"
+      # `true` only after the template is confirmed APPROVED by Meta.
+      - key: MSG91_WHATSAPP_TEMPLATE_APPROVED
+        sync: false
+      # Shared secret for MSG91 delivery reports (dashboard only).
+      - key: MSG91_WEBHOOK_SECRET
+        sync: false
       - key: MSG91_WHATSAPP_TEMPLATE_LANGUAGE
         value: en
       # Set from scripts/msg91-inspect-whatsapp-template.ts output only.
@@ -106,4 +117,12 @@ services:
       - key: SMS_PROVIDER_API_KEY
         sync: false
       - key: SMS_SENDER_ID
+        sync: false
+      # MSG91 Flow id (not the 19-digit DLT id) and its verified variables.
+      - key: SMS_DLT_TEMPLATE_ID
+        value: 6abd3c3362121d42e10c6c22
+      - key: SMS_PROVIDER_TEMPLATE_VARS
+        value: '{"donorName":"name","amount":"amount","receiptNumber":"receipt"}'
+      # `true` only after MSG91 reports the DLT content match as verified.
+      - key: SMS_DLT_CONTENT_VERIFIED
         sync: false

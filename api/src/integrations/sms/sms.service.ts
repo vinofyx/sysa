@@ -19,13 +19,18 @@ export interface ReceiptSmsVariables {
   donorName: string;
   category: string;
   amount: string;
+  receiptNumber?: string;
 }
 
-/** MSG91's own default naming for Flow template variables (confirmed
- * against MSG91's docs/examples — a template built any other way in the
- * dashboard would use different names, in which case override via
- * SMS_PROVIDER_TEMPLATE_VARS, see below). */
-const DEFAULT_VAR_NAMES = { donorName: 'VAR1', category: 'VAR2', amount: 'VAR3' } as const;
+/** MSG91's default naming for Flow template variables. Override via
+ * SMS_PROVIDER_TEMPLATE_VARS if the DLT template uses custom names
+ * (e.g. {"donorName":"name","amount":"amount","receiptNumber":"receipt"}). */
+const DEFAULT_VAR_NAMES = {
+  donorName: 'VAR1',
+  category: 'VAR2',
+  amount: 'VAR3',
+  receiptNumber: 'VAR4',
+} as const;
 
 function templateVarNames(): typeof DEFAULT_VAR_NAMES {
   if (!env.SMS_PROVIDER_TEMPLATE_VARS) return DEFAULT_VAR_NAMES;
@@ -86,6 +91,16 @@ export async function sendSms(to: string, variables: ReceiptSmsVariables): Promi
     return 'not_configured';
   }
 
+  // Configured is not the same as compliant: until the exact DLT content
+  // template is confirmed to match what MSG91 sends, a live SMS risks being
+  // blocked or mis-attributed by the operator. Refuse rather than guess.
+  if (env.SMS_DLT_CONTENT_VERIFIED !== 'true') {
+    logger.warn('SMS not sent — DLT content template not confirmed (SMS_DLT_CONTENT_VERIFIED)', {
+      to: maskPhone(to),
+    });
+    return 'not_configured';
+  }
+
   const url = env.SMS_PROVIDER_API_URL ?? MSG91_FLOW_URL;
   const vars = templateVarNames();
 
@@ -113,6 +128,9 @@ export async function sendSms(to: string, variables: ReceiptSmsVariables): Promi
             [vars.donorName]: variables.donorName,
             [vars.category]: variables.category,
             [vars.amount]: variables.amount,
+            ...(variables.receiptNumber && vars.receiptNumber !== 'VAR4'
+              ? { [vars.receiptNumber]: variables.receiptNumber }
+              : {}),
           },
         ],
       }),

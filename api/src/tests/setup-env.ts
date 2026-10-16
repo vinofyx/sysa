@@ -13,7 +13,9 @@
  *    Tests exercise providers only through `mock.method` stubs.
  */
 import dns from 'node:dns';
+import fs from 'node:fs';
 import net from 'node:net';
+import path from 'node:path';
 
 const guard = globalThis as typeof globalThis & {
   __sysaNetworkGuard?: { attempts: string[] };
@@ -26,10 +28,32 @@ if (!guard.__sysaNetworkGuard) {
   process.env.NODE_ENV = 'test';
   process.env.SYSA_TEST_ISOLATION = '1';
 
+  // Blank (not delete) every provider variable inherited from the shell AND
+  // every variable named in api/.env / api/.env.local. Deleting is not
+  // enough: Prisma Client auto-loads api/.env into process.env when it is
+  // imported, and dotenv/Prisma never override a variable that is already
+  // defined — so an empty value keeps real secrets out of this process. The
+  // API treats blank as unset. Only key NAMES are read from the files.
   const PROVIDER_ENV = /^(MSG91_|SMS_|SMTP_|WHATSAPP_|RAZORPAY_|CLOUDINARY_|EMAIL_FROM$)/;
-  for (const key of Object.keys(process.env)) {
-    if (PROVIDER_ENV.test(key)) delete process.env[key];
+  const apiRoot = path.resolve(__dirname, '..', '..');
+  const namesInEnvFiles = ['.env', '.env.local'].flatMap((file) => {
+    try {
+      return fs
+        .readFileSync(path.join(apiRoot, file), 'utf8')
+        .split(/\r?\n/)
+        .map((line) => line.match(/^\s*([A-Z0-9_]+)\s*=/)?.[1])
+        .filter((name): name is string => Boolean(name));
+    } catch {
+      return [];
+    }
+  });
+  for (const key of new Set([
+    ...Object.keys(process.env).filter((k) => PROVIDER_ENV.test(k)),
+    ...namesInEnvFiles,
+  ])) {
+    process.env[key] = '';
   }
+  process.env.NODE_ENV = 'test'; // in case an env file defines NODE_ENV
 
   process.env.DATABASE_URL = 'mysql://ci:ci@localhost:3306/ci';
   process.env.JWT_ACCESS_SECRET = 'test-access-secret-must-be-32-chars-min';

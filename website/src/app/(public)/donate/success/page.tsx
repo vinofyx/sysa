@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { Link } from '@/i18n/navigation';
 import { PageHero } from '@/components/public/page-hero';
 import { Button } from '@/components/ui/button';
+import { PendingStatusPoller } from '@/components/public/pending-status-poller';
 import { ReceiptDeliveryPanel } from '@/components/public/receipt-delivery-panel';
+import { ReceiptAccessMessage } from '@/components/public/receipt-access-message';
+import { ReceiptSummary } from '@/components/public/receipt-summary';
 import { getDonationStatus } from '@/lib/public-api';
-import { formatCurrency } from '@/lib/format';
+import { loadWithReceiptAccess } from '@/lib/receipt-access';
 import { buildMetadata } from '@/lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,66 +35,79 @@ export default async function DonationSuccessPage({
   const tNav = await getTranslations('Nav');
   const tCommon = await getTranslations('Common');
 
-  const status =
-    donationId && token ? await getDonationStatus(donationId, token).catch(() => null) : null;
+  const result = donationId
+    ? await loadWithReceiptAccess(token, (accessToken) =>
+        getDonationStatus(donationId, accessToken),
+      )
+    : null;
+  const status = result?.ok ? result.data : null;
+  // An expired/revoked link or an outage is shown as such — never as a
+  // payment that is still processing (which would also poll forever).
+  const accessFailure = result && !result.ok ? result.reason : null;
 
-  const paymentSucceeded = !status || status.status === 'completed';
+  // Only a payment the API reports as completed is shown as successful. An
+  // unknown status (no token, API unreachable) or a pending one is shown as
+  // still being confirmed — never as a success.
+  const outcome =
+    status?.status === 'completed' ? 'paid' : status?.status === 'failed' ? 'failed' : 'pending';
+  const title =
+    outcome === 'paid'
+      ? t('paymentSuccessTitle')
+      : outcome === 'failed'
+        ? t('paymentFailedTitle')
+        : t('paymentPendingTitle');
 
   return (
     <div>
       <PageHero
-        title={t('paymentSuccessTitle')}
+        title={accessFailure === 'link_invalid' ? t('receiptLinkInvalidTitle') : title}
         breadcrumb={[{ label: tNav('home'), href: '/' }, { label: tNav('donate') }]}
       />
       <div className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6">
-        <CheckCircle2 className="text-pub-primary-700 mx-auto size-16" />
-        <h2 className="font-pub-heading text-pub-primary-900 dark:text-pub-neutral-900 mt-4 text-xl font-semibold">
-          {t('paymentSuccessTitle')}
-        </h2>
-        <p className="text-pub-neutral-500 mt-2">
-          {paymentSucceeded ? t('paymentSuccessPaymentOnly') : t('paymentPendingBody')}
-        </p>
-
-        {status && (
-          <div className="border-pub-neutral-200 bg-pub-neutral-white mt-6 rounded-xl border p-5 text-left text-sm">
-            <div className="flex justify-between py-1">
-              <span className="text-pub-neutral-500">{t('paymentStatusLabel')}</span>
-              <span className="font-medium capitalize">{status.status}</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-pub-neutral-500">{t('categoriesHeading')}</span>
-              <span className="font-medium">{status.category}</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-pub-neutral-500">{t('amount')}</span>
-              <span className="font-medium">{formatCurrency(status.amount, status.currency)}</span>
-            </div>
-            {status.receiptNumber && (
-              <div className="flex justify-between py-1">
-                <span className="text-pub-neutral-500">{t('receiptNumberLabel')}</span>
-                <span className="font-medium">{status.receiptNumber}</span>
-              </div>
-            )}
-            {status.paymentReference && (
-              <div className="flex justify-between py-1">
-                <span className="text-pub-neutral-500">{t('paymentReferenceLabel')}</span>
-                <span className="font-medium break-all">{status.paymentReference}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {donationId && (
-          <ReceiptDeliveryPanel
-            donationId={donationId}
-            token={token}
-            initialStatus={status}
-            hasEmail={status?.emailOnFile !== false}
+        {accessFailure && donationId ? (
+          <ReceiptAccessMessage
+            reason={accessFailure}
+            retryHref={`/donate/success?donationId=${encodeURIComponent(donationId)}${token ? `&token=${encodeURIComponent(token)}` : ''}`}
           />
+        ) : (
+          <>
+            {outcome === 'paid' ? (
+              <CheckCircle2 className="text-pub-primary-700 mx-auto size-16" />
+            ) : outcome === 'failed' ? (
+              <XCircle className="text-pub-error mx-auto size-16" />
+            ) : (
+              <Clock className="text-pub-neutral-500 mx-auto size-16" />
+            )}
+            <h2 className="font-pub-heading text-pub-primary-900 dark:text-pub-neutral-900 mt-4 text-xl font-semibold">
+              {title}
+            </h2>
+            <p className="text-pub-neutral-500 mt-2">
+              {outcome === 'paid'
+                ? t('paymentSuccessPaymentOnly')
+                : outcome === 'failed'
+                  ? t('paymentFailedBody')
+                  : t('paymentPendingBody')}
+            </p>
+
+            {status && <ReceiptSummary status={status} />}
+
+            {donationId && token && status?.status === 'pending' && (
+              <PendingStatusPoller donationId={donationId} token={token} />
+            )}
+
+            {donationId && outcome === 'paid' && (
+              <ReceiptDeliveryPanel
+                donationId={donationId}
+                token={token}
+                initialStatus={status}
+                hasEmail={status?.emailOnFile !== false}
+              />
+            )}
+          </>
         )}
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          {donationId && status?.receiptAvailable && (
+          {donationId && outcome === 'paid' && status?.receiptAvailable && (
             <Button
               className="bg-pub-primary-700 hover:bg-pub-primary-500"
               render={
