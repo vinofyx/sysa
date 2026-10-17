@@ -1,3 +1,4 @@
+import { diagnoseDbError } from '@lib/db-diagnostics';
 import { logger } from '@lib/logger';
 
 import * as donationRepo from '@repositories/donation.repository';
@@ -74,9 +75,9 @@ export function startDeliveryRetryWorker(): () => void {
     try {
       await runDeliveryRetriesOnce();
     } catch (error) {
-      logger.error('Delivery retry worker run failed', {
-        error: error instanceof Error ? error.message : error,
-      });
+      // Code/category only: a Prisma message can carry the database host,
+      // query text and parameters.
+      logger.error('Delivery retry worker run failed', diagnoseDbError(error));
     } finally {
       running = false;
     }
