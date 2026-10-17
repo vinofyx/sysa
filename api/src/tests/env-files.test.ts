@@ -47,3 +47,22 @@ describe('.env.local is never loaded in production', () => {
     assert.deepEqual(envFilesToLoad(undefined), ['.env', '.env.local']);
   });
 });
+
+describe('host environment wins over an uploaded .env', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sysa-env-host-'));
+  fs.writeFileSync(path.join(dir, '.env'), 'DATABASE_URL=mysql://from-file\n');
+  fs.writeFileSync(path.join(dir, '.env.local'), 'DATABASE_URL=mysql://from-local\n');
+  after(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it('production: hPanel DATABASE_URL is kept; neither file replaces it', () => {
+    const target: NodeJS.ProcessEnv = { NODE_ENV: 'production', DATABASE_URL: 'mysql://from-host' };
+    loadEnvFiles(target, dir);
+    assert.equal(target.DATABASE_URL, 'mysql://from-host');
+  });
+
+  it('production without a host value: .env fills it, .env.local never does', () => {
+    const target: NodeJS.ProcessEnv = { NODE_ENV: 'production' };
+    loadEnvFiles(target, dir);
+    assert.equal(target.DATABASE_URL, 'mysql://from-file');
+  });
+});

@@ -1,4 +1,5 @@
 import { env, type Env } from '@config/env';
+import { categorizeDbMessage } from '@lib/db-diagnostics';
 
 /** Every configured credential. Their actual values are scrubbed from logs
  * and from persisted provider error text, so a provider that echoes a
@@ -23,12 +24,45 @@ let cachedSecrets: string[] | null = null;
 
 function secretValues(): string[] {
   if (cachedSecrets) return cachedSecrets;
-  const values = SECRET_KEYS.map((key) => env[key]).filter(
+  const values = [...SECRET_KEYS.map((key) => env[key]), ...databaseUrlSecrets()].filter(
     (value): value is string => typeof value === 'string' && value.length >= 6,
   );
   // Longest first so a secret that contains another is fully replaced.
   cachedSecrets = [...new Set(values)].sort((a, b) => b.length - a.length);
   return cachedSecrets;
+}
+
+/** The configured DATABASE_URL and its password (raw and URL-decoded), so a
+ * driver error that echoes either is scrubbed like any other credential. */
+function databaseUrlSecrets(): string[] {
+  const url = env.DATABASE_URL;
+  if (!url) return [];
+  const out = [url];
+  const password = /^[a-z]+:\/\/[^:/@]*:([^@]*)@/i.exec(url)?.[1];
+  if (password) {
+    out.push(password);
+    try {
+      out.push(decodeURIComponent(password));
+    } catch {
+      // not valid percent-encoding — the raw form is already covered
+    }
+  }
+  return out;
+}
+
+/** Credentials inside ANY connection string (not just the configured one). */
+const CONNECTION_STRING_CREDENTIALS =
+  /\b((?:mysql|postgres(?:ql)?|mongodb(?:\+srv)?|redis|sqlserver):\/\/)[^\s/@"'`]+@/gi;
+
+/** Prisma/database driver error text can carry the database host, user,
+ * query text and query parameters (donor data). Any such text is replaced
+ * wholesale by a fixed category (see lib/db-diagnostics.ts). */
+const DATABASE_ERROR_TEXT =
+  /Invalid `prisma\.|prisma\.\$(?:queryRaw|executeRaw)|PrismaClient[A-Za-z]*Error|database server at `|Can't reach database server|Authentication failed against database server|Raw query failed/i;
+
+export function redactDatabaseErrors(text: string): string {
+  if (DATABASE_ERROR_TEXT.test(text)) return `[database error: ${categorizeDbMessage(text)}]`;
+  return text.replace(CONNECTION_STRING_CREDENTIALS, `$1${REDACTED}@`);
 }
 
 /** Full identity numbers are never stored (only masked last-4 forms), but
@@ -55,7 +89,7 @@ export function redactSecrets(text: string): string {
   for (const secret of secretValues()) {
     if (out.includes(secret)) out = out.split(secret).join(REDACTED);
   }
-  return redactIdentityNumbers(redactUrlTokens(out));
+  return redactIdentityNumbers(redactUrlTokens(redactDatabaseErrors(out)));
 }
 
 /** Redacts string leaves of plain objects/arrays in place-safe copies. */
