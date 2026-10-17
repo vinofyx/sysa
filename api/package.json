@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "test": "tsx --test --import ./src/tests/setup-env.ts --test-reporter spec src/tests/razorpay-signature.test.ts src/tests/receipt-delivery.test.ts src/tests/receipt-pdf.test.ts src/tests/receipt-flow.test.ts src/tests/post-payment-notifications.test.ts src/tests/security-isolation.test.ts",
+    "test": "tsx --test --import ./src/tests/setup-env.ts --test-reporter spec src/tests/env-files.test.ts src/tests/razorpay-signature.test.ts src/tests/receipt-delivery.test.ts src/tests/receipt-pdf.test.ts src/tests/receipt-flow.test.ts src/tests/post-payment-notifications.test.ts src/tests/security-isolation.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

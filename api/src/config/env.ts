@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
 
@@ -10,11 +12,36 @@ import { z } from 'zod';
 // Tests must never pick up real provider credentials from a developer's env
 // files — they configure everything they need in src/tests/setup-env.ts,
 // which also sets SYSA_TEST_ISOLATION so this holds even if NODE_ENV is off.
+//
+// In production `.env.local` is never read: it holds test keys and dev-only
+// settings, and because it overrides even host-provided variables, a stray
+// copy on the server would silently replace production config. The decision
+// uses NODE_ENV as set by the host (hPanel / process manager) BEFORE any file
+// is loaded — a developer's `.env` may say production while `.env.local`
+// switches it back to development, and that local setup must keep working.
+export function envFilesToLoad(hostNodeEnv: string | undefined): string[] {
+  return hostNodeEnv === 'production' ? ['.env'] : ['.env', '.env.local'];
+}
+
+/** Loads the env files `envFilesToLoad` allows into `target` (exported for
+ * tests). Later files override earlier ones; `.env` never overrides
+ * variables the host already set. */
+export function loadEnvFiles(target: NodeJS.ProcessEnv, dir: string = process.cwd()): string[] {
+  const files = envFilesToLoad(target.NODE_ENV);
+  files.forEach((file, index) => {
+    loadDotenv({
+      path: path.join(dir, file),
+      override: index > 0,
+      processEnv: target as Record<string, string>,
+    });
+  });
+  return files;
+}
+
 if (process.env.NODE_ENV !== 'test' && process.env.SYSA_TEST_ISOLATION !== '1') {
   const explicitPort = process.env.PORT;
   const explicitBindHost = process.env.BIND_HOST;
-  loadDotenv();
-  loadDotenv({ path: '.env.local', override: true });
+  loadEnvFiles(process.env);
   if (explicitPort) {
     process.env.PORT = explicitPort;
   }
