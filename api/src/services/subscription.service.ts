@@ -15,6 +15,8 @@ import {
 
 export interface CreateSubscriptionInput extends DonorIdentityInput {
   categoryId: string;
+  /** Stable category code; used only when `categoryId` is unknown. */
+  categoryCode?: string;
   amount: number;
 }
 
@@ -39,7 +41,10 @@ export interface SubscriptionSession {
 export async function createSubscription(
   input: CreateSubscriptionInput,
 ): Promise<SubscriptionSession> {
-  const category = await donationCategoryRepo.findById(input.categoryId);
+  const { category } = await donationCategoryRepo.findForCheckout(
+    input.categoryId,
+    input.categoryCode,
+  );
   if (!category) throw ApiError.badRequest('Selected donation category was not found.');
 
   const donor = await resolveDonor(input);

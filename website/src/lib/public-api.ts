@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 import { env } from '@/lib/env';
+import { VERIFY_PAYMENT_TIMEOUT_MS } from '@/lib/payment-outcome';
 import { isStaticExport } from '@/lib/static-mode';
 import * as staticSite from '@/content/site';
 import { activities as staticActivities } from '@/content/activities';
@@ -214,7 +215,13 @@ export async function getDonationCategories(): Promise<DonationCategory[]> {
       '/donation-categories/public',
     );
     return data.categories;
-  } catch {
+  } catch (error) {
+    // The snapshot's ids may not exist in the API's database; checkout also
+    // sends each category's stable code so the API can still resolve it.
+    console.warn(
+      'Donation categories API unavailable — using the build-time snapshot',
+      error instanceof Error ? error.message : error,
+    );
     return staticDonationCategories;
   }
 }
@@ -314,6 +321,8 @@ export interface InitiateDonationPayload {
   /** Explicit WhatsApp receipt opt-in (checkbox). */
   whatsappReceiptConsent?: boolean;
   categoryId: string;
+  /** Stable category code — lets the API resolve a stale snapshot id. */
+  categoryCode?: string;
   appealId?: string;
   amount: number;
   idempotencyKey: string;
@@ -353,7 +362,7 @@ export async function verifyDonationPayment(payload: VerifyDonationPayload): Pro
       whatsappStatus: SmsDeliveryStatus | null;
       smsStatus: SmsDeliveryStatus | null;
     };
-  }>('/donations/verify', payload);
+  }>('/donations/verify', payload, { timeout: VERIFY_PAYMENT_TIMEOUT_MS });
   return data.data;
 }
 
@@ -370,6 +379,8 @@ export interface CreateSubscriptionPayload {
   /** Explicit WhatsApp receipt opt-in (checkbox). */
   whatsappReceiptConsent?: boolean;
   categoryId: string;
+  /** Stable category code — lets the API resolve a stale snapshot id. */
+  categoryCode?: string;
   amount: number;
 }
 

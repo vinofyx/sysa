@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/receipt-access.test.ts"
+    "test": "tsx --test src/lib/receipt-access.test.ts src/lib/donation-category.test.ts src/lib/payment-outcome.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

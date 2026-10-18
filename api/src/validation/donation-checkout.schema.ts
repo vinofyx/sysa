@@ -30,8 +30,17 @@ const donorFieldsSchema = z.object({
 
 /** FR-DON-02: category, amount, donor identity — guest checkout, no account
  * required. */
+/** Stable category code (e.g. GENERAL_DONATION), sent alongside the id so a
+ * stale id from a static snapshot can still be resolved — see
+ * donation-category.repository.ts findForCheckout. */
+const categoryCodeSchema = z
+  .string()
+  .regex(/^[A-Z0-9_]{1,64}$/)
+  .optional();
+
 export const initiateDonationSchema = donorFieldsSchema.extend({
   categoryId: z.string().uuid(),
+  categoryCode: categoryCodeSchema,
   appealId: z.string().uuid().optional(),
   // Razorpay's own minimum order amount for INR is ₹1 (100 paise) — enforcing
   // it here gives a clean validation error instead of letting a sub-₹1 amount
@@ -52,6 +61,7 @@ export const initiateDonationSchema = donorFieldsSchema.extend({
  * the existing one-time order-based checkout is never touched. */
 export const createSubscriptionSchema = donorFieldsSchema.extend({
   categoryId: z.string().uuid(),
+  categoryCode: categoryCodeSchema,
   amount: z.coerce
     .number()
     .min(1, 'Minimum donation amount is ₹1')

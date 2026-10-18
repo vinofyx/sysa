@@ -2375,3 +2375,78 @@ describe('Receipt PDF validation before sending', () => {
     assert.ok(line.includes('signature=[REDACTED]'));
   });
 });
+
+describe('checkout category lookup (id, then stable code)', () => {
+  function seedCategory(code: string, active = true) {
+    const id = randomUUID();
+    db.categories.set(id, { id, code, nameEn: code, active });
+    return id;
+  }
+  function initiateWith(category: { categoryId: string; categoryCode?: string }) {
+    return initiateDonation({
+      donorName: 'Ravi Kumar',
+      donorPhone: '9876543210',
+      panNumber: 'ABCDE1234F',
+      aadhaarNumber: '123456789012',
+      ...category,
+      amount: 501,
+      idempotencyKey: `idem-${randomUUID()}`,
+    });
+  }
+
+  it('a valid category id proceeds to Razorpay order creation', async () => {
+    const orders = mock.method(getRazorpayClient().orders, 'create', async () => ({
+      id: 'order_ok',
+    }));
+    const id = seedCategory('GENERAL_DONATION');
+    const session = await initiateWith({ categoryId: id, categoryCode: 'GENERAL_DONATION' });
+    assert.equal(orders.mock.callCount(), 1);
+    assert.equal(db.donations.get(session.donationId)?.categoryId, id);
+  });
+
+  it('a stale snapshot id resolves by its code to the live category', async () => {
+    const orders = mock.method(getRazorpayClient().orders, 'create', async () => ({
+      id: 'order_ok',
+    }));
+    const liveId = seedCategory('ANNAPRASADAM');
+    const session = await initiateWith({ categoryId: randomUUID(), categoryCode: 'ANNAPRASADAM' });
+    assert.equal(orders.mock.callCount(), 1);
+    assert.equal(db.donations.get(session.donationId)?.categoryId, liveId);
+  });
+
+  it('an unknown id with no code, an unknown code, or an inactive code is rejected before any order', async () => {
+    const orders = mock.method(getRazorpayClient().orders, 'create', async () => ({
+      id: 'order_x',
+    }));
+    seedCategory('OLD_GOSHALA', false);
+    for (const attempt of [
+      { categoryId: randomUUID() },
+      { categoryId: randomUUID(), categoryCode: 'NO_SUCH_CODE' },
+      { categoryId: randomUUID(), categoryCode: 'OLD_GOSHALA' },
+    ]) {
+      await assert.rejects(() => initiateWith(attempt), /Selected donation category was not found/);
+    }
+    assert.equal(orders.mock.callCount(), 0);
+  });
+
+  it('the request schema accepts the website payload and rejects a malformed code', () => {
+    const base = {
+      donorName: 'Ravi Kumar',
+      donorPhone: '9876543210',
+      panNumber: 'ABCDE1234F',
+      aadhaarNumber: '123456789012',
+      categoryId: '00000000-0000-4000-8000-000000000000',
+      amount: 1,
+      idempotencyKey: 'idem-12345678',
+    };
+    assert.equal(
+      initiateDonationSchema.parse({ ...base, categoryCode: 'GENERAL_DONATION' }).categoryCode,
+      'GENERAL_DONATION',
+    );
+    assert.equal(initiateDonationSchema.parse(base).categoryCode, undefined);
+    assert.equal(
+      initiateDonationSchema.safeParse({ ...base, categoryCode: "x'; DROP" }).success,
+      false,
+    );
+  });
+});
