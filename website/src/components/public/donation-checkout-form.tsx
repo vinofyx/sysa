@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { useRouter } from '@/i18n/navigation';
 import { useRazorpayScript } from '@/hooks/use-razorpay-script';
+import { categoryCodeFor } from '@/lib/donation-category';
 import {
   initiateDonation,
   verifyDonationPayment,
@@ -193,6 +194,7 @@ export function DonationCheckoutForm({
         donorState: values.donorState || undefined,
         whatsappReceiptConsent: values.whatsappReceiptConsent,
         categoryId: values.categoryId,
+        categoryCode: categoryCodeFor(categories, values.categoryId),
         appealId: selectedAppealId || undefined,
         amount: values.amount,
         idempotencyKey,
@@ -282,6 +284,7 @@ export function DonationCheckoutForm({
         donorState: values.donorState || undefined,
         whatsappReceiptConsent: values.whatsappReceiptConsent,
         categoryId: values.categoryId,
+        categoryCode: categoryCodeFor(categories, values.categoryId),
         amount: values.amount,
       });
 

@@ -1,5 +1,6 @@
 import { env, notificationsMode } from '@config/env';
 import { writeAuditLog } from '@lib/audit-log';
+import { logger } from '@lib/logger';
 import { signDonationAccessToken } from '@lib/donor-jwt';
 import { ApiError } from '@utils/api-error';
 import { maskEmail, maskPhone } from '@utils/pii-mask';
@@ -27,6 +28,8 @@ export interface InitiateDonationInput {
   /** Explicit WhatsApp receipt opt-in for this donation (default false). */
   whatsappReceiptConsent?: boolean;
   categoryId: string;
+  /** Stable category code; used only when `categoryId` is unknown. */
+  categoryCode?: string;
   appealId?: string;
   amount: number;
   idempotencyKey: string;
@@ -75,8 +78,16 @@ export async function initiateDonation(input: InitiateDonationInput): Promise<Ch
   // Validate referenced entities exist BEFORE touching the Razorpay API —
   // otherwise a bogus but well-formed categoryId/appealId creates a real,
   // orphaned Razorpay order and only then fails on the DB insert.
-  const category = await donationCategoryRepo.findById(input.categoryId);
+  const { category, matchedBy } = await donationCategoryRepo.findForCheckout(
+    input.categoryId,
+    input.categoryCode,
+  );
   if (!category) throw ApiError.badRequest('Selected donation category was not found.');
+  if (matchedBy === 'code') {
+    logger.warn('Checkout category id is stale — resolved by category code', {
+      categoryCode: category.code,
+    });
+  }
   if (input.appealId) {
     const appeal = await appealRepo.findById(input.appealId);
     if (!appeal) throw ApiError.badRequest('Selected appeal was not found.');
@@ -89,12 +100,12 @@ export async function initiateDonation(input: InitiateDonationInput): Promise<Ch
     amountPaise,
     currency: 'INR',
     receipt: input.idempotencyKey,
-    notes: { idempotencyKey: input.idempotencyKey, categoryId: input.categoryId },
+    notes: { idempotencyKey: input.idempotencyKey, categoryId: category.id },
   });
 
   const donation = await donationRepo.create({
     donor: { connect: { id: donor.id } },
-    category: { connect: { id: input.categoryId } },
+    category: { connect: { id: category.id } },
     ...(input.appealId ? { appeal: { connect: { id: input.appealId } } } : {}),
     amount: input.amount,
     currency: 'INR',
@@ -113,7 +124,7 @@ export async function initiateDonation(input: InitiateDonationInput): Promise<Ch
     action: 'PAYMENT_INITIATED',
     entityType: 'donation',
     entityId: donation.id,
-    afterState: { amount: input.amount, categoryId: input.categoryId, razorpayOrderId: order.id },
+    afterState: { amount: input.amount, categoryId: category.id, razorpayOrderId: order.id },
   });
 
   return toCheckoutSession(donation.id, order.id, input.amount);
