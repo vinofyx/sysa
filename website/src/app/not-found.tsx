@@ -1,6 +1,5 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import { Playfair_Display, Inter, Noto_Sans_Telugu } from 'next/font/google';
 import { FileQuestion } from 'lucide-react';
 
 import { FloatingSocialButtons } from '@/components/public/floating-social-buttons';
@@ -10,24 +9,6 @@ import { StatusPage } from '@/components/shared/status-page';
 import { getNavigation, getSiteSettings, getSocialLinks } from '@/lib/public-api';
 
 import './public.css';
-
-const playfairDisplay = Playfair_Display({
-  variable: '--font-playfair',
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
-  style: ['normal', 'italic'],
-});
-
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-});
-
-const notoSansTelugu = Noto_Sans_Telugu({
-  variable: '--font-noto-telugu',
-  subsets: ['telugu'],
-  weight: ['400', '500', '600', '700'],
-});
 
 /**
  * The 404 boundary for any URL that doesn't match a real route at all (as
@@ -49,11 +30,7 @@ export default async function NotFound() {
   ]);
 
   return (
-    <div
-      lang="en"
-      dir="ltr"
-      className={`${playfairDisplay.variable} ${inter.variable} ${notoSansTelugu.variable} font-public flex min-h-screen flex-col`}
-    >
+    <div lang="en" dir="ltr" className="font-public flex min-h-screen flex-col">
       <NextIntlClientProvider locale="en" messages={messages}>
         <SiteHeader settings={settings} navItems={navigation.header} />
         <main className="flex-1 overflow-x-clip">

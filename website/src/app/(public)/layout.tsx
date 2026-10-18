@@ -1,6 +1,5 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import { Playfair_Display, Inter, Noto_Sans_Telugu } from 'next/font/google';
 
 import { FloatingSocialButtons } from '@/components/public/floating-social-buttons';
 import { SiteFooter } from '@/components/public/site-footer';
@@ -8,24 +7,6 @@ import { SiteHeader } from '@/components/public/site-header';
 import { getNavigation, getSiteSettings, getSocialLinks } from '@/lib/public-api';
 
 import '../public.css';
-
-const playfairDisplay = Playfair_Display({
-  variable: '--font-playfair',
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
-  style: ['normal', 'italic'],
-});
-
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-});
-
-const notoSansTelugu = Noto_Sans_Telugu({
-  variable: '--font-noto-telugu',
-  subsets: ['telugu'],
-  weight: ['400', '500', '600', '700'],
-});
 
 /** Every public page depends on live CMS data (header/footer nav, site
  * settings, and each page's own content) that can change at any time via the
@@ -55,11 +36,7 @@ export default async function PublicLayout({ children }: { children: React.React
   ]);
 
   return (
-    <div
-      lang="en"
-      dir="ltr"
-      className={`${playfairDisplay.variable} ${inter.variable} ${notoSansTelugu.variable} font-public flex min-h-screen flex-col`}
-    >
+    <div lang="en" dir="ltr" className="font-public flex min-h-screen flex-col">
       <NextIntlClientProvider locale="en" messages={messages}>
         <SiteHeader settings={settings} navItems={navigation.header} />
         {/* overflow-x-clip: Reveal's slide-left/slide-right variants (components/public/motion.tsx)
