@@ -300,12 +300,63 @@ async function checkForLoopbackApiUrl() {
   }
 }
 
+// NEXT_PUBLIC_SITE_URL feeds canonical links, og:url, structured data, the
+// sitemap and robots.txt. .env.local's dev value (http://localhost:3031) is
+// used whenever the build command doesn't override it — a build that set only
+// NEXT_PUBLIC_API_URL shipped localhost canonical/sitemap URLs on 78 pages.
+// Same anchoring as LOOPBACK_URL_PATTERN for the JS chunks; in the HTML/XML/
+// text output only the places a site URL is written are checked.
+const LOOPBACK_HOST = String.raw`https?:\/\/(?:localhost|127\.0\.0\.1|\[?::1\]?)(?::\d+)?`;
+const LOOPBACK_SITE_URL_PATTERN = new RegExp(
+  String.raw`NEXT_PUBLIC_SITE_URL\s*:\s*["']${LOOPBACK_HOST}["']`,
+);
+const LOOPBACK_SITE_URL_IN_PAGE_PATTERN = new RegExp(
+  String.raw`(?:rel="canonical" href="|property="og:url" content="|<loc>|Sitemap:\s*|"url":")${LOOPBACK_HOST}`,
+);
+
+async function checkForLoopbackSiteUrl() {
+  const outDir = path.join(webRoot, 'out');
+  if (!existsSync(outDir)) return;
+
+  const { readdir } = await import('node:fs/promises');
+  const entries = await readdir(outDir, { recursive: true, withFileTypes: true });
+  const offenders = [];
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const isChunk = entry.name.endsWith('.js');
+    if (!isChunk && !/\.(html|xml|txt)$/.test(entry.name)) continue;
+    const filePath = path.join(entry.parentPath ?? entry.path, entry.name);
+    const contents = await readFile(filePath, 'utf-8');
+    const pattern = isChunk ? LOOPBACK_SITE_URL_PATTERN : LOOPBACK_SITE_URL_IN_PAGE_PATTERN;
+    if (pattern.test(contents)) offenders.push(path.relative(webRoot, filePath));
+  }
+  if (offenders.length === 0) return;
+
+  const summary =
+    'NEXT_PUBLIC_SITE_URL is a loopback address in the production output — canonical links, og:url, ' +
+    'structured data, sitemap.xml and robots.txt would point at localhost.\n' +
+    '   Fix: NEXT_PUBLIC_API_URL=https://sysa.in NEXT_PUBLIC_SITE_URL=https://sysa.in npm run build:static\n' +
+    `   Affected files (${offenders.length}):\n` +
+    offenders
+      .slice(0, 10)
+      .map((f) => '     - ' + f)
+      .join('\n') +
+    (offenders.length > 10 ? `\n     … and ${offenders.length - 10} more` : '');
+
+  if (process.env.ALLOW_LOCALHOST_API === 'true') {
+    console.log(`\nℹ️  Dev build (ALLOW_LOCALHOST_API=true) — ${summary}`);
+    return;
+  }
+  throw new Error(`Refusing to ship a production build with a loopback site URL — ${summary}`);
+}
+
 let exitCode = 0;
 try {
   await moveAside();
   await runBuild();
   await copyHostingerAssets();
   await checkForLoopbackApiUrl();
+  await checkForLoopbackSiteUrl();
   console.log('\nStatic export complete: website/out/');
 } catch (err) {
   console.error('\nStatic export build failed:', err.message);
