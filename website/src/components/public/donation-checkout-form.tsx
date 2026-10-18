@@ -36,6 +36,7 @@ import {
 import { useRouter } from '@/i18n/navigation';
 import { useRazorpayScript } from '@/hooks/use-razorpay-script';
 import { categoryCodeFor } from '@/lib/donation-category';
+import { verifyFailureDestination } from '@/lib/payment-outcome';
 import {
   initiateDonation,
   verifyDonationPayment,
@@ -238,9 +239,13 @@ export function DonationCheckoutForm({
                 `/donate/success?donationId=${session.donationId}&token=${session.statusToken}`,
               );
             })
-            .catch(() => {
+            .catch((error: unknown) => {
+              // Only a definitive API rejection is a failed payment; a
+              // timeout/network/server error goes to the status page, which
+              // shows the API's real status (polling while pending).
+              const page = verifyFailureDestination(error) === 'failure' ? 'failure' : 'success';
               router.push(
-                `/donate/failure?donationId=${session.donationId}&token=${session.statusToken}`,
+                `/donate/${page}?donationId=${session.donationId}&token=${session.statusToken}`,
               );
             });
         },

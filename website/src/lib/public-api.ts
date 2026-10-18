@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 import { env } from '@/lib/env';
+import { VERIFY_PAYMENT_TIMEOUT_MS } from '@/lib/payment-outcome';
 import { isStaticExport } from '@/lib/static-mode';
 import * as staticSite from '@/content/site';
 import { activities as staticActivities } from '@/content/activities';
@@ -361,7 +362,7 @@ export async function verifyDonationPayment(payload: VerifyDonationPayload): Pro
       whatsappStatus: SmsDeliveryStatus | null;
       smsStatus: SmsDeliveryStatus | null;
     };
-  }>('/donations/verify', payload);
+  }>('/donations/verify', payload, { timeout: VERIFY_PAYMENT_TIMEOUT_MS });
   return data.data;
 }
 
