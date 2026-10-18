@@ -206,7 +206,37 @@ pm2 startup   # persist across server reboots
 
 ## 8. Post-Deployment Smoke Test
 
-Run through this before considering the deployment live (see GO_LIVE_CHECKLIST.md for the full pre-launch list):
+Run through this before considering the deployment live (see GO_LIVE_CHECKLIST.md for the full pre-launch list). Hostinger reporting a deployment as "Completed" only means the build ran — it is not proof the site works.
+
+Start with the automated, read-only smoke test (it never creates orders, donations or messages, and exits non-zero on any failure):
+
+```bash
+npm run smoke -- https://sysa.in
+```
+
+Locally, with only the API running: `npm run smoke -- http://localhost:8081 --api-only --origin http://localhost:3031`.
+
+**Node.js app settings on Hostinger** (application root = repository root, which is what Hostinger builds from):
+
+| Setting       | Value                                                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Build command | `npm ci && npm run build --workspace=api` (the website is deployed separately as static files)                                           |
+| Entry file    | `api/dist/server.js` — there is no `dist/server.js` at the repository root                                                               |
+| Node.js       | 20 or 22                                                                                                                                 |
+| Required env  | `NODE_ENV=production`, `DATABASE_URL` (host `localhost` on Hostinger), `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, Razorpay keys — see §3 |
+
+**Reading a failure** — what the donor sees after Pay Now, and where to look:
+
+| Symptom                                                                                  | Meaning                                                                                                    | Where to look                                                                                             |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| "Unable to connect. Please check your internet connection…"                              | The browser got **no response at all** from the API (process not running, wrong URL, DNS, blocked by CORS) | `npm run smoke`: `request failed: ECONNREFUSED` / timeout. Locally, start both servers with `npm run dev` |
+| Hostinger HTML "503 Service Unavailable" (`Server: hcdn`)                                | No Node.js process is answering — crashed on startup or wrong entry file                                   | hPanel → Node.js → Logs; check the entry file above                                                       |
+| JSON `{"status":"degraded","checks":{"database":"error","databaseError":"auth_failed"}}` | API runs, MySQL rejects the login                                                                          | hPanel → Databases (password, user assigned to the database), then `DATABASE_URL`                         |
+| `databaseError` `unreachable` / `access_denied` / `database_missing`                     | Wrong host / user not assigned to the database / wrong database name                                       | `DATABASE_URL` host must be `localhost` on Hostinger                                                      |
+| Pay Now shows a server message (HTTP 500)                                                | API reached, a dependency failed (database, Razorpay keys)                                                 | Smoke test check 3, then the API logs                                                                     |
+| Homepage returns JSON instead of the website                                             | The domain points at the Node.js app, not the static site                                                  | Serve `website/out` on the domain and route only `/api/*` to Node (§10–11)                                |
+
+Then confirm by hand:
 
 1. `curl https://sysa.in/api/v1/health` → HTTP 200 and JSON from the Node.js API (not an HTML 404). Example body: `{"status":"ok", ...}`.
 2. Visit `https://sysa.in` — homepage loads.
