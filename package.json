@@ -31,7 +31,7 @@
     "prisma:migrate": "npm run prisma:migrate --workspace=api",
     "prisma:deploy": "npm run prisma:deploy --workspace=api",
     "prisma:studio": "npm run prisma:studio --workspace=api",
-    "prepare": "husky"
+    "prepare": "node .husky/install.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
