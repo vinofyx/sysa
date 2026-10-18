@@ -5,8 +5,13 @@
 let husky;
 try {
   husky = (await import('husky')).default;
-} catch {
-  process.exit(0);
+} catch (error) {
+  // Only the expected case — husky itself not installed — is skipped; a
+  // broken husky install (or any other error) still fails loudly.
+  if (error?.code === 'ERR_MODULE_NOT_FOUND' && /'husky'/.test(String(error.message))) {
+    process.exit(0);
+  }
+  throw error;
 }
 const message = husky();
 if (message) console.log(message);
