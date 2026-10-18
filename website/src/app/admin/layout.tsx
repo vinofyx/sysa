@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { Playfair_Display } from 'next/font/google';
 
 import { AdminHeader } from '@/components/admin/admin-header';
 import { AdminSidebar, AdminSidebarRail } from '@/components/admin/admin-sidebar';
@@ -7,15 +6,6 @@ import { AdminThemeScope } from '@/components/admin/admin-theme-scope';
 import { getServerUser } from '@/lib/server-auth';
 
 import './admin.css';
-
-// Scoped to the admin nav chrome only (brand wordmark + section labels) —
-// distinct from `(public)/layout.tsx`'s `--font-playfair`, since admin
-// routes sit outside that route group and don't share its font-loader instance.
-const playfairDisplay = Playfair_Display({
-  variable: '--font-admin-playfair',
-  subsets: ['latin'],
-  weight: ['600', '700'],
-});
 
 /**
  * Admin shell — Server Component so the authoritative identity/permission check
@@ -32,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className={`${playfairDisplay.variable} admin-shell flex min-h-screen`}>
+    <div className="admin-shell flex min-h-screen">
       <AdminThemeScope />
       <AdminSidebarRail />
       <AdminSidebar />

@@ -2,6 +2,29 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+/*
+ * Font stacks. No webfonts are downloaded at build time (next/font/google
+ * fetches from Google during `next build`, which fails on hosts that block or
+ * proxy fonts.googleapis.com). Each stack names the design font first, so it
+ * is used where installed, then the closest common system fonts. Stacks that
+ * are chained together (e.g. --font-pub-heading in public.css) end without a
+ * generic family so Telugu glyphs can still fall through to the Telugu fonts.
+ */
+:root {
+  --font-playfair:
+    'Playfair Display', 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia,
+    'Times New Roman';
+  --font-admin-playfair: var(--font-playfair);
+  --font-inter:
+    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  --font-noto-telugu:
+    'Noto Sans Telugu', 'Nirmala UI', Gautami, 'Kohinoor Telugu', 'Telugu Sangam MN', Vani;
+  --font-geist-sans:
+    Geist, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  --font-geist-mono:
+    'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
