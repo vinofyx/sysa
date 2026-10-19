@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { config as loadDotenv } from 'dotenv';
@@ -38,10 +39,29 @@ export function loadEnvFiles(target: NodeJS.ProcessEnv, dir: string = process.cw
   return files;
 }
 
+/** Where this process's configuration came from — names and booleans only,
+ * never values. Logged once at startup by the database diagnostic. */
+export const envLoadInfo = {
+  cwd: process.cwd(),
+  /** NODE_ENV as set by the host before any env file was read. */
+  hostNodeEnv: process.env.NODE_ENV ?? null,
+  /** DATABASE_URL was set by the host (hPanel / process manager), not a file. */
+  databaseUrlFromHost: Boolean(process.env.DATABASE_URL?.trim()),
+  /** Env files that exist in the working directory (whether or not loaded). */
+  envFilesInCwd: [] as string[],
+  /** Env files this process was allowed to load. */
+  envFilesLoaded: [] as string[],
+};
+
 if (process.env.NODE_ENV !== 'test' && process.env.SYSA_TEST_ISOLATION !== '1') {
   const explicitPort = process.env.PORT;
   const explicitBindHost = process.env.BIND_HOST;
-  loadEnvFiles(process.env);
+  envLoadInfo.envFilesInCwd = ['.env', '.env.local', '.env.production'].filter((file) =>
+    existsSync(path.join(process.cwd(), file)),
+  );
+  envLoadInfo.envFilesLoaded = loadEnvFiles(process.env).filter((file) =>
+    envLoadInfo.envFilesInCwd.includes(file),
+  );
   if (explicitPort) {
     process.env.PORT = explicitPort;
   }
