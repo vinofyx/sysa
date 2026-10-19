@@ -5,7 +5,8 @@ import { afterEach, describe, it, mock } from 'node:test';
 import { Prisma } from '@prisma/client';
 import winston from 'winston';
 
-import { diagnoseDbError } from '@lib/db-diagnostics';
+import { describeDatabaseUrl, diagnoseDbError } from '@lib/db-diagnostics';
+import { logDatabaseStartupCheck } from '@lib/db-startup-check';
 import { logger } from '@lib/logger';
 import { prisma } from '@lib/prisma';
 import { healthRouter } from '@/routes/v1/health.routes';
@@ -168,5 +169,94 @@ describe('central log redaction of database errors', () => {
       assert.ok(!output.includes(leaked), `log leaked ${leaked}`);
     }
     assert.ok(output.includes('[database error:'));
+  });
+});
+
+describe('DATABASE_URL description and startup check (server logs only)', () => {
+  const USER = 'u123456_sai_user';
+  const PASSWORD = 'Sup3rS3cretPw';
+
+  it('describes host, port and database without the username or password', () => {
+    const d = describeDatabaseUrl(
+      `mysql://${USER}:${PASSWORD}@db.example.test:3306/u123456_sai_db`,
+    );
+    assert.deepEqual(
+      {
+        parseable: d.parseable,
+        host: d.host,
+        port: d.port,
+        database: d.database,
+        prefix: d.usernameMatchesDatabasePrefix,
+      },
+      {
+        parseable: true,
+        host: 'db.example.test',
+        port: '3306',
+        database: 'u123456_sai_db',
+        prefix: true,
+      },
+    );
+    assert.equal(d.passwordLength, PASSWORD.length);
+    const text = JSON.stringify(d);
+    assert.ok(!text.includes(PASSWORD) && !text.includes(USER), 'credentials leaked');
+  });
+
+  it('flags the configuration mistakes that cause auth failures', () => {
+    assert.equal(describeDatabaseUrl(`"mysql://u:${PASSWORD}@h:3306/d"`).wrappedInQuotes, true);
+    const unencoded = describeDatabaseUrl('mysql://u:pa@ss@h:3306/d');
+    assert.equal(unencoded.passwordHasUnencodedReservedChars, true);
+    const encoded = describeDatabaseUrl('mysql://u:Pass%24word@h:3306/d');
+    assert.equal(encoded.passwordPercentEncoded, true);
+    assert.equal(encoded.passwordLength, 'Pass$word'.length);
+    assert.equal(
+      describeDatabaseUrl('mysql://u_a_user:x@h:3306/v_b_db').usernameMatchesDatabasePrefix,
+      false,
+    );
+    assert.deepEqual(
+      {
+        present: describeDatabaseUrl(undefined).present,
+        parseable: describeDatabaseUrl('not a url').parseable,
+      },
+      { present: false, parseable: false },
+    );
+  });
+
+  it('a failed startup check logs code, category and parsed target — never credentials', async () => {
+    const previous = process.env.DATABASE_URL;
+    process.env.DATABASE_URL = `mysql://${USER}:${PASSWORD}@db.example.test:3306/u123456_sai_db`;
+    mock.method(prisma, '$queryRaw', async () => {
+      throw new Prisma.PrismaClientInitializationError(
+        `Authentication failed against database server at \`db.example.test\`, the provided database credentials for \`${USER}\` are not valid.`,
+        '5.22.0',
+        'P1000',
+      );
+    });
+    const lines: string[] = [];
+    const stream = new Writable({
+      write(chunk, _enc, done) {
+        lines.push(String(chunk));
+        done();
+      },
+    });
+    const transport = new winston.transports.Stream({ stream, format: winston.format.json() });
+    logger.add(transport);
+    try {
+      await logDatabaseStartupCheck();
+      await new Promise((resolve) => setImmediate(resolve));
+    } finally {
+      logger.remove(transport);
+      process.env.DATABASE_URL = previous;
+      mock.restoreAll();
+    }
+    const output = lines.join('\n');
+    assert.match(output, /Database startup check: FAILED/);
+    assert.match(output, /"code":"P1000"/);
+    assert.match(output, /"category":"auth_failed"/);
+    assert.match(output, /"host":"db\.example\.test"/);
+    assert.match(output, /"database":"u123456_sai_db"/);
+    assert.match(output, /"databaseUrlSource":/);
+    for (const leaked of [PASSWORD, USER, 'mysql://']) {
+      assert.ok(!output.includes(leaked), `log leaked ${leaked}`);
+    }
   });
 });

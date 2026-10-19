@@ -74,3 +74,96 @@ export function diagnoseDbError(error: unknown): DbErrorDiagnosis {
     categorizeDbMessage(error instanceof Error ? error.message : String(record.message ?? ''));
   return { code, category, errorName };
 }
+
+/** Non-secret description of a DATABASE_URL, for server-side diagnostics:
+ * host, port and database name, plus shape flags for the credentials. Never
+ * returns the username, password or the URL itself. */
+export interface DatabaseUrlDescription {
+  present: boolean;
+  parseable: boolean;
+  /** The value is wrapped in quotes — they become part of the URL when set in
+   * a hosting panel, which then fails to parse or authenticate. */
+  wrappedInQuotes: boolean;
+  scheme: string | null;
+  host: string | null;
+  port: string | null;
+  database: string | null;
+  hasUsername: boolean;
+  /** Username and database share the hosting account prefix (e.g. `u123_`). */
+  usernameMatchesDatabasePrefix: boolean | null;
+  hasPassword: boolean;
+  passwordLength: number;
+  /** `%xx` escapes present — decoded before being sent to MySQL. */
+  passwordPercentEncoded: boolean;
+  /** Raw `@ : / ? # [ ]` or space — must be percent-encoded in a URL. */
+  passwordHasUnencodedReservedChars: boolean;
+  hasQueryParameters: boolean;
+}
+
+export function describeDatabaseUrl(raw: string | undefined): DatabaseUrlDescription {
+  const value = raw?.trim() ?? '';
+  const base: DatabaseUrlDescription = {
+    present: value !== '',
+    parseable: false,
+    wrappedInQuotes: /^["'].*["']$/.test(value),
+    scheme: null,
+    host: null,
+    port: null,
+    database: null,
+    hasUsername: false,
+    usernameMatchesDatabasePrefix: null,
+    hasPassword: false,
+    passwordLength: 0,
+    passwordPercentEncoded: false,
+    passwordHasUnencodedReservedChars: false,
+    hasQueryParameters: false,
+  };
+  if (!base.present) return base;
+
+  // Credentials are read with a regex on the raw text, because URL parsing
+  // would already have altered unencoded reserved characters. They end at the
+  // LAST `@` before the host, as MySQL drivers split them.
+  const rawCredentials =
+    /^[a-z][a-z0-9+.-]*:\/\/([^/]*)@[^@/]*(?:[/?#]|$)/i.exec(
+      value.replace(/^["']|["']$/g, ''),
+    )?.[1] ?? '';
+  const colon = rawCredentials.indexOf(':');
+  const rawUser = colon >= 0 ? rawCredentials.slice(0, colon) : rawCredentials;
+  const rawPassword = colon >= 0 ? rawCredentials.slice(colon + 1) : '';
+  let decodedPassword = rawPassword;
+  try {
+    decodedPassword = decodeURIComponent(rawPassword);
+  } catch {
+    // invalid escape — length below falls back to the raw form
+  }
+
+  try {
+    const url = new URL(value.replace(/^["']|["']$/g, ''));
+    const database = decodeURIComponent(url.pathname.replace(/^\//, '')) || null;
+    const userPrefix = /^([a-z0-9]+_)/i.exec(decodeURIComponent(url.username))?.[1];
+    const dbPrefix = database ? /^([a-z0-9]+_)/i.exec(database)?.[1] : undefined;
+    return {
+      ...base,
+      parseable: true,
+      scheme: url.protocol.replace(/:$/, ''),
+      host: url.hostname || null,
+      port: url.port || null,
+      database,
+      hasUsername: rawUser !== '',
+      usernameMatchesDatabasePrefix: userPrefix && dbPrefix ? userPrefix === dbPrefix : null,
+      hasPassword: rawPassword !== '',
+      passwordLength: decodedPassword.length,
+      passwordPercentEncoded: /%[0-9a-f]{2}/i.test(rawPassword),
+      passwordHasUnencodedReservedChars: /[@:/?#[\]\s]/.test(rawPassword),
+      hasQueryParameters: url.search !== '',
+    };
+  } catch {
+    return {
+      ...base,
+      hasUsername: rawUser !== '',
+      hasPassword: rawPassword !== '',
+      passwordLength: decodedPassword.length,
+      passwordHasUnencodedReservedChars: /[@:/?#[\]\s]/.test(rawPassword),
+    };
+  }
+}

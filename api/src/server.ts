@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { env } from '@config/env';
 import { logger } from '@lib/logger';
 import { prisma } from '@lib/prisma';
+import { logDatabaseStartupCheck } from '@lib/db-startup-check';
 import { startDeliveryRetryWorker } from './jobs/delivery-retry.worker';
 
 const app = createApp();
@@ -11,6 +12,7 @@ const server = app.listen(env.PORT, env.BIND_HOST, () => {
     `🚀 Sai Yadadri Seva Ashram API listening on ${env.BIND_HOST}:${env.PORT} [${env.NODE_ENV}]`,
   );
   logger.info(`   Health check: ${env.API_URL}/api/v1/health`);
+  void logDatabaseStartupCheck();
 });
 
 // Durable receipt-delivery retries (database-backed; see the worker).
