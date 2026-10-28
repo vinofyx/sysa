@@ -18,11 +18,16 @@ function initError(message: string, code?: string) {
   return new Prisma.PrismaClientInitializationError(message, '5.22.0', code);
 }
 
-/** Runs GET /api/v1/health's handler directly (no network). */
-async function callHealth(): Promise<{ status: number; body: Record<string, any> }> {
+/** Runs one of the health route handlers directly (no network).
+ *  `path` must be either `'/'` (GET /api/v1/health) or `'/check'`
+ *  (GET /api/v1/health/check). */
+async function callHealth(
+  path: '/' | '/check' = '/',
+): Promise<{ status: number; body: Record<string, any> }> {
   const layer = (healthRouter as unknown as { stack: any[] }).stack.find(
-    (l) => l.route?.path === '/',
+    (l) => l.route?.path === path,
   );
+  if (!layer) throw new Error(`No health route registered for path '${path}'`);
   const handler = layer.route.stack[0].handle;
   return new Promise((resolve) => {
     let status = 200;
@@ -111,6 +116,40 @@ describe('GET /api/v1/health database failure reporting', () => {
     for (const leaked of ['S3cretPass', 'sysa_user', 'db.example.test', 'mysql://']) {
       assert.ok(!everything.includes(leaked), `leaked ${leaked}`);
     }
+  });
+});
+
+describe('GET /api/v1/health/check alias', () => {
+  afterEach(() => mock.restoreAll());
+
+  it('returns 200 with database ok when the database answers', async () => {
+    mock.method(prisma, '$queryRaw', async () => [{ 1: 1 }]);
+    const { status, body } = await callHealth('/check');
+    assert.equal(status, 200);
+    assert.equal(body.status, 'ok');
+    assert.deepEqual(body.checks, { database: 'ok' });
+    assert.ok(typeof body.timestamp === 'string', 'timestamp must be a string');
+    assert.ok(typeof body.uptimeSeconds === 'number', 'uptimeSeconds must be a number');
+    assert.ok(typeof body.responseTimeMs === 'number', 'responseTimeMs must be a number');
+    assert.ok(typeof body.version === 'string', 'version must be a string');
+  });
+
+  it('returns 503 degraded with only the error category when the database fails', async () => {
+    mock.method(prisma, '$queryRaw', async () => {
+      throw new Prisma.PrismaClientInitializationError(
+        'Authentication failed against database server at `db.example.test`',
+        '5.22.0',
+        'P1000',
+      );
+    });
+    const { status, body } = await callHealth('/check');
+    assert.equal(status, 503);
+    assert.equal(body.status, 'degraded');
+    assert.deepEqual(body.checks, { database: 'error', databaseError: 'auth_failed' });
+    // Must not leak any internal details
+    const safe = JSON.stringify(body);
+    assert.ok(!safe.includes('db.example.test'), 'host must not leak');
+    assert.ok(!safe.includes('mysql://'), 'connection string must not leak');
   });
 });
 

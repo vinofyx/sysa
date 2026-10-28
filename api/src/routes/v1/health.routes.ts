@@ -12,15 +12,15 @@ const REPEAT_LOG_MS = 60_000;
 let lastLogged: { key: string; at: number } | null = null;
 
 /**
- * GET /api/v1/health
+ * Shared handler for both health routes (see below).
  *
- * Liveness/readiness probe used by uptime monitoring, load balancers, and CI smoke tests
- * (see design/15-Deployment-Architecture.md §8 and §4 "SmokeTest" pipeline step).
- * Reports API process health plus database connectivity. On a database
- * failure the response carries only a fixed category (e.g. `auth_failed`) —
- * never the error message, host, user or connection string.
+ * Performs a live `SELECT 1` against the database and returns a JSON body
+ * with `status`, `timestamp`, `uptimeSeconds`, `responseTimeMs`, `checks`,
+ * and `version`. HTTP 200 when the database answers; 503 when it does not.
+ * Only a fixed error category is ever returned — never the error message,
+ * host, username, or connection string.
  */
-healthRouter.get('/', async (_req: Request, res: Response) => {
+async function healthHandler(_req: Request, res: Response): Promise<void> {
   const startedAt = Date.now();
   let databaseStatus: 'ok' | 'error' = 'ok';
   let databaseError: DbErrorCategory | undefined;
@@ -52,4 +52,22 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
   };
 
   res.status(databaseStatus === 'ok' ? 200 : 503).json(body);
-});
+}
+
+/**
+ * GET /api/v1/health
+ *
+ * Canonical liveness/readiness probe used by uptime monitoring, load
+ * balancers, and CI smoke tests (see design/15-Deployment-Architecture.md
+ * §8 and §4 "SmokeTest" pipeline step).
+ */
+healthRouter.get('/', healthHandler);
+
+/**
+ * GET /api/v1/health/check
+ *
+ * Alias for GET /api/v1/health — resolves NOT_FOUND that external monitors
+ * and integration consumers receive when calling the `/check` sub-path.
+ * Both paths share the identical handler; the canonical path remains `/`.
+ */
+healthRouter.get('/check', healthHandler);
