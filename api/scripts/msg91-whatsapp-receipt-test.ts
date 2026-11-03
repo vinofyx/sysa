@@ -26,6 +26,7 @@ import path from 'node:path';
 import { env } from '@config/env';
 import {
   RECEIPT_TEMPLATE_NAME,
+  RECEIPT_PDF_TEMPLATE_NAME,
   buildMsg91WhatsAppPayload,
   sendWhatsAppReceipt,
   type WhatsAppReceiptInput,
@@ -109,9 +110,12 @@ export interface ControlledSendConfig {
  * name settings only — never values that could be secret. */
 export function checkControlledSendConfig(config: ControlledSendConfig): string[] {
   const problems: string[] = [];
-  if (config.MSG91_WHATSAPP_TEMPLATE_NAME !== RECEIPT_TEMPLATE_NAME) {
+  if (
+    config.MSG91_WHATSAPP_TEMPLATE_NAME !== RECEIPT_TEMPLATE_NAME &&
+    config.MSG91_WHATSAPP_TEMPLATE_NAME !== RECEIPT_PDF_TEMPLATE_NAME
+  ) {
     problems.push(
-      `MSG91_WHATSAPP_TEMPLATE_NAME must be ${RECEIPT_TEMPLATE_NAME} (got "${config.MSG91_WHATSAPP_TEMPLATE_NAME ?? ''}") — never the marketing template sysa_general_update`,
+      `MSG91_WHATSAPP_TEMPLATE_NAME must be ${RECEIPT_TEMPLATE_NAME} or ${RECEIPT_PDF_TEMPLATE_NAME} (got "${config.MSG91_WHATSAPP_TEMPLATE_NAME ?? ''}") — never the marketing template sysa_general_update`,
     );
   }
   if (!config.MSG91_WHATSAPP_TEMPLATE_ID) problems.push('MSG91_WHATSAPP_TEMPLATE_ID is not set');
@@ -163,8 +167,13 @@ async function main(): Promise<void> {
     receiptNumber: `TEST-${new Date().toISOString().slice(0, 10)}`,
     donationDate: new Date().toLocaleDateString('en-IN'),
     paymentId: null,
-    documentUrl: null,
+    documentUrl:
+      process.env.TEST_DOCUMENT_URL ||
+      (env.MSG91_WHATSAPP_TEMPLATE_NAME === RECEIPT_PDF_TEMPLATE_NAME
+        ? 'https://sysa.in/sample-receipt.pdf'
+        : null),
     filename: 'Payment-Receipt-TEST.pdf',
+    receiptUrl: 'https://sysa.in/sample-receipt.pdf',
   };
 
   const built = buildMsg91WhatsAppPayload(input);

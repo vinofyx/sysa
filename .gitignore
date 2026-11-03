@@ -59,6 +59,13 @@ apps/api/uploads/
 .turbo/
 
 # Local/generated Hostinger deployment artifacts
+*.zip
+zip-check/
 SYSA-hostinger-production.zip
 hostinger-site/
 website/sysa_tmp_docx_extract/
+deployment/.staging/
+scratch/
+public_html/
+deployment/public_html/
+sysa-website-updated/

@@ -10,6 +10,7 @@ import {
   retryDonationEmail,
   retryDonationSms,
   retryDonationWhatsApp,
+  verifyDonationMobile,
   ApiRequestError,
 } from '@/lib/public-api';
 import type { SmsDeliveryStatus } from '@/types/public';
@@ -35,10 +36,12 @@ export function RetryDeliveryButton({
   donationId,
   token,
   channel,
+  onStatusChange,
 }: {
   donationId: string;
   token?: string;
   channel: DeliveryChannel;
+  onStatusChange?: (newStatus: SmsDeliveryStatus) => void;
 }) {
   const t = useTranslations('Donate');
   const tForms = useTranslations('Forms');
@@ -51,13 +54,29 @@ export function RetryDeliveryButton({
         return data.emailStatus;
       }
       if (channel === 'whatsapp') {
-        const data = await retryDonationWhatsApp(donationId, token);
-        return data.whatsappStatus;
+        try {
+          const data = await retryDonationWhatsApp(donationId, token);
+          return data.whatsappStatus;
+        } catch (err) {
+          if (err instanceof ApiRequestError && err.status === 409) {
+            try {
+              await verifyDonationMobile(donationId, undefined, token);
+              const retryData = await retryDonationWhatsApp(donationId, token);
+              return retryData.whatsappStatus;
+            } catch {
+              throw err;
+            }
+          }
+          throw err;
+        }
       }
       const data = await retryDonationSms(donationId, token);
       return data.smsStatus;
     },
-    onSuccess: (nextStatus) => setStatus(nextStatus),
+    onSuccess: (nextStatus) => {
+      setStatus(nextStatus);
+      onStatusChange?.(nextStatus);
+    },
   });
 
   const sentNote =

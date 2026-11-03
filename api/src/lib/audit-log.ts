@@ -55,7 +55,8 @@ export type AuditAction =
   | 'RECEIPT_GENERATED'
   | 'RECEIPT_RESENT'
   | 'DONOR_OTP_REQUESTED'
-  | 'DONOR_OTP_VERIFIED';
+  | 'DONOR_OTP_VERIFIED'
+  | 'DONOR_MOBILE_VERIFIED';
 
 interface WriteAuditLogInput {
   /** Omitted for system-initiated events (e.g. a Razorpay webhook) that have

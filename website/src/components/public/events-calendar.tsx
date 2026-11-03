@@ -50,6 +50,7 @@ export function EventsCalendar({ events, locale }: { events: PublicEvent[]; loca
         </button>
         <p className="font-pub-heading text-pub-primary-900 dark:text-pub-neutral-900 text-sm font-semibold">
           {cursor.toLocaleDateString(locale === 'te' ? 'te-IN' : 'en-IN', {
+            timeZone: 'Asia/Kolkata',
             month: 'long',
             year: 'numeric',
           })}

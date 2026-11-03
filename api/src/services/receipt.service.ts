@@ -684,6 +684,7 @@ async function deliverWhatsApp(
       paymentId: receipt.donation.paymentGatewayRef,
       documentUrl,
       filename: receiptFilename(receipt.receiptNumber),
+      receiptUrl: buildReceiptDownloadUrl(receipt.donationId),
     }),
   );
 

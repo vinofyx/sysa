@@ -28,10 +28,14 @@ export function formatReceiptDateTime(value: string | Date): string {
   return `${day}, ${time} IST`;
 }
 
-export function formatCurrency(value: string | number, currency = 'INR'): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Number(value));
+export function formatCurrency(value: string | number, _currency = 'INR'): string {
+  const num = Math.round(Number(value) || 0);
+  const s = String(num);
+  const lastThree = s.slice(-3);
+  const otherNumbers = s.slice(0, -3);
+  const formatted =
+    otherNumbers !== ''
+      ? otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree
+      : lastThree;
+  return `₹${formatted}`;
 }

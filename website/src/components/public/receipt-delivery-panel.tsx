@@ -20,7 +20,7 @@ function isSent(status: SmsDeliveryStatus | null | undefined): boolean {
 }
 
 function isFailed(status: SmsDeliveryStatus | null | undefined): boolean {
-  return status === 'failed' || status === 'not_configured';
+  return status === 'failed' || status === 'not_configured' || status === 'skipped';
 }
 
 function ChannelRow({
@@ -33,6 +33,7 @@ function ChannelRow({
   skipped,
   skippedLabel,
   heldLabel,
+  failureReason,
 }: {
   label: string;
   status: SmsDeliveryStatus | null | undefined;
@@ -44,6 +45,7 @@ function ChannelRow({
   skippedLabel?: string;
   /** Set when a dry run held this channel back: shown neutrally, still resendable. */
   heldLabel?: string;
+  failureReason?: string | null;
 }) {
   if (heldLabel) {
     return (
@@ -93,6 +95,9 @@ function ChannelRow({
           )}
         </span>
       </div>
+      {isFailed(status) && failureReason && (
+        <p className="text-pub-error text-xs">{failureReason}</p>
+      )}
       {isFailed(status) && retry}
     </div>
   );
@@ -112,20 +117,32 @@ export function ReceiptDeliveryPanel({
   const t = useTranslations('Donate');
   const [status, setStatus] = React.useState<DonationStatusResult | null>(initialStatus);
 
+  const refreshStatus = React.useCallback(() => {
+    if (!token) return;
+    getDonationStatus(donationId, token)
+      .then((fresh) => setStatus(fresh))
+      .catch(() => {});
+  }, [donationId, token]);
+
   const emailStatus = status?.emailStatus ?? null;
-  const whatsappStatus = status?.whatsappStatus ?? null;
+  const rawWhatsappStatus = status?.whatsappStatus ?? null;
+  const whatsappDeliveryStatus = status?.whatsappDeliveryStatus ?? null;
+
   const emailSkipped = hasEmail === false || status?.emailStatus === 'skipped';
-  const whatsappSkipped =
-    status?.mobileOnFile === false ||
-    status?.whatsappConsent === false ||
-    status?.whatsappStatus === 'skipped';
-  // The provider accepting the request ('sent') is not delivery; only a
-  // delivery report may say the message actually arrived.
+  // WhatsApp is skipped only if the donor did not opt in, or no mobile was provided.
+  const whatsappSkipped = status?.mobileOnFile === false || status?.whatsappConsent === false;
+
+  // Delivery report confirmation
   const whatsappDelivered =
-    status?.whatsappDeliveryStatus === 'delivered' || status?.whatsappDeliveryStatus === 'read';
+    whatsappDeliveryStatus === 'delivered' || whatsappDeliveryStatus === 'read';
+  const whatsappDeliveryConfirmedFailed = whatsappDeliveryStatus === 'failed';
+
+  // Effective status: if provider reported delivery failure via webhook, display failed
+  const effectiveWhatsappStatus = whatsappDeliveryConfirmedFailed ? 'failed' : rawWhatsappStatus;
+
   const stillProcessing =
     (!emailSkipped && isProcessing(emailStatus)) ||
-    (!whatsappSkipped && isProcessing(whatsappStatus));
+    (!whatsappSkipped && isProcessing(effectiveWhatsappStatus));
 
   React.useEffect(() => {
     if (!token || !stillProcessing) return;
@@ -161,6 +178,16 @@ export function ReceiptDeliveryPanel({
     );
   }
 
+  const emailRetryPermitted =
+    !emailSkipped &&
+    emailStatus !== 'sent' &&
+    !status?.emailFailureReason?.startsWith('[not retried automatically]');
+
+  const whatsappRetryPermitted =
+    !whatsappSkipped &&
+    effectiveWhatsappStatus !== 'sent' &&
+    !status?.whatsappFailureReason?.startsWith('[not retried automatically]');
+
   return (
     <div className="border-pub-neutral-200 bg-pub-neutral-white mt-4 rounded-xl border p-5 text-left text-sm">
       <p className="font-medium">{t('receiptDeliveryHeading')}</p>
@@ -176,12 +203,22 @@ export function ReceiptDeliveryPanel({
         skipped={emailSkipped}
         skippedLabel={t('emailNotProvided')}
         heldLabel={status?.emailHeldByDryRun ? t('deliveryNotSentYet') : undefined}
-        retry={<RetryDeliveryButton donationId={donationId} token={token} channel="email" />}
+        failureReason={status?.emailFailureReason}
+        retry={
+          emailRetryPermitted ? (
+            <RetryDeliveryButton
+              donationId={donationId}
+              token={token}
+              channel="email"
+              onStatusChange={refreshStatus}
+            />
+          ) : null
+        }
       />
       <ChannelRow
         label={t('whatsappDeliveryLabel')}
-        status={whatsappStatus}
-        sentLabel={whatsappDelivered ? t('whatsappDelivered') : t('whatsappSentSuccessfully')}
+        status={effectiveWhatsappStatus}
+        sentLabel={whatsappDelivered ? t('whatsappDelivered') : t('whatsappSubmitted')}
         failedLabel={t('whatsappDeliveryFailed')}
         processingLabel={t('receiptDeliveryProcessing')}
         skipped={whatsappSkipped}
@@ -189,7 +226,17 @@ export function ReceiptDeliveryPanel({
           status?.mobileOnFile === false ? t('mobileNotProvided') : t('whatsappNotRequested')
         }
         heldLabel={status?.whatsappHeldByDryRun ? t('deliveryNotSentYet') : undefined}
-        retry={<RetryDeliveryButton donationId={donationId} token={token} channel="whatsapp" />}
+        failureReason={status?.whatsappFailureReason}
+        retry={
+          whatsappRetryPermitted ? (
+            <RetryDeliveryButton
+              donationId={donationId}
+              token={token}
+              channel="whatsapp"
+              onStatusChange={refreshStatus}
+            />
+          ) : null
+        }
       />
     </div>
   );

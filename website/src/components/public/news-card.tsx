@@ -22,6 +22,7 @@ export function NewsCard({
   const title = locale === 'te' && post.titleTe ? post.titleTe : post.titleEn;
   const date = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString(locale === 'te' ? 'te-IN' : 'en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: 'numeric',
         month: 'short',
         year: 'numeric',

@@ -180,8 +180,8 @@ export async function SiteFooter({ settings, footerNavItems, socialLinks }: Site
 
       <div className="relative border-t border-white/10">
         <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-3 px-4 py-6 text-xs text-white/60 sm:flex-row sm:px-6 lg:px-8">
-          <p>
-            &copy; {new Date().getFullYear()} {siteName}. {t('rightsReserved')}
+          <p suppressHydrationWarning>
+            {`\u00A9 ${new Date().getFullYear()} ${siteName}. ${t('rightsReserved')}`}
           </p>
           <nav className="flex flex-wrap justify-center gap-4">
             {LEGAL_LINKS.map((link) => (
@@ -190,7 +190,7 @@ export async function SiteFooter({ settings, footerNavItems, socialLinks }: Site
               </Link>
             ))}
           </nav>
-          <p className="text-white/50">{t('regdNo')}: 423/2019</p>
+          <p className="text-white/50">{`${t('regdNo')}: 423/2019`}</p>
         </div>
       </div>
     </footer>

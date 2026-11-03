@@ -38,11 +38,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function currency(value: string | number) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(Number(value));
+  const num = Math.round(Number(value) || 0);
+  const s = String(num);
+  const lastThree = s.slice(-3);
+  const otherNumbers = s.slice(0, -3);
+  const formatted =
+    otherNumbers !== ''
+      ? otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree
+      : lastThree;
+  return `₹${formatted}`;
 }
 
 export default async function DonatePage() {
@@ -142,11 +146,9 @@ export default async function DonatePage() {
                         />
                         <div className="mt-2 flex justify-between text-xs text-white/75">
                           <span>
-                            {tDonate('raised')}: {currency(appeal.raisedAmountCache)}
+                            {`${tDonate('raised')}: ${currency(appeal.raisedAmountCache)}`}
                           </span>
-                          <span>
-                            {tDonate('target')}: {currency(appeal.targetAmount)}
-                          </span>
+                          <span>{`${tDonate('target')}: ${currency(appeal.targetAmount)}`}</span>
                         </div>
                       </div>
                     </div>
@@ -171,7 +173,10 @@ export default async function DonatePage() {
                   : 'max-w-xl',
               )}
             >
-              <div className="shadow-pub-xl bg-pub-neutral-white rounded-[var(--radius-pub-card)] p-1">
+              <div
+                suppressHydrationWarning
+                className="shadow-pub-xl bg-pub-neutral-white rounded-[var(--radius-pub-card)] p-1"
+              >
                 <DonationCheckoutForm categories={categories} appeals={appeals} />
               </div>
               {settings.upiId && (

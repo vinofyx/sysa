@@ -23,30 +23,59 @@ export function buildMetadata({
   image,
   noIndex,
 }: BuildMetadataParams): Metadata {
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL;
-  const normalizedPath = path === '/' ? '' : path;
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'https://sysa.in';
+  const normalizedPath = path === '/' ? '' : path.startsWith('/') ? path : `/${path}`;
 
   const canonical = `${siteUrl}${normalizedPath}`;
+  const ogUrl = path === '/' ? `${siteUrl}/` : canonical;
+
+  const defaultSharingImage = `${siteUrl}/whatsapp-preview-v3.jpg`;
+  const resolvedImageUrl = image
+    ? image.startsWith('http')
+      ? image
+      : `${siteUrl}${image.startsWith('/') ? '' : '/'}${image}`
+    : defaultSharingImage;
+
+  const resolvedTitle = title || 'Sai Yadadri Seva Ashram';
+  const resolvedDescription =
+    description || 'Maanava Sevaaye Madhava Seva – Service to Humanity is Service to God.';
 
   return {
-    title,
-    description,
+    title: resolvedTitle,
+    description: resolvedDescription,
     alternates: { canonical },
     robots: noIndex ? { index: false, follow: false } : { index: true, follow: true },
+    icons: {
+      icon: [
+        { url: '/favicon-v2.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
+        { url: '/icon-v2.png', type: 'image/png', sizes: '32x32' },
+      ],
+      apple: [{ url: '/apple-touch-icon-v2.png', sizes: '180x180', type: 'image/png' }],
+      shortcut: '/favicon-v2.ico',
+    },
     openGraph: {
-      title,
-      description,
-      url: canonical,
+      title: resolvedTitle,
+      description: resolvedDescription,
+      url: ogUrl,
       siteName: 'Sai Yadadri Seva Ashram',
       locale,
       type: 'website',
-      images: image ? [{ url: image }] : undefined,
+      images: [
+        {
+          url: resolvedImageUrl,
+          secureUrl: resolvedImageUrl,
+          type: 'image/jpeg',
+          width: 1200,
+          height: 630,
+          alt: 'Sai Yadadri Seva Ashram official banner',
+        },
+      ],
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
-      title,
-      description,
-      images: image ? [image] : undefined,
+      card: 'summary_large_image',
+      title: resolvedTitle,
+      description: resolvedDescription,
+      images: [resolvedImageUrl],
     },
   };
 }
@@ -63,18 +92,25 @@ export function localizedDefaultDescription(settings: SiteSettings, locale: stri
   const siteName =
     locale === 'te' && settings.siteNameTe ? settings.siteNameTe : settings.siteNameEn;
   const override = locale === 'te' ? null : settings.defaultMetaDescription;
-  return override ?? tagline ?? siteName;
+  return (
+    override ??
+    tagline ??
+    siteName ??
+    'Maanava Sevaaye Madhava Seva – Service to Humanity is Service to God.'
+  );
 }
 
 /** Falls back to `SiteSettings.defaultMetaTitle/Description` when a page has
  * no editorial override — never a hardcoded generic string. */
 export function defaultSeoFields(settings: SiteSettings, locale: string) {
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'https://sysa.in';
   const siteName =
     locale === 'te' && settings.siteNameTe ? settings.siteNameTe : settings.siteNameEn;
   return {
-    title: (locale === 'te' ? null : settings.defaultMetaTitle) ?? siteName,
+    title:
+      (locale === 'te' ? null : settings.defaultMetaTitle) ?? siteName ?? 'Sai Yadadri Seva Ashram',
     description: localizedDefaultDescription(settings, locale),
-    image: settings.defaultOgImageUrl,
+    image: settings.defaultOgImageUrl || `${siteUrl}/whatsapp-preview-v3.jpg`,
   };
 }
 

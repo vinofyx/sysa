@@ -68,6 +68,7 @@ export default async function EventDetailPage({ params }: Props) {
   const description =
     locale === 'te' && event.descriptionTe ? event.descriptionTe : event.descriptionEn;
   const date = new Date(event.startDate).toLocaleDateString(locale === 'te' ? 'te-IN' : 'en-IN', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'long',
     day: 'numeric',
     month: 'long',

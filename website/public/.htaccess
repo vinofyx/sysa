@@ -10,6 +10,15 @@
 
 RewriteEngine On
 
+# ----------------------------------------------------------------------
+# Canonical Domain Redirection
+# Force HTTPS and non-www lowercase canonical hostname: https://sysa.in/
+# Redirects HTTP, www.sysa.in, and uppercase/mixed-case hostnames (e.g. SYSA.in)
+# ----------------------------------------------------------------------
+RewriteCond %{HTTPS} !=on [OR]
+RewriteCond %{HTTP_HOST} !^sysa\.in$
+RewriteRule ^ https://sysa.in%{REQUEST_URI} [R=301,L]
+
 # Apache/CGI often drops the Authorization header before PHP sees it.
 # Receipt retry and donor Bearer tokens need it forwarded to the Node API.
 RewriteCond %{HTTP:Authorization} .
@@ -19,7 +28,24 @@ RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 </IfModule>
 
-# Forward /api/* to the Express API via api-proxy.php (origin is set in
+<IfModule mod_mime.c>
+  AddType image/x-icon .ico
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
+</IfModule>
+
+# Deny direct access to upstream configuration and hidden/env files
+<FilesMatch "^(api-upstream.*\.php|\.env.*|\.git.*)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Forward /api and /api/* to the Express API via api-proxy.php (origin is set in
 # api-upstream.php — never sysa.onrender.com). Must run before the
 # static-file / 404 rules — otherwise Apache would serve Next's HTML 404.
 # QSA keeps query tokens (?token=) for receipt/status/retry auth.

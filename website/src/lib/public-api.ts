@@ -422,11 +422,17 @@ export async function getDonationStatus(
   donationId: string,
   token: string,
 ): Promise<DonationStatusResult> {
-  const { data } = await publicApiClient.get<{ data: DonationStatusResult }>(
+  const response = await publicApiClient.get<{ data: DonationStatusResult } | DonationStatusResult>(
     `/donations/${donationId}/status`,
-    { params: { token } },
+    {
+      params: { token, _t: Date.now() },
+    },
   );
-  return data.data;
+  const body = response.data;
+  if (body && typeof body === 'object' && 'data' in body && body.data) {
+    return body.data as DonationStatusResult;
+  }
+  return body as DonationStatusResult;
 }
 
 /** The receipt PDF download (GET /donations/:id/receipt/pdf): rendered by the
@@ -513,4 +519,19 @@ export async function getMyDonations(page: number, pageSize: number) {
     params: { page, pageSize },
   });
   return data;
+}
+
+export async function verifyDonationMobile(
+  donationId: string,
+  phone?: string,
+  token?: string,
+): Promise<{ verified: boolean; donorId: string; phone: string }> {
+  const { data } = await publicApiClient.post<{
+    data: { verified: boolean; donorId: string; phone: string };
+  }>(
+    `/donations/${donationId}/verify-mobile`,
+    { phone },
+    { params: token ? { token } : undefined },
+  );
+  return data.data;
 }

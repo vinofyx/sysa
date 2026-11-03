@@ -13,6 +13,22 @@
  */
 declare(strict_types=1);
 
+ini_set('display_errors', '0');
+error_reporting(0);
+
+// Proxy loop prevention: detect if incoming request was already forwarded by this proxy
+if (!empty($_SERVER['HTTP_X_SYSA_PROXY'])) {
+    http_response_code(508);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => [
+            'code' => 'PROXY_LOOP_DETECTED',
+            'message' => 'Proxy loop detected: request has already passed through this proxy',
+        ],
+    ]);
+    exit;
+}
+
 if (!function_exists('getallheaders')) {
     function getallheaders(): array
     {
@@ -55,37 +71,70 @@ function sysa_api_upstream_origin(): string
 }
 
 $upstreamOrigin = sysa_api_upstream_origin();
+
+// Validate upstream origin URL
+$parsedUpstream = parse_url($upstreamOrigin);
+$upstreamScheme = strtolower($parsedUpstream['scheme'] ?? '');
+$upstreamHost = strtolower($parsedUpstream['host'] ?? '');
+$currentHost = strtolower(explode(':', $_SERVER['HTTP_HOST'] ?? '')[0]);
+
 if (
     $upstreamOrigin === '' ||
+    !in_array($upstreamScheme, ['http', 'https'], true) ||
+    $upstreamHost === '' ||
     stripos($upstreamOrigin, 'onrender.com') !== false
 ) {
     http_response_code(503);
-    header('Content-Type: application/json');
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'error' => [
-            'message' => 'API upstream is not configured. Copy api-upstream.example.php to api-upstream.php and set the Node.js API origin. Render is not used.',
+            'code' => 'UPSTREAM_NOT_CONFIGURED',
+            'message' => 'API upstream is not properly configured. Ensure api-upstream.php returns a valid URL (e.g. https://api.sysa.in). Render is not used.',
         ],
     ]);
     exit;
 }
 
+// Disallow proxying to self (prevent infinite proxy loops)
+if ($upstreamHost === $currentHost || ($currentHost === 'sysa.in' && $upstreamHost === 'sysa.in')) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => [
+            'code' => 'PROXY_CONFIG_ERROR',
+            'message' => 'Upstream origin cannot point to the website domain itself.',
+        ],
+    ]);
+    exit;
+}
+
+// Extract path
 $apiPath = $_SERVER['REDIRECT_SYSA_API'] ?? $_SERVER['SYSA_API'] ?? '';
 if ($apiPath === '') {
     $apiPath = $_SERVER['REDIRECT_URL'] ?? (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
 }
-$query = $_SERVER['QUERY_STRING'] ?? '';
-$requestUri = $apiPath . ($query !== '' ? '?' . $query : '');
-$path = $apiPath;
 
-if (strpos($path, '/api/') !== 0) {
-    http_response_code(404);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => ['message' => 'Not found']]);
+// Prevent directory traversal or invalid characters
+if (strpos($apiPath, '..') !== false || strpos($apiPath, "\0") !== false) {
+    http_response_code(400);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => ['code' => 'INVALID_PATH', 'message' => 'Invalid request path']]);
     exit;
 }
 
+// Allow /api and /api/*
+if ($apiPath !== '/api' && strpos($apiPath, '/api/') !== 0) {
+    http_response_code(404);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => ['code' => 'NOT_FOUND', 'message' => 'Not found']]);
+    exit;
+}
+
+$query = $_SERVER['QUERY_STRING'] ?? '';
+$requestUri = $apiPath . ($query !== '' ? '?' . $query : '');
 $target = $upstreamOrigin . $requestUri;
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $body = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)
     ? file_get_contents('php://input')
     : '';
@@ -111,6 +160,9 @@ $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
 if ($contentType !== '' && !isset($seen['content-type'])) {
     $forwardHeaders[] = 'Content-Type: ' . $contentType;
 }
+
+// Add proxy metadata and loop protection headers
+$forwardHeaders[] = 'X-SYSA-Proxy: 1';
 $forwardHeaders[] = 'X-Forwarded-For: ' . ($_SERVER['REMOTE_ADDR'] ?? '');
 $forwardHeaders[] = 'X-Forwarded-Proto: https';
 $forwardHeaders[] = 'X-Forwarded-Host: ' . ($_SERVER['HTTP_HOST'] ?? 'sysa.in');
@@ -121,9 +173,14 @@ curl_setopt_array($ch, [
     CURLOPT_HTTPHEADER => $forwardHeaders,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HEADER => true,
-    CURLOPT_TIMEOUT => 120,
+    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+    CURLOPT_RESOLVE => ['api.sysa.in:443:147.93.17.165'],
+    CURLOPT_CONNECTTIMEOUT => 15,
+    CURLOPT_TIMEOUT => 45,
     CURLOPT_FOLLOWLOCATION => false,
     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+    CURLOPT_SSL_VERIFYPEER => false,
+    CURLOPT_SSL_VERIFYHOST => 0,
 ]);
 if ($body !== '' && $body !== false) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
@@ -131,9 +188,17 @@ if ($body !== '' && $body !== false) {
 
 $response = curl_exec($ch);
 if ($response === false) {
+    $errNo = curl_errno($ch);
+    $errMsg = curl_error($ch);
+    error_log("[SYSA_API_PROXY] Upstream request failed (curl $errNo: $errMsg) to $target");
     http_response_code(502);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => ['message' => 'API upstream unreachable']]);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => [
+            'code' => 'UPSTREAM_UNAVAILABLE',
+            'message' => 'API upstream unreachable: ' . ($errMsg ?: 'cURL error ' . $errNo),
+        ],
+    ]);
     curl_close($ch);
     exit;
 }
@@ -161,3 +226,4 @@ foreach (explode("\r\n", $rawHeaders) as $line) {
     header($line, false);
 }
 echo $responseBody;
+

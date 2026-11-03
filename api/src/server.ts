@@ -12,6 +12,9 @@ const server = app.listen(env.PORT, env.BIND_HOST, () => {
     `🚀 Sai Yadadri Seva Ashram API listening on ${env.BIND_HOST}:${env.PORT} [${env.NODE_ENV}]`,
   );
   logger.info(`   Health check: ${env.API_URL}/api/v1/health`);
+  console.info(
+    `[PAYMENT-CONFIG] Razorpay configured: ${Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET)}, KeyPrefix: ${env.RAZORPAY_KEY_ID ? env.RAZORPAY_KEY_ID.slice(0, 9) : 'none'}, WebhookSecretSet: ${Boolean(env.RAZORPAY_WEBHOOK_SECRET)}`,
+  );
   void logDatabaseStartupCheck();
 });
 

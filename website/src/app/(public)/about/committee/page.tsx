@@ -11,7 +11,6 @@ import { translateDesignation } from '@/lib/designation-labels';
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  const t = await getTranslations('Nav');
   const settings = await getSiteSettings();
   return buildMetadata({
     locale,

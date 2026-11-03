@@ -24,11 +24,15 @@ export function EventCard({
   const tEvents = useTranslations('Events');
   const title = locale === 'te' && event.titleTe ? event.titleTe : event.titleEn;
   const date = new Date(event.startDate).toLocaleDateString(locale === 'te' ? 'te-IN' : 'en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
-  const isPast = new Date(event.startDate) < new Date();
+  const [isPast, setIsPast] = React.useState(false);
+  React.useEffect(() => {
+    setIsPast(new Date(event.startDate) < new Date());
+  }, [event.startDate]);
   const [imageFailed, setImageFailed] = React.useState(false);
 
   return (

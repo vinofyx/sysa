@@ -22,6 +22,7 @@ function FeaturedNewsCard({ post, locale }: { post: NewsPost; locale: string }) 
   const body = locale === 'te' && post.bodyTe ? post.bodyTe : post.bodyEn;
   const date = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString(locale === 'te' ? 'te-IN' : 'en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: 'numeric',
         month: 'short',
         year: 'numeric',

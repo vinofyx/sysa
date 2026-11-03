@@ -330,7 +330,10 @@ export function DonationCheckoutForm({
 
   return (
     <>
-      <div className="border-pub-neutral-200 bg-pub-neutral-white flex flex-col gap-4 rounded-xl border p-6">
+      <div
+        suppressHydrationWarning
+        className="border-pub-neutral-200 bg-pub-neutral-white flex flex-col gap-4 rounded-xl border p-6"
+      >
         <h3 className="font-pub-heading text-pub-primary-900 dark:text-pub-neutral-900 flex items-center gap-2 text-base font-semibold">
           <ShieldCheck className="text-pub-primary-700 size-5" /> {t('onlineHeading')}
         </h3>

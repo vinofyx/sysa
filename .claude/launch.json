@@ -5,15 +5,20 @@
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace=website"],
-      "port": 3030,
+      "port": 3031,
       "autoPort": true
     },
     {
       "name": "api",
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/d", "/c", ".claude\\dev-api.bat"],
-      "port": 5050,
-      "autoPort": true
+      "port": 8081
+    },
+    {
+      "name": "api-no-payments",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/dev-api-no-payments.cjs"],
+      "port": 8081
     },
     {
       "name": "static-export-preview",

@@ -53,20 +53,49 @@ export function createApp(): Application {
   // the browser then surfaces it only as a network error ("Unable to
   // connect") on Pay Now. Production keeps the exact allow-list.
   const loopbackOrigin = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
-  app.use(
-    cors({
-      origin:
-        env.NODE_ENV === 'development'
-          ? (origin, callback) => {
-              callback(
-                null,
-                !origin || env.CORS_ORIGIN.includes(origin) || loopbackOrigin.test(origin),
-              );
-            }
-          : env.CORS_ORIGIN,
-      credentials: true,
-    }),
-  );
+  const isDevelopment = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
+
+  const isOriginAllowed = (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
+    // Requests with no origin (like mobile apps, curl, or server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+    // Explicit configured CORS origins (exact allowlist in production)
+    if (env.CORS_ORIGIN.includes(origin)) {
+      return callback(null, true);
+    }
+    // In development / test: allow exact development origin http://localhost:5055 and any loopback
+    if (isDevelopment && (loopbackOrigin.test(origin) || origin === 'http://localhost:5055')) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  };
+
+  const corsOptions: cors.CorsOptions = {
+    origin: isOriginAllowed,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Correlation-ID',
+      'X-SYSA-Proxy',
+      'X-Forwarded-For',
+      'X-Forwarded-Proto',
+      'Cache-Control',
+      'Pragma',
+      'Expires',
+    ],
+    exposedHeaders: ['X-Correlation-ID'],
+    optionsSuccessStatus: 204,
+  };
+
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
 
   // General-purpose rate limiting (SEC-INFRA-04); stricter per-route limits are applied
   // to sensitive endpoints (auth, donations, contact) when those routes are implemented.

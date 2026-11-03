@@ -11,6 +11,8 @@ module.exports = tseslint.config(
       'node_modules/**',
       'prisma/migrations/**',
       'eslint.config.js',
+      'server.js',
+      'scripts/**',
       'src/tests/**',
       'src/**/*.test.ts',
     ],
@@ -35,7 +37,7 @@ module.exports = tseslint.config(
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
     },
   },
   {

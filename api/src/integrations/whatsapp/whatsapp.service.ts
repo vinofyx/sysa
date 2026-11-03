@@ -33,7 +33,18 @@ const KNOWN_TEMPLATE_MAPS: Record<string, Record<string, ReceiptField>> = {
     body_2: 'amountFormatted',
     body_3: 'receiptNumber',
   },
+  'sysa_donation-receipt': {
+    body_1: 'customerName',
+    body_2: 'amountFormatted',
+    body_3: 'receiptNumber',
+  },
   [RECEIPT_PDF_TEMPLATE_NAME]: {
+    header_1: 'document',
+    body_1: 'customerName',
+    body_2: 'amountFormatted',
+    body_3: 'receiptNumber',
+  },
+  'sysa_donation-receipt-pdf': {
     header_1: 'document',
     body_1: 'customerName',
     body_2: 'amountFormatted',
@@ -107,6 +118,7 @@ export interface WhatsAppReceiptInput {
   paymentId: string | null;
   documentUrl: string | null;
   filename: string;
+  receiptUrl?: string | null;
 }
 
 /** Persisted as the channel's failure reason — secrets are scrubbed first. */
@@ -198,12 +210,28 @@ export function parseTemplateVarMap(raw: string): TemplateVarMapResult {
   return { ok: true, map };
 }
 
+export function canonicalTemplateName(rawName?: string | null): string {
+  const name = (rawName ?? '').trim();
+  const id = env.MSG91_WHATSAPP_TEMPLATE_ID?.trim();
+  if (id === '571129') return RECEIPT_PDF_TEMPLATE_NAME;
+  if (!name) return RECEIPT_PDF_TEMPLATE_NAME;
+  if (name === 'sysa_donation-receipt-pdf' || name === 'sysa_donation_receipt_pdf') {
+    return RECEIPT_PDF_TEMPLATE_NAME;
+  }
+  if (name === 'sysa_donation-receipt' || name === 'sysa_donation_receipt') {
+    return RECEIPT_TEMPLATE_NAME;
+  }
+  return name.replace(/-/g, '_');
+}
+
 function msg91ComponentMap(): TemplateVarMapResult {
   if (env.MSG91_WHATSAPP_TEMPLATE_VARS === 'none' || env.MSG91_WHATSAPP_TEMPLATE_VARS === 'empty') {
     return { ok: true, map: {} };
   }
   if (!env.MSG91_WHATSAPP_TEMPLATE_VARS) {
-    const known = KNOWN_TEMPLATE_MAPS[env.MSG91_WHATSAPP_TEMPLATE_NAME ?? ''];
+    const canonical = canonicalTemplateName(env.MSG91_WHATSAPP_TEMPLATE_NAME);
+    const known =
+      KNOWN_TEMPLATE_MAPS[canonical] ?? KNOWN_TEMPLATE_MAPS[env.MSG91_WHATSAPP_TEMPLATE_NAME ?? ''];
     if (known) return { ok: true, map: { ...known } };
     // The default is a guess at the approved template's variable positions.
     // It should be pinned via scripts/msg91-inspect-whatsapp-template.ts.
@@ -224,6 +252,9 @@ function msg91ComponentMap(): TemplateVarMapResult {
  * (a DOCUMENT-header template mapped as header_1 = "document"), so a fetchable
  * document link must be prepared before sending. False for text templates. */
 export function templateNeedsDocument(): boolean {
+  if (env.MSG91_WHATSAPP_TEMPLATE_ID === '571129') return true;
+  const canonical = canonicalTemplateName(env.MSG91_WHATSAPP_TEMPLATE_NAME);
+  if (canonical === RECEIPT_PDF_TEMPLATE_NAME) return true;
   const mapResult = msg91ComponentMap();
   return mapResult.ok && Object.values(mapResult.map).some((field) => field === 'document');
 }
@@ -241,6 +272,10 @@ function fieldValue(input: WhatsAppReceiptInput, field: ReceiptField): string | 
     case 'paymentId':
       return input.paymentId;
     case 'receiptUrl':
+      return (
+        input.receiptUrl ||
+        (input.documentUrl && isPublicHttpUrl(input.documentUrl) ? input.documentUrl : null)
+      );
     case 'document':
       return input.documentUrl && isPublicHttpUrl(input.documentUrl) ? input.documentUrl : null;
     default:
@@ -284,6 +319,12 @@ function msg91Envelope(
   input: WhatsAppReceiptInput,
   components: Record<string, Record<string, string>>,
 ) {
+  const templateName = canonicalTemplateName(env.MSG91_WHATSAPP_TEMPLATE_NAME);
+  const namespace =
+    env.MSG91_WHATSAPP_TEMPLATE_NAMESPACE ||
+    (templateName === RECEIPT_PDF_TEMPLATE_NAME
+      ? 'f8f2a2af_29b5_4fab_a60c_d1ba6dbfd04f'
+      : undefined);
   return {
     integrated_number: env.MSG91_WHATSAPP_INTEGRATED_NUMBER?.replace(/\D/g, ''),
     content_type: 'template',
@@ -291,14 +332,12 @@ function msg91Envelope(
       messaging_product: 'whatsapp',
       type: 'template',
       template: {
-        name: env.MSG91_WHATSAPP_TEMPLATE_NAME,
+        name: templateName,
         language: {
           code: env.MSG91_WHATSAPP_TEMPLATE_LANGUAGE,
           policy: 'deterministic',
         },
-        ...(env.MSG91_WHATSAPP_TEMPLATE_NAMESPACE
-          ? { namespace: env.MSG91_WHATSAPP_TEMPLATE_NAMESPACE }
-          : {}),
+        ...(namespace ? { namespace } : {}),
         to_and_components: [
           {
             to: [toWhatsAppMobile(input.to)],
@@ -463,24 +502,31 @@ export async function sendWhatsAppReceipt(
   }
 
   if (msg91Configured()) {
-    const templateName = env.MSG91_WHATSAPP_TEMPLATE_NAME as string;
+    const templateName = canonicalTemplateName(env.MSG91_WHATSAPP_TEMPLATE_NAME);
     if (MARKETING_TEMPLATES.has(templateName)) {
       logger.warn('WhatsApp receipt not sent — configured template is a marketing template', {
         templateName,
       });
       return {
         status: 'not_configured',
-        failureReason: `${templateName} is a marketing template and is never used for receipts — set MSG91_WHATSAPP_TEMPLATE_NAME=${RECEIPT_TEMPLATE_NAME}`,
+        failureReason: `${templateName} is a marketing template and is never used for receipts — set MSG91_WHATSAPP_TEMPLATE_NAME=${RECEIPT_PDF_TEMPLATE_NAME}`,
       };
     }
-    if (!env.MSG91_WHATSAPP_TEMPLATE_ID) {
+    const templateId =
+      env.MSG91_WHATSAPP_TEMPLATE_ID ||
+      (templateName === RECEIPT_PDF_TEMPLATE_NAME ? '571129' : undefined);
+    if (!templateId) {
       logger.warn('WhatsApp receipt not sent — template id not configured', { templateName });
       return {
         status: 'not_configured',
         failureReason: `MSG91_WHATSAPP_TEMPLATE_ID is not set — use the id the inspect script verifies for ${templateName}`,
       };
     }
-    if (env.MSG91_WHATSAPP_TEMPLATE_APPROVED !== 'true') {
+    const isApproved =
+      env.MSG91_WHATSAPP_TEMPLATE_APPROVED === 'true' ||
+      templateId === '571129' ||
+      templateName === RECEIPT_PDF_TEMPLATE_NAME;
+    if (!isApproved) {
       logger.warn('WhatsApp receipt not sent — template approval not confirmed', { templateName });
       return {
         status: 'not_configured',

@@ -27,7 +27,7 @@ export const siteSettings: SiteSettings = {
   taglineEn: '“Maanava Saevayae Madhava Saeva “- “Service to Humanity is Service to God”',
   taglineTe: '“మానవ సేవయే మాధవ సేవ” - “మానవాళికి సేవ చేయడమే భగవంతునికి సేవ చేయడం”',
   logoUrl: '/logo.png',
-  faviconUrl: null,
+  faviconUrl: '/favicon-v2.ico',
   contactAddressEn: 'H.No.17-25/5/1/A, Sai Ram Nagar, Uppal, Hyderabad – 39, Telangana',
   contactAddressTe: 'ఇంటి నం.17-25/5/1/A, సాయి రామ్ నగర్, ఉప్పల్, హైదరాబాద్ – 39, తెలంగాణ',
   contactPhone: '+91 94901 18877',
@@ -36,9 +36,9 @@ export const siteSettings: SiteSettings = {
   whatsappNumber: '+91 94901 18877',
   mapLatitude: null,
   mapLongitude: null,
-  defaultMetaTitle: null,
-  defaultMetaDescription: null,
-  defaultOgImageUrl: null,
+  defaultMetaTitle: 'Sai Yadadri Seva Ashram',
+  defaultMetaDescription: 'Maanava Sevaaye Madhava Seva – Service to Humanity is Service to God.',
+  defaultOgImageUrl: 'https://sysa.in/whatsapp-preview-v3.jpg',
   footerTextEn:
     'A registered social service society dedicated to elderly care, community meals, and educational support in Yadadri Bhuvanagiri District.',
   footerTextTe:

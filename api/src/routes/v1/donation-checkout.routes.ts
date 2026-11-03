@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logger } from '@lib/logger';
 import { writeAuditLog } from '@lib/audit-log';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -22,9 +23,11 @@ import {
 import { ApiError } from '@utils/api-error';
 
 import * as donationRepo from '@repositories/donation.repository';
+import * as donorRepo from '@repositories/donor.repository';
 import * as subscriptionRepo from '@repositories/donor-subscription.repository';
 import * as checkoutService from '@services/donation-checkout.service';
 import * as subscriptionService from '@services/subscription.service';
+import { isValidIndianMobile, normalizeIndianMobile } from '@utils/mobile';
 import { verifyAndCompletePayment } from '@services/payment-verification.service';
 import {
   renderReceiptPdfForDownload,
@@ -170,6 +173,20 @@ donationCheckoutRouter.post(
       const session = await checkoutService.initiateDonation(input);
       res.status(201).json({ data: session });
     } catch (error) {
+      const errName = error instanceof Error ? error.constructor.name : typeof error;
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const errCode = (error as { code?: string })?.code;
+      const correlationId = (req as Request & { correlationId?: string }).correlationId;
+
+      logger.error('Donation initiation failed', {
+        correlationId,
+        errorName: errName,
+        errorCode: errCode,
+        message: errMsg,
+        path: req.path,
+        method: req.method,
+      });
+
       next(error);
     }
   },
@@ -226,6 +243,10 @@ donationCheckoutRouter.get(
   validate({ params: idParamSchema, query: donationTokenQuerySchema }),
   async (req, res, next) => {
     try {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       const { id } = req.params as unknown as z.infer<typeof idParamSchema>;
       const { token } = req.query as unknown as z.infer<typeof donationTokenQuerySchema>;
 
@@ -252,6 +273,10 @@ donationCheckoutRouter.get(
   validate({ params: idParamSchema }),
   async (req, res, next) => {
     try {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       const { id } = req.params as unknown as z.infer<typeof idParamSchema>;
       const token = req.query.token as string | undefined;
 
@@ -416,6 +441,59 @@ donationCheckoutRouter.post(
       const result = await retryFailedDeliveries(id, { overridePermanent: adminId !== null });
       await auditResend(id, adminId, 'all_unsent', result);
       res.status(200).json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+donationCheckoutRouter.post(
+  '/:id/verify-mobile',
+  smsRetryLimiter,
+  validate({ params: idParamSchema }),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params as unknown as z.infer<typeof idParamSchema>;
+      const token = req.query.token as string | undefined;
+
+      const donation = await donationRepo.findById(id);
+      if (!donation) throw ApiError.notFound('Donation not found');
+
+      const authorized = await isAuthorizedForDonation(req, id, donation.donorId, token);
+      if (!authorized) throw ApiError.unauthorized();
+
+      const adminId = adminIdFromRequest(req, token);
+      const rawPhone = (req.body as { phone?: string })?.phone || donation.receiptPhone;
+      if (!rawPhone || !isValidIndianMobile(rawPhone)) {
+        throw ApiError.badRequest('A valid 10-digit Indian mobile number is required.');
+      }
+
+      const normalized = normalizeIndianMobile(rawPhone);
+      await donorRepo.update(donation.donorId, {
+        phone: normalized,
+        whatsappReceiptConsent: donation.whatsappReceiptConsent ?? true,
+        whatsappConsentUpdatedAt: new Date(),
+      });
+
+      await writeAuditLog({
+        adminUserId: adminId ?? undefined,
+        action: 'DONOR_MOBILE_VERIFIED',
+        entityType: 'donor',
+        entityId: donation.donorId,
+        afterState: {
+          donationId: id,
+          verifiedPhone: normalized,
+          requestedBy: adminId ? 'admin' : 'donor_or_receipt_link',
+        },
+      });
+
+      res.status(200).json({
+        data: {
+          verified: true,
+          donorId: donation.donorId,
+          phone: normalized,
+        },
+      });
     } catch (error) {
       next(error);
     }

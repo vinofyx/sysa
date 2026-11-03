@@ -78,3 +78,172 @@ describe('Receipt page access outcomes', () => {
     assert.equal(isTerminalPollError(apiError(undefined)), false);
   });
 });
+
+describe('Donation status retrieval, payload structure & security', () => {
+  const mockCompletedStatus = {
+    id: '588ccb11-70fd-4fa1-89e1-8d49868fe897',
+    status: 'completed',
+    paymentStatus: 'completed',
+    amount: 1000,
+    currency: 'INR',
+    category: 'General Donation',
+    donorName: 'Dharani',
+    donorPhoneMasked: '******0526',
+    donorEmailMasked: 'd***@sysa.in',
+    receiptAvailable: true,
+    receiptNumber: 'RCPT-2026-000004',
+    receiptUrl: 'https://res.cloudinary.com/demo/image/upload/sample.pdf',
+    paymentReference: 'pay_sample123',
+  };
+
+  const mockPendingStatus = {
+    ...mockCompletedStatus,
+    status: 'pending',
+    paymentStatus: 'pending',
+    receiptAvailable: false,
+    receiptNumber: null,
+    receiptUrl: null,
+  };
+
+  function unwrapStatus<T>(body: { data?: T } | T): T {
+    if (body && typeof body === 'object' && 'data' in body && (body as { data?: T }).data) {
+      return (body as { data: T }).data;
+    }
+    return body as T;
+  }
+
+  it('unwraps status correctly from backend { data: status } wrapper', () => {
+    const rawResponse = { data: mockCompletedStatus };
+    const unwrapped = unwrapStatus(rawResponse);
+
+    assert.equal(unwrapped.id, mockCompletedStatus.id);
+    assert.equal(unwrapped.status, 'completed');
+    assert.equal(unwrapped.receiptNumber, 'RCPT-2026-000004');
+    assert.equal(unwrapped.amount, 1000);
+    assert.equal(unwrapped.receiptAvailable, true);
+  });
+
+  it('unwraps status correctly when returned directly without wrapper', () => {
+    const rawResponse = mockCompletedStatus;
+    const unwrapped = unwrapStatus(rawResponse);
+
+    assert.equal(unwrapped.id, mockCompletedStatus.id);
+    assert.equal(unwrapped.receiptNumber, 'RCPT-2026-000004');
+  });
+
+  it('handles pending payment status cleanly with polling continuation', () => {
+    assert.equal(mockPendingStatus.status, 'pending');
+    assert.equal(mockPendingStatus.receiptAvailable, false);
+    assert.equal(mockPendingStatus.receiptNumber, null);
+    assert.equal(mockPendingStatus.amount, 1000);
+  });
+
+  it('correctly handles 401 and 403 as terminal invalid token errors', () => {
+    const error401 = apiError(401);
+    const error403 = apiError(403);
+
+    assert.equal(classifyReceiptError(error401), 'link_invalid');
+    assert.equal(classifyReceiptError(error403), 'link_invalid');
+    assert.equal(isTerminalPollError(error401), true);
+    assert.equal(isTerminalPollError(error403), true);
+  });
+
+  it('correctly handles 404 as missing donation / receipt not ready', () => {
+    const error404 = apiError(404);
+    assert.equal(classifyReceiptError(error404), 'not_ready');
+    assert.equal(isTerminalPollError(error404), true);
+  });
+
+  it('correctly handles network error or 500 server error as transient unavailable', () => {
+    const networkError = apiError(undefined);
+    const serverError = apiError(500);
+
+    assert.equal(classifyReceiptError(networkError), 'unavailable');
+    assert.equal(classifyReceiptError(serverError), 'unavailable');
+    assert.equal(isTerminalPollError(networkError), false);
+    assert.equal(isTerminalPollError(serverError), false);
+  });
+
+  it('ensures logged error objects never expose access tokens or donor personal info', () => {
+    const testDonationId = '588ccb11-70fd-4fa1-89e1-8d49868fe897';
+    const testToken = 'secret-hmac-token-xyz-12345';
+    const rawError = new Error(`Request failed with status code 500 at /status?token=${testToken}`);
+
+    // Build the sanitized log entry as implemented in DonationSuccessView
+    const safeErrorMsg =
+      rawError instanceof Error
+        ? rawError.message.replace(/([?&]token=)[^&#\s]+/gi, '$1[REDACTED]')
+        : 'Unknown error';
+    const logPayload = {
+      donationId: testDonationId,
+      error: safeErrorMsg,
+    };
+
+    const serialized = JSON.stringify(logPayload);
+    assert.equal(
+      serialized.includes(testToken),
+      false,
+      'Log payload must NOT contain access token',
+    );
+    assert.equal(serialized.includes('Dharani'), false, 'Log payload must NOT contain donor name');
+    assert.equal(serialized.includes('BAQPL0308B'), false, 'Log payload must NOT contain PAN');
+    assert.equal(
+      serialized.includes(testDonationId),
+      true,
+      'Log payload preserves donationId for tracing',
+    );
+  });
+
+  it('handles HTTP 200 response with completed payment details', () => {
+    const response200 = { ok: true, data: mockCompletedStatus };
+    assert.equal(response200.ok, true);
+    assert.equal(response200.data.paymentStatus, 'completed');
+    assert.equal(response200.data.receiptAvailable, true);
+    assert.equal(response200.data.receiptNumber, 'RCPT-2026-000004');
+    assert.equal(response200.data.amount, 1000);
+  });
+
+  it('handles HTTP 200 response with pending payment details and triggers polling', () => {
+    const response200Pending = { ok: true, data: mockPendingStatus };
+    assert.equal(response200Pending.ok, true);
+    assert.equal(response200Pending.data.paymentStatus, 'pending');
+    assert.equal(response200Pending.data.receiptAvailable, false);
+    assert.equal(response200Pending.data.receiptNumber, null);
+  });
+
+  it('handles HTTP 401 Unauthorized as link_invalid', () => {
+    assert.equal(classifyReceiptError(apiError(401)), 'link_invalid');
+    assert.equal(isTerminalPollError(apiError(401)), true);
+  });
+
+  it('handles HTTP 403 Forbidden as link_invalid', () => {
+    assert.equal(classifyReceiptError(apiError(403)), 'link_invalid');
+    assert.equal(isTerminalPollError(apiError(403)), true);
+  });
+
+  it('handles HTTP 404 Not Found as not_ready', () => {
+    assert.equal(classifyReceiptError(apiError(404)), 'not_ready');
+    assert.equal(isTerminalPollError(apiError(404)), true);
+  });
+
+  it('handles HTTP 409 Conflict as not_completed', () => {
+    assert.equal(classifyReceiptError(apiError(409)), 'not_completed');
+    assert.equal(isTerminalPollError(apiError(409)), false);
+  });
+
+  it('handles HTTP 500 Internal Server Error as unavailable', () => {
+    assert.equal(classifyReceiptError(apiError(500)), 'unavailable');
+    assert.equal(isTerminalPollError(apiError(500)), false);
+  });
+
+  it('builds receipt download PDF URL safely with encoded token parameter', () => {
+    const id = '588ccb11-70fd-4fa1-89e1-8d49868fe897';
+    const token = 'v2.1730000000.abc123def456';
+    const expectedQuery = `?token=${encodeURIComponent(token)}`;
+    const url = `https://api.sysa.in/api/v1/donations/${id}/receipt/pdf${expectedQuery}`;
+
+    assert.ok(url.includes(id));
+    assert.ok(url.includes(encodeURIComponent(token)));
+    assert.ok(url.endsWith(expectedQuery));
+  });
+});

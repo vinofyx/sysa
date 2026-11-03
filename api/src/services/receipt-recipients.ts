@@ -1,3 +1,5 @@
+import { normalizeIndianMobile } from '@utils/mobile';
+
 /**
  * Who a donation's receipt goes to. The single rule used by delivery
  * (email/WhatsApp/SMS), the PDF, both emails and the website receipt.
@@ -38,10 +40,12 @@ export function receiptRecipients(donation: RecipientSource): ReceiptRecipients 
   const phone = submittedPhone ?? (donor.phone?.trim() || null);
   // Matched by email to someone else's record: the receipt carries that
   // record's name and details, so it must not go to an unverified mobile.
+  // Phone numbers are normalized first so +91/bare formatting differences
+  // never trigger a false mismatch.
+  const normSubmitted = submittedPhone ? normalizeIndianMobile(submittedPhone) : null;
+  const normDonor = donor.phone ? normalizeIndianMobile(donor.phone) : null;
   const phoneBlockedReason =
-    submittedPhone && donor.phone && submittedPhone !== donor.phone
-      ? MISMATCHED_MOBILE_REASON
-      : null;
+    normSubmitted && normDonor && normSubmitted !== normDonor ? MISMATCHED_MOBILE_REASON : null;
   return {
     email: donation.receiptEmail?.trim() || donor.email || null,
     phone,

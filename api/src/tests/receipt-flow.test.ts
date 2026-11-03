@@ -48,6 +48,7 @@ import {
 import { buildReceiptDownloadUrl } from '@lib/receipt-link';
 import { requestLogger } from '@middleware/request-logger.middleware';
 import { issueReceipt, retryFailedDeliveries } from '@services/receipt.service';
+import { receiptRecipients } from '@services/receipt-recipients';
 
 import { extractPdfText } from './helpers/pdf-text';
 import { assertPdf, receiptMedia } from '@integrations/storage/receipt-media';
@@ -2121,6 +2122,52 @@ describe('Receipts go to the contact details submitted with the donation', () =>
       donorMail().map((m) => m.to),
       ['owner@example.com'],
     );
+  });
+
+  it('normalized comparison allows +91 formatted numbers to match bare 10-digit donor phone', async () => {
+    const donor = await resolveDonor({
+      donorName: 'Same Donor',
+      donorPhone: '9490118877',
+      donorEmail: 'same@example.com',
+    });
+    const recipients = receiptRecipients({
+      receiptPhone: '+91 94901 18877',
+      donor: {
+        email: donor.email,
+        phone: donor.phone,
+        whatsappReceiptConsent: true,
+      },
+    });
+    assert.equal(recipients.phoneBlockedReason, null);
+  });
+
+  it('allows authorized verification of a donor mobile number, enabling WhatsApp receipt retry', async () => {
+    const donor = await resolveDonor({
+      donorName: 'Verified Owner',
+      donorPhone: '9123400002',
+      donorEmail: 'verified@example.com',
+    });
+    const { donationId } = await initiateAndPay({
+      donorName: 'Verified Owner',
+      donorPhone: '9876500099',
+      donorEmail: 'verified@example.com',
+      whatsappReceiptConsent: true,
+    });
+    const [before] = receiptsFor(donationId);
+    assert.equal(before.whatsappStatus, 'skipped');
+    assert.match(before.whatsappFailureReason as string, /does not belong to the donor record/);
+
+    // Update donor phone via authorized verification
+    await fakePrisma.donor.update({
+      where: { id: donor.id },
+      data: { phone: '9876500099' },
+    });
+
+    // Retry WhatsApp now succeeds!
+    const result = await retryReceiptWhatsApp(donationId);
+    assert.equal(result, 'sent');
+    const [target] = whatsappCalls[0].body.payload.template.to_and_components;
+    assert.deepEqual(target.to, ['919876500099']);
   });
 
   it('opt-in belongs to each donation: a later unticked donation does not cancel an earlier ticked one', async () => {

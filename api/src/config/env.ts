@@ -97,6 +97,7 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  DIAGNOSTIC_API_KEY: z.string().min(16).optional(),
 
   // Donation/receipt link tokens (lib/donor-jwt.ts). DONATION_TOKEN_SECRET is
   // their own signing key — rotating it revokes every donation link without
@@ -156,7 +157,7 @@ const envSchema = z.object({
   // value works too: it's just a one-element list.
   CORS_ORIGIN: z
     .string()
-    .default('http://localhost:3000')
+    .default('http://localhost:3000,http://localhost:5055')
     .transform((value) =>
       value
         .split(',')

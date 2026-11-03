@@ -186,12 +186,19 @@ async function restore() {
 }
 
 function runBuild() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.sysa.in';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sysa.in';
   return new Promise((resolve, reject) => {
     const child = spawn('next', ['build'], {
       cwd: webRoot,
       stdio: 'inherit',
       shell: true,
-      env: { ...process.env, NEXT_PUBLIC_STATIC_EXPORT: 'true' },
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_STATIC_EXPORT: 'true',
+        NEXT_PUBLIC_API_URL: apiUrl,
+        NEXT_PUBLIC_SITE_URL: siteUrl,
+      },
     });
     child.on('exit', (code) =>
       code === 0 ? resolve() : reject(new Error(`next build exited with code ${code}`)),

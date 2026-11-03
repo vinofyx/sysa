@@ -1,6 +1,10 @@
 import { prisma } from '@lib/prisma';
 import type { Prisma } from '@prisma/client';
 
+export function findById(id: string) {
+  return prisma.donor.findUnique({ where: { id } });
+}
+
 export function findByEmail(email: string) {
   return prisma.donor.findUnique({ where: { email } });
 }

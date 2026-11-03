@@ -5,6 +5,7 @@ import { afterEach, describe, it, mock } from 'node:test';
 import { Prisma } from '@prisma/client';
 import winston from 'winston';
 
+import { env } from '@config/env';
 import { describeDatabaseUrl, diagnoseDbError } from '@lib/db-diagnostics';
 import { logDatabaseStartupCheck } from '@lib/db-startup-check';
 import { logger } from '@lib/logger';
@@ -23,6 +24,7 @@ function initError(message: string, code?: string) {
  *  (GET /api/v1/health/check). */
 async function callHealth(
   path: '/' | '/check' = '/',
+  reqOverrides: Record<string, any> = {},
 ): Promise<{ status: number; body: Record<string, any> }> {
   const layer = (healthRouter as unknown as { stack: any[] }).stack.find(
     (l) => l.route?.path === path,
@@ -41,7 +43,12 @@ async function callHealth(
         return res;
       },
     };
-    void handler({}, res, () => undefined);
+    const req = {
+      headers: {},
+      query: {},
+      ...reqOverrides,
+    };
+    void handler(req, res, () => undefined);
   });
 }
 
@@ -150,6 +157,56 @@ describe('GET /api/v1/health/check alias', () => {
     const safe = JSON.stringify(body);
     assert.ok(!safe.includes('db.example.test'), 'host must not leak');
     assert.ok(!safe.includes('mysql://'), 'connection string must not leak');
+  });
+});
+
+describe('GET /api/v1/health protected diagnostics mode', () => {
+  afterEach(() => mock.restoreAll());
+
+  it('omits diagnostics when no key or invalid key is provided', async () => {
+    mock.method(prisma, '$queryRaw', async () => [{ 1: 1 }]);
+    const { body: publicBody } = await callHealth('/');
+    assert.equal(publicBody.diagnostics, undefined);
+
+    const { body: wrongKeyBody } = await callHealth('/', {
+      headers: { 'x-diagnostic-key': 'invalid_secret_key_12345678901234567890' },
+    });
+    assert.equal(wrongKeyBody.diagnostics, undefined);
+  });
+
+  it('returns safe diagnostics without leaking credentials when valid key is supplied', async () => {
+    mock.method(prisma, '$queryRaw', async () => {
+      throw new Prisma.PrismaClientInitializationError(
+        'Authentication failed against database server at `srv1834.hstgr.io`',
+        '5.22.0',
+        'P1000',
+      );
+    });
+    const { status, body } = await callHealth('/check', {
+      headers: { 'x-diagnostic-key': env.JWT_ACCESS_SECRET },
+    });
+    assert.equal(status, 503);
+    assert.ok(body.diagnostics, 'diagnostics must be present when authorized');
+    assert.equal(body.diagnostics.errorCode, 'P1000');
+    assert.equal(body.diagnostics.errorCategory, 'auth_failed');
+    assert.ok(typeof body.diagnostics.hasPassword === 'boolean');
+    assert.ok(typeof body.diagnostics.databaseUrlSource === 'string');
+    assert.ok(typeof body.diagnostics.razorpayConfigured === 'boolean');
+    assert.ok(['live', 'test', 'unset'].includes(body.diagnostics.razorpayKeyType));
+
+    const serialized = JSON.stringify(body);
+    for (const secret of ['Zxc01iop2', 'S3cretPass', 'mysql://']) {
+      assert.ok(!serialized.includes(secret), `must not leak ${secret}`);
+    }
+  });
+
+  it('matches routes regardless of query strings', async () => {
+    mock.method(prisma, '$queryRaw', async () => [{ 1: 1 }]);
+    const { status, body } = await callHealth('/check', {
+      query: { tag: 'monitor', timestamp: '1234567' },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.status, 'ok');
   });
 });
 

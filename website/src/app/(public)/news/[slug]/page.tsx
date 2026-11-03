@@ -69,6 +69,7 @@ export default async function NewsDetailPage({ params }: Props) {
   const url = `${env.NEXT_PUBLIC_SITE_URL}/news/${slug}`;
   const date = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString(locale === 'te' ? 'te-IN' : 'en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: 'numeric',
         month: 'long',
         year: 'numeric',
